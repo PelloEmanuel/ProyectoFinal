@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "TaskFlow",
+    "slug": "taskflow",
+    "scheme": "taskflow",
+    "version": "1.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "com.taskflow.app",
+      "softwareKeyboardLayoutMode": "resize",
+      "usesCleartextTraffic": true
+    },
+    "ios": {
+      "bundleIdentifier": "com.taskflow.app",
+      "supportsTablet": true
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-status-bar",
+      "expo-web-browser",
+      "expo-asset",
+      "expo-font"
+    ]
+  }
+}
