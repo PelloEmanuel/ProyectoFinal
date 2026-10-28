@@ -11,7 +11,16 @@
       "softwareKeyboardLayoutMode": "resize",
       "usesCleartextTraffic": true
     },
-    "ios": { "bundleIdentifier": "com.taskflow.app", "supportsTablet": true },
-    "plugins": ["expo-secure-store"]
+    "ios": {
+      "bundleIdentifier": "com.taskflow.app",
+      "supportsTablet": true
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-status-bar",
+      "expo-web-browser",
+      "expo-asset",
+      "expo-font"
+    ]
   }
 }
