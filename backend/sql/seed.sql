@@ -1,70 +1,51 @@
 -- ============================================================================
--- Archivo: backend/sql/seed.sql
--- Descripción: Datos iniciales para PostgreSQL (usuarios por rol, etiquetas,
--- tareas de ejemplo y asignaciones N:M en task_tags).
--- Se conecta con: backend/src/scripts/init-db.js.
--- Contraseñas de prueba:
---   admin@taskflow.test   -> Admin123!
---   manager@taskflow.test -> Manager123!
---   user@taskflow.test    -> User1234!
+-- SkillTrack Campus Escolar - Datos Base del Sistema (Sin perfiles de prueba)
+-- Inicializa roles institucionales, áreas académicas base y parámetros
+-- iniciales de configuración (con INSERT IGNORE para preservar cambios del Admin).
 -- ============================================================================
+USE skilltrack;
 
--- 1. Usuarios iniciales (uno por cada rol requerido)
-INSERT INTO users (name, email, password_hash, role, two_factor_enabled, is_active)
-VALUES
-  ('Admin TaskFlow', 'admin@taskflow.test', '$2a$10$X0e0AfMX1SU8xCfUhAxpzOHXdxaRc.0TrvA2Avv3qTrDMX293A6om', 'admin', 0, 1),
-  ('Sofía Supervisora', 'manager@taskflow.test', '$2a$10$ZvdGoylBbOr8qiPX3pQ3ReEHhnes4UgqtxEe/JrZlCNStR.cmK6Ca', 'manager', 0, 1),
-  ('Ulises Usuario', 'user@taskflow.test', '$2a$10$mdPk8RkbC8rxpv6MiRMrku81uzVQJzRidWffhlRf56amoJGVpRxe.', 'user', 0, 1)
-ON CONFLICT (email) DO UPDATE SET
-  name = EXCLUDED.name,
-  password_hash = EXCLUDED.password_hash,
-  role = EXCLUDED.role,
-  is_active = EXCLUDED.is_active;
+-- ----------------------------------------------------------------------------
+-- 1. Roles del sistema (1: admin, 2: instructor, 3: student)
+-- ----------------------------------------------------------------------------
+INSERT INTO roles (id, name, description) VALUES
+  (1, 'admin', 'Administrador general del Campus Escolar SkillTrack'),
+  (2, 'instructor', 'Profesor / Docente a cargo de materias, teoría, actividades y evaluaciones'),
+  (3, 'student', 'Alumno inscripto por Año (1° a 6°) y Curso (1° a 3°)')
+ON DUPLICATE KEY UPDATE description = VALUES(description);
 
--- 2. Etiquetas iniciales (para relación N:M)
-INSERT INTO tags (name, color)
-VALUES
-  ('Urgente', '#dc2626'),
-  ('Backend', '#4f46e5'),
-  ('Mobile UI', '#2563eb'),
-  ('Documentación', '#16a34a')
-ON CONFLICT (name) DO UPDATE SET
-  color = EXCLUDED.color;
+-- ----------------------------------------------------------------------------
+-- 2. Áreas / Categorías y Habilidades base para las materias escolares
+-- ----------------------------------------------------------------------------
+INSERT INTO categories (id, name, description, status) VALUES
+  (1, 'Ciencias Exactas y Matemática', 'Matemática, Álgebra, Análisis Matemático, Física y Estadística', 'active'),
+  (2, 'Lengua, Literatura y Humanidades', 'Lengua y Literatura, Historia, Geografía, Filosofía y Ciudadanía', 'active'),
+  (3, 'Ciencias Naturales', 'Biología, Química, Salud y Ambiente', 'active'),
+  (4, 'Informática e Idiomas', 'Programación, Sistemas, Tecnología e Inglés', 'active')
+ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description), status = 'active';
 
--- 3. Tareas iniciales de ejemplo (solo si aún no hay tareas cargadas)
-INSERT INTO tasks (title, description, status, priority, due_date, created_by, assigned_to)
-SELECT
-  'Configurar base de datos PostgreSQL en Render',
-  'Verificar conexión segura con variables de entorno y modelo en 3FN.',
-  'done',
-  'high',
-  CURRENT_DATE + INTERVAL '2 days',
-  (SELECT id FROM users WHERE email = 'admin@taskflow.test'),
-  (SELECT id FROM users WHERE email = 'user@taskflow.test')
-WHERE NOT EXISTS (SELECT 1 FROM tasks WHERE title = 'Configurar base de datos PostgreSQL en Render');
+INSERT INTO skills (id, name, description, category_id) VALUES
+  (1, 'Resolución de Problemas', 'Razonamiento lógico-matemático y modelado analítico', 1),
+  (2, 'Comprensión y Redacción', 'Análisis de textos, argumentación y expresión escrita', 2),
+  (3, 'Método Científico', 'Experimentación, formulación de hipótesis y análisis de datos', 3),
+  (4, 'Pensamiento Computacional', 'Algoritmos, desarrollo de software y herramientas digitales', 4),
+  (5, 'Trabajo Colaborativo', 'Investigación en equipo y proyectos interdisciplinarios', 2)
+ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description);
 
-INSERT INTO tasks (title, description, status, priority, due_date, created_by, assigned_to)
-SELECT
-  'Revisar pantallas y permisos por rol',
-  'Comprobar accesos de Usuario, Supervisor y Administrador en la app móvil.',
-  'in_progress',
-  'medium',
-  CURRENT_DATE + INTERVAL '5 days',
-  (SELECT id FROM users WHERE email = 'manager@taskflow.test'),
-  (SELECT id FROM users WHERE email = 'user@taskflow.test')
-WHERE NOT EXISTS (SELECT 1 FROM tasks WHERE title = 'Revisar pantallas y permisos por rol');
-
--- 4. Relaciones N:M en tabla intermedia task_tags
-INSERT INTO task_tags (task_id, tag_id)
-SELECT t.id, g.id
-FROM tasks t
-JOIN tags g ON g.name IN ('Backend', 'Urgente')
-WHERE t.title = 'Configurar base de datos PostgreSQL en Render'
-ON CONFLICT DO NOTHING;
-
-INSERT INTO task_tags (task_id, tag_id)
-SELECT t.id, g.id
-FROM tasks t
-JOIN tags g ON g.name IN ('Mobile UI', 'Documentación')
-WHERE t.title = 'Revisar pantallas y permisos por rol'
-ON CONFLICT DO NOTHING;
+-- ----------------------------------------------------------------------------
+-- 3. Configuración global de la plataforma
+-- Se usa INSERT IGNORE para que los cambios del Administrador (como la clave
+-- para registro de docentes) persistan siempre tras reiniciar el servidor.
+-- ----------------------------------------------------------------------------
+INSERT IGNORE INTO platform_settings (setting_key, setting_value) VALUES
+  ('platform_name', 'SkillTrack Campus Escolar'),
+  ('institution_name', 'Instituto Educativo SkillTrack'),
+  ('platform_description', 'Campus escolar de seguimiento académico de 1° a 6° Año (Cursos 1° a 3°)'),
+  ('enrollment_policy', 'open'),
+  ('allow_public_registration', 'true'),
+  ('require_email_verification', 'false'),
+  ('certificates_enabled', 'true'),
+  ('default_passing_score', '60'),
+  ('certificate_issuer_title', 'Dirección Académica SkillTrack'),
+  ('support_email', 'preceptoria@skilltrack.edu'),
+  ('instructor_registration_key', 'DOCENTE2026');

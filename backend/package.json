@@ -1,13 +1,14 @@
 {
-  "name": "taskflow-backend",
+  "name": "skilltrack-backend",
   "version": "1.0.0",
-  "description": "API REST de TaskFlow (Express + PostgreSQL + JWT)",
+  "description": "API REST de SkillTrack (Express + MySQL + JWT + TOTP 2FA)",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "init-db": "node src/scripts/init-db.js",
-    "seed": "node src/scripts/seed.js"
+    "seed": "node src/scripts/seed.js",
+    "test": "node tests/api.test.js"
   },
   "engines": {
     "node": ">=18"
@@ -22,7 +23,7 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
-    "nodemailer": "^6.9.14",
-    "pg": "^8.20.0"
+    "mysql2": "^3.11.0",
+    "nodemailer": "^6.9.14"
   }
 }

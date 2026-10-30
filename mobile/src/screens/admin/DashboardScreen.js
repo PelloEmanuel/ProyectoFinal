@@ -1,57 +1,616 @@
+/**
+ * Archivo: mobile/src/screens/admin/DashboardScreen.js
+ * Descripción: Panel Principal de Administración Institucional:
+ * - Supervisión general y métricas institucionales.
+ * - Acceso directo a Gestión de Cursos Escolares y Gestión de Materias (BD).
+ * - Visualizador de cronogramas semanales seleccionando 1 por 1 entre los cursos abiertos.
+ * - Configuración de la clave de registro para nuevos docentes.
+ */
 import React, { useCallback, useState } from 'react';
-import { RefreshControl, ScrollView, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { ErrorBanner, Loading, Screen } from '../../components/ui';
-import { tasksApi } from '../../api/services';
-import { getErrorMessage } from '../../utils/errors';
-import { STATUS, colors } from '../../theme';
+import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
+import { adminApi, attendanceApi } from '../../api/services';
+import { extractErrorMessage } from '../../utils/errors';
+import {
+  AlertBanner,
+  Badge,
+  Button,
+  Card,
+  Chip,
+  EmptyState,
+  Input,
+  MetricCard,
+  ProgressBar,
+  SectionHeader,
+} from '../../components/ui';
+import SchoolScheduleGrid, {
+  formatSchoolGroupShort,
+} from '../../components/SchoolScheduleGrid';
 
-const Stat = ({ label, value, color }) => (
-  <View style={{ flexGrow: 1, flexBasis: 140, backgroundColor: '#fff', borderRadius: 14, padding: 16, margin: 6, borderWidth: 1, borderColor: colors.border }}>
-    <Text style={{ fontSize: 30, fontWeight: '800', color }}>{value}</Text>
-    <Text style={{ color: colors.muted }}>{label}</Text>
-  </View>
-);
-
-/** Panel de métricas para supervisor y administrador. */
-export default function DashboardScreen() {
+export default function DashboardScreen({ navigation }) {
+  const { user } = useAuth();
+  const { colors } = useTheme();
   const [data, setData] = useState(null);
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+  const [instructorKey, setInstructorKey] = useState('');
+  const [savingKey, setSavingKey] = useState(false);
+  const [keyMessage, setKeyMessage] = useState('');
 
-  const load = useCallback(async () => {
-    try { setError(''); setData(await tasksApi.stats()); } catch (e) { setError(getErrorMessage(e)); }
-    setRefreshing(false);
+  // Cursos abiertos y visualizador de cronogramas 1 por 1
+  const [openCourses, setOpenCourses] = useState([]);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+  const [schedule, setSchedule] = useState([]);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+
+  const loadScheduleForGroup = useCallback(async (grp) => {
+    if (!grp) {
+      setSchedule([]);
+      return;
+    }
+    try {
+      setLoadingSchedule(true);
+      const res = await adminApi.getSchedule({
+        schoolYear: grp.schoolYear,
+        courseDivision: grp.courseDivision,
+      });
+      const sched = res?.data?.schedule || res?.schedule || [];
+      setSchedule(sched);
+    } catch (err) {
+      console.error('Error cargando cronograma de curso:', err);
+    } finally {
+      setLoadingSchedule(false);
+    }
   }, []);
-  useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  if (!data && !error) return <Loading />;
+  const loadDashboard = useCallback(
+    async (isRefresh = false) => {
+      try {
+        if (isRefresh) setRefreshing(true);
+        else setLoading(true);
+        setError('');
+
+        const [dashRes, openCoursesRes] = await Promise.all([
+          adminApi.getDashboard(),
+          attendanceApi.getOpenCourses(),
+        ]);
+
+        const d = dashRes?.data?.data || dashRes?.data || dashRes;
+        setData(d);
+        if (d?.instructorRegistrationKey !== undefined) {
+          setInstructorKey(String(d.instructorRegistrationKey));
+        }
+
+        const openList = Array.isArray(openCoursesRes)
+          ? openCoursesRes
+          : openCoursesRes?.data || [];
+        setOpenCourses(openList);
+
+        if (openList.length > 0) {
+          setSelectedGroup((prev) => {
+            const found = prev
+              ? openList.find(
+                  (g) =>
+                    g.schoolYear === prev.schoolYear &&
+                    g.courseDivision === prev.courseDivision
+                )
+              : null;
+            const target = found || openList[0];
+            loadScheduleForGroup(target);
+            return target;
+          });
+        } else {
+          setSelectedGroup(null);
+          setSchedule([]);
+        }
+      } catch (err) {
+        setError(extractErrorMessage(err));
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [loadScheduleForGroup]
+  );
+
+  const handleSelectGroup = (grp) => {
+    setSelectedGroup(grp);
+    loadScheduleForGroup(grp);
+  };
+
+  const handleSaveInstructorKey = async () => {
+    const clean = String(instructorKey || '').trim();
+    if (!clean) {
+      setError('La clave para docentes no puede estar vacía.');
+      return;
+    }
+    try {
+      setSavingKey(true);
+      setError('');
+      setKeyMessage('');
+      await adminApi.updateSettings({ instructor_registration_key: clean });
+      setInstructorKey(clean);
+      setKeyMessage('Clave para registro de docentes actualizada correctamente.');
+    } catch (err) {
+      setError(extractErrorMessage(err));
+    } finally {
+      setSavingKey(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboard(false);
+    }, [loadDashboard])
+  );
+
+  if (loading && !data) {
+    return (
+      <View style={[styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  const metrics = data?.metrics || {};
+  const roleDistribution = data?.roleDistribution || [];
+
   return (
-    <Screen scroll={false}>
-      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}>
-        <ErrorBanner message={error} />
-        {data && (
-          <>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {Object.entries(STATUS).map(([k, v]) => <Stat key={k} label={v.label} value={data.byStatus[k]} color={v.color} />)}
-              <Stat label="Vencidas" value={data.overdue} color={colors.danger} />
-            </View>
-            <Text style={{ fontSize: 18, fontWeight: '700', margin: 8, marginTop: 16, color: colors.text }}>Carga por persona</Text>
-            {data.byUser.length === 0 && <Text style={{ color: colors.muted, margin: 8 }}>Todavía no hay tareas asignadas.</Text>}
-            {data.byUser.map((u) => (
-              <View key={u.id} style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, margin: 6, borderWidth: 1, borderColor: colors.border }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                  <Text style={{ fontWeight: '600', color: colors.text }}>{u.name}</Text>
-                  <Text style={{ color: colors.muted }}>{u.done}/{u.total} hechas</Text>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      contentContainerStyle={styles.content}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => loadDashboard(true)}
+          tintColor={colors.primary}
+        />
+      }
+    >
+      {/* Hero Header */}
+      <View style={[styles.hero, { backgroundColor: colors.navy }]}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.greeting}>Administración Institucional</Text>
+          <Text style={styles.heroName}>
+            {user?.firstName} {user?.lastName}
+          </Text>
+          <Text style={styles.heroSub}>
+            Supervisión integral de usuarios, oferta académica, métricas y cronogramas.
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.profileBtn, { backgroundColor: colors.primary }]}
+          onPress={() => navigation.navigate('Profile')}
+        >
+          <Ionicons name="shield-checkmark" size={22} color="#ffffff" />
+        </TouchableOpacity>
+      </View>
+
+      <AlertBanner type="error" message={error} />
+      <AlertBanner type="success" message={keyMessage} />
+
+      {/* Acceso directo destacado a Gestión de Cursos y Gestión de Materias */}
+      <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate('AdminCourses', { initialSection: 'groups' })
+          }
+          activeOpacity={0.8}
+          style={{
+            flex: 1,
+            backgroundColor: colors.card,
+            borderRadius: 16,
+            padding: 14,
+            borderWidth: 1.5,
+            borderColor: colors.primary,
+          }}
+        >
+          <View
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              backgroundColor: `${colors.primary}18`,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 8,
+            }}
+          >
+            <Ionicons name="school" size={20} color={colors.primary} />
+          </View>
+          <Text style={{ fontSize: 15, fontWeight: '800', color: colors.text }}>
+            Gestión de Cursos
+          </Text>
+          <Text
+            style={{
+              fontSize: 11,
+              color: colors.textSecondary,
+              marginTop: 4,
+              lineHeight: 15,
+            }}
+          >
+            Abrir, cerrar o eliminar cursos escolares (1° a 6° Año, 1° a 3° Curso).
+          </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginTop: 10,
+            }}
+          >
+            <Text
+              style={{ fontSize: 12, fontWeight: '800', color: colors.primary }}
+            >
+              Ingresar →
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate('AdminCourses', { initialSection: 'catalog' })
+          }
+          activeOpacity={0.8}
+          style={{
+            flex: 1,
+            backgroundColor: colors.card,
+            borderRadius: 16,
+            padding: 14,
+            borderWidth: 1.5,
+            borderColor: colors.secondary || '#3b82f6',
+          }}
+        >
+          <View
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 10,
+              backgroundColor: `${colors.secondary || '#3b82f6'}18`,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 8,
+            }}
+          >
+            <Ionicons
+              name="book"
+              size={20}
+              color={colors.secondary || '#3b82f6'}
+            />
+          </View>
+          <Text style={{ fontSize: 15, fontWeight: '800', color: colors.text }}>
+            Gestión de Materias
+          </Text>
+          <Text
+            style={{
+              fontSize: 11,
+              color: colors.textSecondary,
+              marginTop: 4,
+              lineHeight: 15,
+            }}
+          >
+            Crear, editar y dar de alta materias en la base de datos institucional.
+          </Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginTop: 10,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: '800',
+                color: colors.secondary || '#3b82f6',
+              }}
+            >
+              Ingresar →
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
+      {/* Clave de habilitación para registro de Docentes */}
+      <Card style={{ marginBottom: 14 }}>
+        <View style={styles.rowBetween}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons
+              name="key-outline"
+              size={20}
+              color={colors.primary}
+              style={{ marginRight: 8 }}
+            />
+            <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>
+              Clave para Registro de Docentes
+            </Text>
+          </View>
+          <Badge label="Editable en todo momento" tone="primary" />
+        </View>
+        <Text
+          style={{
+            color: colors.textSecondary,
+            fontSize: 12,
+            marginTop: 6,
+            marginBottom: 10,
+          }}
+        >
+          Compartí esta clave únicamente con los profesores que deban registrarse como Docentes:
+        </Text>
+        <Input
+          label="Clave vigente para nuevos docentes"
+          value={instructorKey}
+          onChangeText={setInstructorKey}
+          placeholder="Ej. DOCENTE2026"
+          autoCapitalize="none"
+        />
+        <Button
+          title="Guardar nueva clave de docente"
+          icon="save-outline"
+          loading={savingKey}
+          onPress={handleSaveInstructorKey}
+          small
+          style={{ marginBottom: 0 }}
+        />
+      </Card>
+
+      {/* Global Metrics */}
+      <View style={styles.metricsRow}>
+        <MetricCard
+          label="Usuarios totales"
+          value={metrics.totalUsers ?? 0}
+          icon="people-outline"
+          tone="primary"
+          subtitle={`${metrics.activeUsers ?? 0} activos`}
+        />
+        <MetricCard
+          label="Cursos"
+          value={metrics.totalCourses ?? 0}
+          icon="library-outline"
+          tone="info"
+          subtitle={`${metrics.publishedCourses ?? 0} publicados`}
+        />
+      </View>
+      <View style={[styles.metricsRow, { marginTop: 10 }]}>
+        <MetricCard
+          label="Inscripciones"
+          value={metrics.totalEnrollments ?? 0}
+          icon="school-outline"
+          tone="success"
+          subtitle={`${metrics.completedEnrollments ?? 0} finalizadas`}
+        />
+        <MetricCard
+          label="Certificados"
+          value={metrics.totalCertificates ?? 0}
+          icon="ribbon-outline"
+          tone="warning"
+          subtitle={`Tasa: ${metrics.completionRate ?? 0}%`}
+        />
+      </View>
+
+      {/* Distribución por rol */}
+      <View style={styles.section}>
+        <SectionHeader
+          title="Distribución por rol institucional"
+          actionLabel="Gestionar usuarios"
+          onAction={() => navigation.navigate('Users')}
+        />
+        <Card>
+          {roleDistribution.map((r) => {
+            const total = metrics.totalUsers || 1;
+            const pct = Math.round(((r.count || 0) / total) * 100);
+            const roleLabel =
+              r.role === 'admin'
+                ? 'Administradores'
+                : r.role === 'instructor'
+                ? 'Instructores / Docentes'
+                : r.role === 'preceptor'
+                ? 'Preceptores'
+                : 'Estudiantes';
+            return (
+              <View key={r.role} style={{ marginBottom: 12 }}>
+                <View style={styles.rowBetween}>
+                  <Text
+                    style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}
+                  >
+                    {roleLabel}
+                  </Text>
+                  <Badge label={`${r.count} (${pct}%)`} tone="primary" />
                 </View>
-                <View style={{ height: 8, backgroundColor: colors.border, borderRadius: 4, marginTop: 8 }}>
-                  <View style={{ height: 8, borderRadius: 4, backgroundColor: colors.success, width: `${(u.done / u.total) * 100}%` }} />
+                <View style={{ marginTop: 6 }}>
+                  <ProgressBar progress={pct} showLabel={false} />
                 </View>
               </View>
-            ))}
-          </>
+            );
+          })}
+        </Card>
+      </View>
+
+      {/* Cronogramas de Cursos Abiertos (eligiendo 1 por 1) */}
+      <View style={styles.section}>
+        <SectionHeader
+          title="Cronogramas de Cursos Abiertos"
+          subtitle="Elegí un curso abierto para ver su cuadrícula horaria y materias asignadas"
+          actionLabel="Armador Completo"
+          onAction={() =>
+            navigation.navigate('AdminCourses', { initialSection: 'schedule' })
+          }
+        />
+
+        {openCourses.length === 0 ? (
+          <EmptyState
+            icon="school-outline"
+            title="No hay cursos abiertos actualmente"
+            message="Abrí cursos escolares (ej. 6° 1ª) desde 'Gestión de Cursos' para poder cargar y visualizar sus cronogramas."
+            actionLabel="Ir a Gestión de Cursos"
+            onAction={() =>
+              navigation.navigate('AdminCourses', { initialSection: 'groups' })
+            }
+          />
+        ) : (
+          <Card style={{ padding: 14, overflow: 'hidden' }}>
+            <Text
+              style={{
+                fontSize: 12,
+                fontWeight: '800',
+                color: colors.textSecondary,
+                marginBottom: 8,
+                textTransform: 'uppercase',
+              }}
+            >
+              Seleccionar Curso Abierto:
+            </Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={{ marginBottom: 14 }}
+            >
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                {openCourses.map((grp) => {
+                  const isSelected =
+                    selectedGroup?.schoolYear === grp.schoolYear &&
+                    selectedGroup?.courseDivision === grp.courseDivision;
+                  return (
+                    <Chip
+                      key={grp.id}
+                      label={`${grp.fullLabel} (${grp.subjectsCount || 0} materias)`}
+                      selected={isSelected}
+                      onPress={() => handleSelectGroup(grp)}
+                    />
+                  );
+                })}
+              </View>
+            </ScrollView>
+
+            {loadingSchedule ? (
+              <View style={{ paddingVertical: 24, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text
+                  style={{
+                    color: colors.textSecondary,
+                    fontSize: 12,
+                    marginTop: 8,
+                  }}
+                >
+                  Cargando cuadrícula de horarios...
+                </Text>
+              </View>
+            ) : selectedGroup ? (
+              <View>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 10,
+                  }}
+                >
+                  <View>
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: '900',
+                        color: colors.text,
+                      }}
+                    >
+                      Horarios de {selectedGroup.fullLabel}
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        color: colors.textSecondary,
+                        marginTop: 2,
+                      }}
+                    >
+                      {schedule.length}{' '}
+                      {schedule.length === 1
+                        ? 'bloque horario asignado'
+                        : 'bloques horarios asignados'}{' '}
+                      • {selectedGroup.studentsCount || 0} alumnos inscriptos
+                    </Text>
+                  </View>
+                  <Badge label="Curso Abierto" tone="success" />
+                </View>
+
+                <SchoolScheduleGrid
+                  schoolYear={selectedGroup.schoolYear}
+                  courseDivision={selectedGroup.courseDivision}
+                  schedule={schedule}
+                  editable={false}
+                  onPressOccupiedCell={(entry) =>
+                    navigation.navigate('CourseDetail', {
+                      courseId: entry.courseId,
+                    })
+                  }
+                />
+
+                <Button
+                  title={`Modificar horarios de ${selectedGroup.label || selectedGroup.fullLabel}`}
+                  icon="calendar-outline"
+                  variant="outline"
+                  small
+                  onPress={() =>
+                    navigation.navigate('AdminCourses', {
+                      initialSection: 'schedule',
+                      schoolYear: selectedGroup.schoolYear,
+                      courseDivision: selectedGroup.courseDivision,
+                    })
+                  }
+                  style={{ marginTop: 12, marginBottom: 0 }}
+                />
+              </View>
+            ) : null}
+          </Card>
         )}
-      </ScrollView>
-    </Screen>
+      </View>
+    </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1 },
+  content: { padding: 16, paddingBottom: 32 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  hero: {
+    borderRadius: 20,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  greeting: {
+    color: '#93c5fd',
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  heroName: { color: '#ffffff', fontSize: 21, fontWeight: '800', marginTop: 2 },
+  heroSub: { color: '#cbd5e1', fontSize: 13, marginTop: 4, lineHeight: 18 },
+  profileBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12,
+  },
+  metricsRow: { flexDirection: 'row', gap: 10 },
+  section: { marginTop: 22 },
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+});

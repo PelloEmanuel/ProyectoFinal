@@ -1,18 +1,39 @@
 {
   "expo": {
-    "name": "TaskFlow",
-    "slug": "taskflow",
-    "scheme": "taskflow",
+    "name": "SkillTrack",
+    "slug": "skilltrack",
+    "owner": "pelloemanuel",
+    "scheme": "skilltrack",
     "version": "1.0.0",
     "orientation": "default",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
+    "primaryColor": "#0f172a",
     "android": {
-      "package": "com.taskflow.app",
+      "package": "com.skilltrack.app",
+      "versionCode": 1,
       "softwareKeyboardLayoutMode": "resize",
-      "usesCleartextTraffic": true
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "skilltrack"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "ios": {
-      "bundleIdentifier": "com.taskflow.app",
+      "bundleIdentifier": "com.skilltrack.app",
       "supportsTablet": true
     },
     "plugins": [

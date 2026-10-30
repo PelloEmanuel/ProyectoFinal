@@ -1,23 +1,95 @@
+/**
+ * Archivo: mobile/src/utils/storage.js
+ * Descripción: Almacenamiento cifrado mediante Expo SecureStore en Android/iOS
+ * y compatibilidad automática con localStorage cuando se abre desde el navegador web.
+ */
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-// Almacenamiento cifrado (Keychain / Keystore) para la sesión persistente.
-const KEYS = { access: 'tf_access', refresh: 'tf_refresh', user: 'tf_user' };
+const KEYS = {
+  access: 'skt_access_token',
+  refresh: 'skt_refresh_token',
+  user: 'skt_user_profile',
+  theme: 'skt_theme_mode',
+};
+
+const isWeb = Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage;
+
+async function setItem(key, value) {
+  if (isWeb) {
+    window.localStorage.setItem(key, value);
+    return;
+  }
+  await SecureStore.setItemAsync(key, value);
+}
+
+async function getItem(key) {
+  if (isWeb) {
+    return window.localStorage.getItem(key);
+  }
+  return SecureStore.getItemAsync(key);
+}
+
+async function deleteItem(key) {
+  if (isWeb) {
+    window.localStorage.removeItem(key);
+    return;
+  }
+  await SecureStore.deleteItemAsync(key);
+}
 
 export async function saveSession({ accessToken, refreshToken, user }) {
-  if (accessToken) await SecureStore.setItemAsync(KEYS.access, accessToken);
-  if (refreshToken) await SecureStore.setItemAsync(KEYS.refresh, refreshToken);
-  if (user) await SecureStore.setItemAsync(KEYS.user, JSON.stringify(user));
+  try {
+    if (accessToken) await setItem(KEYS.access, accessToken);
+    if (refreshToken) await setItem(KEYS.refresh, refreshToken);
+    if (user) await setItem(KEYS.user, JSON.stringify(user));
+  } catch {
+    // Fallback silencioso si el llavero del dispositivo no está disponible
+  }
 }
 
 export async function loadSession() {
-  const [accessToken, refreshToken, user] = await Promise.all([
-    SecureStore.getItemAsync(KEYS.access),
-    SecureStore.getItemAsync(KEYS.refresh),
-    SecureStore.getItemAsync(KEYS.user),
-  ]);
-  return { accessToken, refreshToken, user: user ? JSON.parse(user) : null };
+  try {
+    const [accessToken, refreshToken, user] = await Promise.all([
+      getItem(KEYS.access),
+      getItem(KEYS.refresh),
+      getItem(KEYS.user),
+    ]);
+    return {
+      accessToken: accessToken || null,
+      refreshToken: refreshToken || null,
+      user: user ? JSON.parse(user) : null,
+    };
+  } catch {
+    return { accessToken: null, refreshToken: null, user: null };
+  }
 }
 
 export async function clearSession() {
-  await Promise.all(Object.values(KEYS).map((k) => SecureStore.deleteItemAsync(k)));
+  try {
+    await Promise.all([
+      deleteItem(KEYS.access),
+      deleteItem(KEYS.refresh),
+      deleteItem(KEYS.user),
+    ]);
+  } catch {
+    // Ignorar error de limpieza
+  }
+}
+
+export async function saveThemePreference(mode) {
+  try {
+    await setItem(KEYS.theme, mode);
+  } catch {
+    // Ignorar
+  }
+}
+
+export async function loadThemePreference() {
+  try {
+    const val = await getItem(KEYS.theme);
+    return val || 'dark';
+  } catch {
+    return 'dark';
+  }
 }

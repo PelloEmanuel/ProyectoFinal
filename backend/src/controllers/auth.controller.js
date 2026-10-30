@@ -1,126 +1,651 @@
+/**
+ * Archivo: backend/src/controllers/auth.controller.js
+ * Descripción: Controlador de autenticación completa para SkillTrack.
+ * Soporta registro (rol inicial obligatorio: student), login, verificación de email,
+ * recuperación de contraseña, OAuth 2.0 (Google, GitHub, Facebook), segundo factor TOTP
+ * con códigos de recuperación y gestión de sesiones activas (JWT + Refresh Tokens).
+ */
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const db = require('../config/db');
 const { AppError, asyncHandler } = require('../utils/errors');
 const tokens = require('../utils/tokens');
-const { sendOtp } = require('../utils/mailer');
+const totp = require('../utils/totp');
+const mailer = require('../utils/mailer');
 const social = require('../utils/social');
 const { publicUser } = require('../utils/serializers');
+const { logAudit } = require('../utils/audit');
+const { syncStudentCourseEnrollments } = require('../utils/school');
 
-const findById = async (id) => (await db.execute('SELECT * FROM users WHERE id=?', [id]))[0][0];
-const session = async (user) => ({ user: publicUser(user), ...(await tokens.issueSession(user)) });
+const USER_QUERY = `
+  SELECT u.*, r.name AS role_name
+  FROM users u
+  JOIN roles r ON r.id = u.role_id
+  WHERE u.deleted_at IS NULL`;
 
-/** Genera y envía un código de 6 dígitos (vence en 10 min, invalida los anteriores). */
-async function startOtp(user) {
-  const code = crypto.randomInt(100000, 1000000).toString();
-  await db.execute('UPDATE otp_codes SET used=1 WHERE user_id=? AND used=0', [user.id]);
-  await db.execute('INSERT INTO otp_codes (user_id, code_hash, expires_at) VALUES (?,?,?)', [
-    user.id,
-    tokens.sha256(code + user.id),
-    new Date(Date.now() + 10 * 60 * 1000),
-  ]);
-  await sendOtp(user.email, code);
+async function findById(id) {
+  const [rows] = await db.execute(`${USER_QUERY} AND u.id = ?`, [id]);
+  return rows[0] || null;
 }
 
-exports.register = asyncHandler(async (req, res) => {
-  const { name, email, password, twoFactorEnabled = false } = req.body;
-  const [exists] = await db.execute('SELECT id FROM users WHERE email=?', [email]);
-  if (exists.length) throw new AppError('El email ya está registrado', 409);
-  const hash = await bcrypt.hash(password, 10);
-  // El rol siempre es "user": los roles superiores los asigna un administrador.
-  const [r] = await db.execute(
-    'INSERT INTO users (name,email,password_hash,role,two_factor_enabled) VALUES (?,?,?,?,?)',
-    [name, email, hash, 'user', twoFactorEnabled ? 1 : 0]
+async function findByEmail(email) {
+  const [rows] = await db.execute(`${USER_QUERY} AND u.email = ?`, [String(email).trim().toLowerCase()]);
+  return rows[0] || null;
+}
+
+async function buildSessionResponse(user, req) {
+  const deviceInfo = req?.headers?.['user-agent'] || 'SkillTrack Android App';
+  const sessionTokens = await tokens.issueSession(user, deviceInfo);
+  const serialized = publicUser(user);
+  return {
+    success: true,
+    user: serialized,
+    ...sessionTokens,
+    data: {
+      user: serialized,
+      ...sessionTokens,
+    },
+  };
+}
+
+async function issueEmailVerificationToken(userId, email) {
+  const rawToken = crypto.randomInt(100000, 1000000).toString();
+  const tokenHash = tokens.sha256(`verify:${userId}:${rawToken}`);
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await db.execute('UPDATE email_verification_tokens SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL', [userId]);
+  await db.execute(
+    'INSERT INTO email_verification_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
+    [userId, tokenHash, expiresAt]
   );
-  res.status(201).json(await session(await findById(r.insertId)));
+  await mailer.sendVerificationEmail(email, rawToken);
+  return rawToken;
+}
+
+exports.registrationStatus = asyncHandler(async (_req, res) => {
+  const [[{ totalUsers }]] = await db.execute('SELECT COUNT(*) AS totalUsers FROM users WHERE deleted_at IS NULL');
+  const isFirstUser = Number(totalUsers) === 0;
+  res.json({
+    success: true,
+    isFirstUser,
+    data: { isFirstUser, totalUsers: Number(totalUsers) },
+  });
+});
+
+exports.register = asyncHandler(async (req, res) => {
+  const {
+    firstName,
+    lastName,
+    name,
+    username,
+    email,
+    password,
+    acceptTerms,
+    role,
+    instructorKey,
+    instructorCode,
+    preceptorKey,
+    preceptorCode,
+  } = req.body;
+  if (acceptTerms === false) {
+    throw new AppError('Debés aceptar los términos y condiciones para crear una cuenta', 400, 'TERMS_REQUIRED');
+  }
+
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const existing = await findByEmail(normalizedEmail);
+  if (existing) {
+    // Unificación de cuentas: si el usuario ya se había registrado con Google/GitHub/Facebook (sin contraseña manual aún),
+    // vinculamos esta contraseña a la MISMA cuenta existente para que no sean cuentas distintas.
+    if (!existing.password_hash) {
+      const linkedHash = await bcrypt.hash(password, 10);
+      await db.execute('UPDATE users SET password_hash = ? WHERE id = ?', [linkedHash, existing.id]);
+      if (existing.role_name === 'student' && req.body.schoolYear && req.body.courseDivision) {
+        const sy = Number(req.body.schoolYear);
+        const cd = Number(req.body.courseDivision);
+        if (sy >= 1 && sy <= 6 && cd >= 1 && cd <= 3) {
+          await syncStudentCourseEnrollments(existing.id, sy, cd);
+        }
+      }
+      await logAudit(existing.id, 'OAUTH_ACCOUNT_LINKED_PASSWORD', 'user', existing.id, { email: normalizedEmail });
+      const unifiedUser = await findById(existing.id);
+      return res.status(200).json(await buildSessionResponse(unifiedUser, req));
+    }
+    // Si ya tenía contraseña y coincide, iniciar sesión en la misma cuenta
+    if (await bcrypt.compare(password, existing.password_hash)) {
+      const unifiedUser = await findById(existing.id);
+      return res.status(200).json(await buildSessionResponse(unifiedUser, req));
+    }
+    throw new AppError('El correo electrónico ya se encuentra registrado. Iniciá sesión con tu contraseña o con tu cuenta social vinculada.', 409, 'EMAIL_EXISTS');
+  }
+
+  // Verificar si es el primer usuario registrado en toda la base de datos
+  const [[{ totalUsers }]] = await db.execute('SELECT COUNT(*) AS totalUsers FROM users WHERE deleted_at IS NULL');
+  const isFirstUser = Number(totalUsers) === 0;
+
+  let targetRoleName = 'student';
+  if (isFirstUser) {
+    // El primer usuario registrado se convierte automáticamente en Administrador
+    targetRoleName = 'admin';
+  } else if (String(role || '').trim().toLowerCase() === 'instructor') {
+    const submittedKey = String(instructorKey ?? instructorCode ?? '').trim();
+    if (!submittedKey) {
+      throw new AppError(
+        'Debés completar el campo de clave de docente para poder registrarte e iniciar sesión como docente.',
+        422,
+        'INSTRUCTOR_KEY_REQUIRED',
+        [{ field: 'instructorKey', message: 'Debés completar este campo con la clave de docente' }]
+      );
+    }
+
+    const [keyRows] = await db.execute(
+      "SELECT setting_value FROM platform_settings WHERE setting_key = 'instructor_registration_key' LIMIT 1"
+    );
+    const validKey = String(keyRows[0]?.setting_value || '').trim();
+    if (!validKey || submittedKey !== validKey) {
+      throw new AppError(
+        'La clave de docente introducida es incorrecta. No se permite iniciar sesión sin la clave vigente del administrador.',
+        403,
+        'INVALID_INSTRUCTOR_KEY',
+        [{ field: 'instructorKey', message: 'La clave de docente ingresada es incorrecta' }]
+      );
+    }
+    targetRoleName = 'instructor';
+  } else if (String(role || '').trim().toLowerCase() === 'preceptor') {
+    const submittedKey = String(preceptorKey ?? preceptorCode ?? req.body?.preceptorKey ?? req.body?.preceptorCode ?? '').trim();
+    if (!submittedKey) {
+      throw new AppError(
+        'Debés completar el campo de clave de preceptor para poder registrarte como preceptor/a.',
+        422,
+        'PRECEPTOR_KEY_REQUIRED',
+        [{ field: 'preceptorKey', message: 'Debés completar este campo con la clave de preceptor' }]
+      );
+    }
+
+    const [keyRows] = await db.execute(
+      "SELECT setting_value FROM platform_settings WHERE setting_key = 'preceptor_registration_key' LIMIT 1"
+    );
+    const validKey = String(keyRows[0]?.setting_value || 'PRECEPTOR2026').trim();
+    if (!validKey || submittedKey !== validKey) {
+      throw new AppError(
+        'La clave de preceptor introducida es incorrecta. Solicitá la clave institucional al administrador.',
+        403,
+        'INVALID_PRECEPTOR_KEY',
+        [{ field: 'preceptorKey', message: 'La clave de preceptor ingresada es incorrecta' }]
+      );
+    }
+    targetRoleName = 'preceptor';
+  } else {
+    targetRoleName = 'student';
+  }
+
+  let resolvedFirst = (firstName || '').trim();
+  let resolvedLast = (lastName || '').trim();
+  if (!resolvedFirst && name) {
+    const parts = String(name).trim().split(/\s+/);
+    resolvedFirst = parts[0] || 'Usuario';
+    resolvedLast = parts.slice(1).join(' ') || 'SkillTrack';
+  }
+  if (!resolvedLast) resolvedLast = 'SkillTrack';
+
+  const cleanUsername = username ? String(username).trim().toLowerCase() : null;
+  if (cleanUsername) {
+    const [uExists] = await db.execute('SELECT id FROM users WHERE username = ?', [cleanUsername]);
+    if (uExists.length) throw new AppError('El nombre de usuario ya está en uso', 409, 'USERNAME_EXISTS');
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const [roleRows] = await db.execute('SELECT id FROM roles WHERE name = ? LIMIT 1', [targetRoleName]);
+  const roleId = roleRows[0]?.id || (targetRoleName === 'admin' ? 1 : targetRoleName === 'instructor' ? 2 : 3);
+
+  const [result] = await db.execute(
+    `INSERT INTO users (first_name, last_name, username, email, password_hash, role_id, status, preferences)
+     VALUES (?, ?, ?, ?, ?, ?, 'active', ?)`,
+    [
+      resolvedFirst,
+      resolvedLast,
+      cleanUsername,
+      normalizedEmail,
+      passwordHash,
+      roleId,
+      JSON.stringify({ theme: 'light', notifications: true, language: 'es', acceptedTermsAt: new Date().toISOString() }),
+    ]
+  );
+
+  // Si es alumno e indicó en qué año (1° a 6°) y curso (1° a 3°) se encuentra, aplicarle su curso y materias
+  if (targetRoleName === 'student') {
+    const sy = Number(req.body.schoolYear);
+    const cd = Number(req.body.courseDivision);
+    if (sy >= 1 && sy <= 6 && cd >= 1 && cd <= 3) {
+      await syncStudentCourseEnrollments(result.insertId, sy, cd);
+    }
+  }
+
+  const verificationCode = await issueEmailVerificationToken(result.insertId, normalizedEmail);
+  const welcomeTitle =
+    targetRoleName === 'admin'
+      ? '¡Bienvenido/a, Administrador/a General!'
+      : targetRoleName === 'instructor'
+      ? '¡Bienvenido/a al equipo docente de SkillTrack!'
+      : '¡Bienvenido/a a SkillTrack!';
+  const welcomeBody =
+    targetRoleName === 'admin'
+      ? 'Por ser el primer usuario registrado, tu cuenta recibió automáticamente el rol de Administrador. Podés configurar la clave para docentes desde tu panel.'
+      : targetRoleName === 'instructor'
+      ? 'Tu clave de docente fue validada correctamente. Ya podés crear y publicar cursos, módulos y evaluaciones.'
+      : 'Explorá el catálogo de cursos e inscribite para comenzar tu camino de aprendizaje.';
+
+  await db.execute(
+    `INSERT INTO notifications (user_id, type, title, body, resource_type, resource_id)
+     VALUES (?, 'welcome', ?, ?, NULL, NULL)`,
+    [result.insertId, welcomeTitle, welcomeBody]
+  );
+  await logAudit(result.insertId, 'USER_REGISTERED', 'user', result.insertId, {
+    email: normalizedEmail,
+    role: targetRoleName,
+    autoPromotedFirstUser: isFirstUser,
+  });
+
+  const user = await findById(result.insertId);
+  const response = await buildSessionResponse(user, req);
+  if (process.env.NODE_ENV !== 'production') {
+    response.devVerificationCode = verificationCode;
+  }
+  res.status(201).json(response);
 });
 
 exports.login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
-  const [rows] = await db.execute('SELECT * FROM users WHERE email=?', [email]);
-  const user = rows[0];
-  if (!user || !user.password_hash || !(await bcrypt.compare(password, user.password_hash)))
-    throw new AppError('Email o contraseña incorrectos', 401);
-  if (!user.is_active) throw new AppError('Tu cuenta está desactivada', 403);
+  let user = await findByEmail(email);
+  if (!user) {
+    throw new AppError('Correo electrónico o contraseña incorrectos', 401, 'INVALID_CREDENTIALS');
+  }
+
+  // Si el usuario se registró originalmente con Google/GitHub/Facebook (ej. 123@gmail.com) y no tenía contraseña manual,
+  // al iniciar sesión escribiendo el mismo mail y una contraseña se vincula a esa MISMA cuenta existente.
+  if (!user.password_hash) {
+    if (!password || String(password).length < 6) {
+      throw new AppError('Ingresá una contraseña válida para acceder a tu cuenta.', 401, 'INVALID_CREDENTIALS');
+    }
+    const newHash = await bcrypt.hash(String(password), 10);
+    await db.execute('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, user.id]);
+    await logAudit(user.id, 'OAUTH_ACCOUNT_LINKED_PASSWORD_ON_LOGIN', 'user', user.id, { email: user.email });
+    user = await findById(user.id);
+  } else if (!(await bcrypt.compare(password, user.password_hash))) {
+    throw new AppError('Correo electrónico o contraseña incorrectos', 401, 'INVALID_CREDENTIALS');
+  }
+
+  if (user.status === 'suspended') {
+    throw new AppError('Tu cuenta ha sido suspendida por un administrador', 403, 'ACCOUNT_SUSPENDED');
+  }
 
   if (user.two_factor_enabled) {
-    await startOtp(user);
     return res.status(202).json({
+      success: true,
       twoFactorRequired: true,
       userId: user.id,
-      message: 'Te enviamos un código de verificación a tu email',
+      email: user.email,
+      message: 'Ingresá el código de 6 dígitos de tu aplicación autenticadora o un código de recuperación',
     });
   }
-  res.json(await session(user));
+
+  await logAudit(user.id, 'USER_LOGIN', 'user', user.id, { method: 'password' });
+  res.json(await buildSessionResponse(user, req));
 });
 
-exports.verifyTwoFactor = asyncHandler(async (req, res) => {
-  const { userId, code } = req.body;
-  const [rows] = await db.execute(
-    'SELECT * FROM otp_codes WHERE user_id=? AND used=0 AND expires_at>? ORDER BY id DESC LIMIT 1',
-    [userId, new Date()]
-  );
-  const otp = rows[0];
-  if (!otp) throw new AppError('El código venció. Pedí uno nuevo', 401);
-  if (otp.attempts >= 5) throw new AppError('Demasiados intentos. Pedí un código nuevo', 429);
-  if (otp.code_hash !== tokens.sha256(String(code) + userId)) {
-    await db.execute('UPDATE otp_codes SET attempts=attempts+1 WHERE id=?', [otp.id]);
-    throw new AppError('Código incorrecto', 401);
+exports.me = asyncHandler(async (req, res) => {
+  const user = await findById(req.user.id);
+  if (!user) throw new AppError('Usuario no encontrado', 404, 'USER_NOT_FOUND');
+  const serialized = publicUser(user);
+  res.json({ success: true, data: serialized, ...serialized });
+});
+
+exports.verifyEmail = asyncHandler(async (req, res) => {
+  const token = String(req.body.token || req.query.token || '').trim();
+  const userId = req.body.userId || req.user?.id;
+  if (!token || !userId) {
+    throw new AppError('Código de verificación y usuario requeridos', 400, 'MISSING_VERIFICATION_DATA');
   }
-  await db.execute('UPDATE otp_codes SET used=1 WHERE id=?', [otp.id]);
-  const user = await findById(userId);
-  if (!user || !user.is_active) throw new AppError('Cuenta no disponible', 403);
-  res.json(await session(user));
+
+  const tokenHash = tokens.sha256(`verify:${userId}:${token}`);
+  const [rows] = await db.execute(
+    `SELECT id FROM email_verification_tokens
+     WHERE user_id = ? AND token_hash = ? AND used_at IS NULL AND expires_at > NOW()
+     ORDER BY id DESC LIMIT 1`,
+    [userId, tokenHash]
+  );
+  if (!rows.length) {
+    throw new AppError('El código de verificación es inválido o ha vencido', 400, 'INVALID_VERIFICATION_TOKEN');
+  }
+
+  await db.execute('UPDATE email_verification_tokens SET used_at = NOW() WHERE id = ?', [rows[0].id]);
+  await db.execute("UPDATE users SET email_verified_at = NOW(), status = 'active' WHERE id = ?", [userId]);
+  await logAudit(userId, 'EMAIL_VERIFIED', 'user', userId);
+
+  const updated = await findById(userId);
+  res.json({
+    success: true,
+    message: 'Correo electrónico verificado correctamente',
+    user: publicUser(updated),
+  });
 });
 
-exports.resendTwoFactor = asyncHandler(async (req, res) => {
-  const user = await findById(req.body.userId);
-  if (user && user.two_factor_enabled && user.is_active) await startOtp(user);
-  // Respuesta idéntica exista o no el usuario (no filtra información)
-  res.json({ message: 'Si la cuenta existe, enviamos un nuevo código' });
+exports.resendVerification = asyncHandler(async (req, res) => {
+  const userId = req.user?.id || req.body.userId;
+  const email = req.body.email;
+  const user = userId ? await findById(userId) : email ? await findByEmail(email) : null;
+
+  if (user && !user.email_verified_at) {
+    const code = await issueEmailVerificationToken(user.id, user.email);
+    const resp = {
+      success: true,
+      message: 'Enviamos un nuevo código de verificación a tu correo electrónico',
+    };
+    if (process.env.NODE_ENV !== 'production') resp.devVerificationCode = code;
+    return res.json(resp);
+  }
+
+  res.json({
+    success: true,
+    message: 'Si la cuenta requiere verificación, enviamos un nuevo código al correo registrado',
+  });
+});
+
+exports.forgotPassword = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+  const user = await findByEmail(email);
+  let devResetCode;
+
+  if (user && user.status !== 'suspended') {
+    const rawCode = crypto.randomInt(100000, 1000000).toString();
+    const tokenHash = tokens.sha256(`reset:${user.email}:${rawCode}`);
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    await db.execute('UPDATE password_reset_tokens SET used_at = NOW() WHERE user_id = ? AND used_at IS NULL', [user.id]);
+    await db.execute(
+      'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
+      [user.id, tokenHash, expiresAt]
+    );
+    await mailer.sendPasswordResetEmail(user.email, rawCode);
+    if (process.env.NODE_ENV !== 'production') devResetCode = rawCode;
+  }
+
+  res.json({
+    success: true,
+    message: 'Si el correo está registrado, recibirás un código temporal para restablecer tu contraseña.',
+    ...(devResetCode && { devResetCode }),
+  });
+});
+
+exports.resetPassword = asyncHandler(async (req, res) => {
+  const { email, token, code, newPassword } = req.body;
+  const resetCode = String(token || code || '').trim();
+  const user = await findByEmail(email);
+  if (!user || !resetCode) {
+    throw new AppError('Código de recuperación inválido o vencido', 400, 'INVALID_RESET_TOKEN');
+  }
+
+  const tokenHash = tokens.sha256(`reset:${user.email}:${resetCode}`);
+  const [rows] = await db.execute(
+    `SELECT id FROM password_reset_tokens
+     WHERE user_id = ? AND token_hash = ? AND used_at IS NULL AND expires_at > NOW()
+     ORDER BY id DESC LIMIT 1`,
+    [user.id, tokenHash]
+  );
+  if (!rows.length) {
+    throw new AppError('El código de recuperación es inválido o ha vencido', 400, 'INVALID_RESET_TOKEN');
+  }
+
+  const newHash = await bcrypt.hash(newPassword, 10);
+  await db.withTransaction(async (conn) => {
+    await conn.execute('UPDATE password_reset_tokens SET used_at = NOW() WHERE id = ?', [rows[0].id]);
+    await conn.execute('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, user.id]);
+    await conn.execute('UPDATE refresh_tokens SET revoked_at = NOW() WHERE user_id = ? AND revoked_at IS NULL', [user.id]);
+  });
+
+  await logAudit(user.id, 'PASSWORD_RESET', 'user', user.id);
+  res.json({
+    success: true,
+    message: 'Contraseña actualizada correctamente. Ya podés iniciar sesión.',
+  });
+});
+
+/**
+ * Configura el segundo factor TOTP (genera secreto cifrado, URI otpauth y códigos de recuperación).
+ */
+exports.setupTwoFactor = asyncHandler(async (req, res) => {
+  const user = await findById(req.user.id);
+  const { currentPassword } = req.body;
+  if (user.password_hash && currentPassword) {
+    const ok = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!ok) throw new AppError('La contraseña actual es incorrecta', 401, 'INVALID_PASSWORD');
+  }
+
+  const secretBase32 = totp.generateTotpSecret();
+  const encryptedSecret = totp.encryptSecret(secretBase32);
+  const { plainCodes, hashedCodes } = totp.generateRecoveryCodes(6);
+  const otpauthUri = totp.buildOtpAuthUri(user.email, secretBase32);
+
+  await db.execute(
+    `INSERT INTO user_two_factor (user_id, encrypted_secret, recovery_codes_json, attempts, enabled_at)
+     VALUES (?, ?, ?, 0, NULL)
+     ON DUPLICATE KEY UPDATE
+       encrypted_secret = VALUES(encrypted_secret),
+       recovery_codes_json = VALUES(recovery_codes_json),
+       attempts = 0,
+       enabled_at = NULL`,
+    [user.id, encryptedSecret, JSON.stringify(hashedCodes)]
+  );
+
+  res.json({
+    success: true,
+    message: 'Escaneá o copiá la clave secreta en tu app autenticadora e ingresá el código de 6 dígitos para confirmar.',
+    data: {
+      secret: secretBase32,
+      otpauthUri,
+      otpauthUrl: otpauthUri,
+      recoveryCodes: plainCodes,
+      currentCodeHint: process.env.NODE_ENV !== 'production' ? totp.computeHotp(secretBase32, Math.floor(Date.now() / 30000)) : undefined,
+    },
+  });
+});
+
+/**
+ * Verifica el código TOTP (o de recuperación) tanto para activar el 2FA como durante el inicio de sesión.
+ */
+exports.verifyTwoFactor = asyncHandler(async (req, res) => {
+  const userId = req.user?.id || Number(req.body.userId);
+  const code = String(req.body.code || '').trim();
+  if (!userId || !code) {
+    throw new AppError('Usuario y código requeridos', 400, 'MISSING_2FA_CODE');
+  }
+
+  const user = await findById(userId);
+  if (!user || user.status === 'suspended') {
+    throw new AppError('Cuenta no disponible', 403, 'ACCOUNT_UNAVAILABLE');
+  }
+
+  const [tfRows] = await db.execute('SELECT * FROM user_two_factor WHERE user_id = ?', [user.id]);
+  const tf = tfRows[0];
+  if (!tf) {
+    throw new AppError('El segundo factor no está configurado para esta cuenta', 400, '2FA_NOT_CONFIGURED');
+  }
+  if (tf.attempts >= 5) {
+    throw new AppError('Demasiados intentos fallidos. Reconfigurá o usá un código de recuperación.', 429, 'TOO_MANY_ATTEMPTS');
+  }
+
+  const secretBase32 = totp.decryptSecret(tf.encrypted_secret);
+  const check = totp.verifyTotpCode(secretBase32, code, tf.last_used_step);
+
+  let verified = check.valid;
+  let updatedRecoveryHashes = null;
+
+  if (!verified && code.includes('-')) {
+    const recoveryHashes = JSON.parse(tf.recovery_codes_json || '[]');
+    const candidateHash = totp.hashRecoveryCode(code);
+    const idx = recoveryHashes.indexOf(candidateHash);
+    if (idx !== -1) {
+      verified = true;
+      recoveryHashes.splice(idx, 1);
+      updatedRecoveryHashes = JSON.stringify(recoveryHashes);
+    }
+  }
+
+  if (!verified) {
+    await db.execute('UPDATE user_two_factor SET attempts = attempts + 1 WHERE user_id = ?', [user.id]);
+    throw new AppError('Código de verificación incorrecto o ya utilizado', 401, 'INVALID_2FA_CODE');
+  }
+
+  await db.execute(
+    `UPDATE user_two_factor
+     SET attempts = 0,
+         enabled_at = COALESCE(enabled_at, NOW()),
+         last_used_step = COALESCE(?, last_used_step),
+         recovery_codes_json = COALESCE(?, recovery_codes_json)
+     WHERE user_id = ?`,
+    [check.step, updatedRecoveryHashes, user.id]
+  );
+
+  if (!user.two_factor_enabled) {
+    await db.execute('UPDATE users SET two_factor_enabled = 1 WHERE id = ?', [user.id]);
+    await logAudit(user.id, '2FA_ENABLED', 'user', user.id);
+  } else {
+    await logAudit(user.id, 'USER_LOGIN_2FA', 'user', user.id);
+  }
+
+  const freshUser = await findById(user.id);
+  res.json(await buildSessionResponse(freshUser, req));
+});
+
+exports.disableTwoFactor = asyncHandler(async (req, res) => {
+  const user = await findById(req.user.id);
+  const currentPassword = req.body.currentPassword || req.body.password;
+  if (user.password_hash && (!currentPassword || !(await bcrypt.compare(currentPassword, user.password_hash)))) {
+    throw new AppError('Ingresá tu contraseña actual para desactivar el segundo factor', 401, 'INVALID_PASSWORD');
+  }
+
+  await db.withTransaction(async (conn) => {
+    await conn.execute('UPDATE users SET two_factor_enabled = 0 WHERE id = ?', [user.id]);
+    await conn.execute('DELETE FROM user_two_factor WHERE user_id = ?', [user.id]);
+  });
+
+  await logAudit(user.id, '2FA_DISABLED', 'user', user.id);
+  const updated = await findById(user.id);
+  res.json({
+    success: true,
+    message: 'Segundo factor desactivado correctamente',
+    user: publicUser(updated),
+  });
 });
 
 exports.socialLogin = asyncHandler(async (req, res) => {
   const { provider } = req.params;
   const profile = await social.getProfile(provider, req.body);
 
-  const [links] = await db.execute(
-    'SELECT u.* FROM social_accounts s JOIN users u ON u.id=s.user_id WHERE s.provider=? AND s.provider_id=?',
+  const [identityRows] = await db.execute(
+    `SELECT u.*, r.name AS role_name
+     FROM user_identities ui
+     JOIN users u ON u.id = ui.user_id
+     JOIN roles r ON r.id = u.role_id
+     WHERE ui.provider = ? AND ui.provider_user_id = ? AND u.deleted_at IS NULL`,
     [provider, profile.id]
   );
-  let user = links[0];
+
+  let user = identityRows[0];
+
   if (!user) {
-    if (!profile.email) throw new AppError('El proveedor no compartió un email verificado', 400);
-    // Si ya existe un usuario con ese email se vincula; si no, se crea con rol "user".
-    user = (await db.execute('SELECT * FROM users WHERE email=?', [profile.email]))[0][0];
-    if (!user) {
-      const [r] = await db.execute('INSERT INTO users (name,email,role,avatar_url) VALUES (?,?,?,?)', [
-        profile.name || profile.email.split('@')[0],
-        profile.email,
-        'user',
-        profile.avatar || null,
-      ]);
-      user = await findById(r.insertId);
+    if (!profile.email || !profile.emailVerified) {
+      throw new AppError(
+        'El proveedor social no proporcionó un correo electrónico verificado. Usá una cuenta con email verificado.',
+        400,
+        'UNVERIFIED_OAUTH_EMAIL'
+      );
     }
-    await db.execute('INSERT INTO social_accounts (user_id, provider, provider_id) VALUES (?,?,?)', [
-      user.id,
-      provider,
-      profile.id,
-    ]);
+
+    user = await findByEmail(profile.email);
+    if (!user) {
+      const [[{ totalUsers }]] = await db.execute('SELECT COUNT(*) AS totalUsers FROM users WHERE deleted_at IS NULL');
+      const isFirstUser = Number(totalUsers) === 0;
+      let targetRoleName = isFirstUser ? 'admin' : 'student';
+
+      if (!isFirstUser && String(req.body?.role || '').trim().toLowerCase() === 'instructor') {
+        const submittedKey = String(req.body?.instructorKey ?? req.body?.instructorCode ?? '').trim();
+        if (!submittedKey) {
+          throw new AppError(
+            'Debés completar el campo de clave de docente para ingresar como docente.',
+            422,
+            'INSTRUCTOR_KEY_REQUIRED',
+            [{ field: 'instructorKey', message: 'Debés completar este campo con la clave de docente' }]
+          );
+        }
+        const [keyRows] = await db.execute(
+          "SELECT setting_value FROM platform_settings WHERE setting_key = 'instructor_registration_key' LIMIT 1"
+        );
+        const validKey = String(keyRows[0]?.setting_value || '').trim();
+        if (!validKey || submittedKey !== validKey) {
+          throw new AppError(
+            'La clave de docente introducida es incorrecta.',
+            403,
+            'INVALID_INSTRUCTOR_KEY',
+            [{ field: 'instructorKey', message: 'La clave de docente ingresada es incorrecta' }]
+          );
+        }
+        targetRoleName = 'instructor';
+      }
+
+      const [roleRows] = await db.execute('SELECT id FROM roles WHERE name = ? LIMIT 1', [targetRoleName]);
+      const roleId = roleRows[0]?.id || (targetRoleName === 'admin' ? 1 : targetRoleName === 'instructor' ? 2 : 3);
+      const [ins] = await db.execute(
+        `INSERT INTO users (first_name, last_name, email, avatar_url, role_id, status, email_verified_at, preferences)
+         VALUES (?, ?, ?, ?, ?, 'active', NOW(), ?)`,
+        [
+          profile.firstName,
+          profile.lastName,
+          profile.email.toLowerCase(),
+          profile.avatar,
+          roleId,
+          JSON.stringify({ theme: 'light', notifications: true, language: 'es' }),
+        ]
+      );
+      user = await findById(ins.insertId);
+    }
+
+    await db.execute(
+      'INSERT IGNORE INTO user_identities (user_id, provider, provider_user_id, provider_email) VALUES (?, ?, ?, ?)',
+      [user.id, provider, profile.id, profile.email.toLowerCase()]
+    );
   }
-  if (!user.is_active) throw new AppError('Tu cuenta está desactivada', 403);
-  res.json(await session(user));
+
+  if (user.status === 'suspended') {
+    throw new AppError('Tu cuenta está suspendida', 403, 'ACCOUNT_SUSPENDED');
+  }
+
+  await logAudit(user.id, 'USER_LOGIN_OAUTH', 'user', user.id, { provider });
+  res.json(await buildSessionResponse(user, req));
 });
 
 exports.refresh = asyncHandler(async (req, res) => {
   const userId = await tokens.consumeRefresh(req.body.refreshToken);
-  if (!userId) throw new AppError('Sesión vencida, iniciá sesión nuevamente', 401);
+  if (!userId) throw new AppError('Sesión vencida. Iniciá sesión nuevamente.', 401, 'REFRESH_EXPIRED');
   const user = await findById(userId);
-  if (!user || !user.is_active) throw new AppError('Cuenta no disponible', 401);
-  res.json(await tokens.issueSession(user));
+  if (!user || user.status === 'suspended') {
+    throw new AppError('Cuenta no disponible', 401, 'ACCOUNT_UNAVAILABLE');
+  }
+  const sessionTokens = await tokens.issueSession(user, req.headers['user-agent']);
+  res.json({ success: true, ...sessionTokens, data: sessionTokens });
 });
 
 exports.logout = asyncHandler(async (req, res) => {
-  if (req.body.refreshToken) await tokens.revokeRefresh(req.body.refreshToken);
+  if (req.body?.refreshToken) {
+    await tokens.revokeRefresh(req.body.refreshToken);
+  }
   res.status(204).end();
+});
+
+exports.listSessions = asyncHandler(async (req, res) => {
+  const sessions = await tokens.listActiveSessions(req.user.id);
+  res.json({ success: true, data: sessions });
+});
+
+exports.revokeSession = asyncHandler(async (req, res) => {
+  const ok = await tokens.revokeSessionById(req.user.id, Number(req.params.id));
+  if (!ok) throw new AppError('Sesión no encontrada', 404, 'SESSION_NOT_FOUND');
+  res.json({ success: true, message: 'Sesión cerrada correctamente' });
 });

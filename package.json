@@ -1,0 +1,14 @@
+{
+  "name": "skilltrack",
+  "version": "1.0.0",
+  "description": "SkillTrack - Plataforma y Campus Escolar Integral",
+  "main": "backend/src/server.js",
+  "scripts": {
+    "start": "node backend/src/server.js",
+    "postinstall": "cd backend && npm install",
+    "dev": "cd backend && npm run dev"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
