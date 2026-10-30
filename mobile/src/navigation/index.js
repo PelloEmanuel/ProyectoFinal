@@ -119,7 +119,7 @@ function UnifiedTopNavBar({ state, descriptors, navigation }) {
         borderBottomColor: colors.border,
         paddingTop: Math.max(insets?.top || 0, 8),
         paddingBottom: 8,
-        paddingHorizontal: 12,
+        paddingHorizontal: isMobile ? 8 : 12,
         elevation: 3,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
@@ -133,7 +133,7 @@ function UnifiedTopNavBar({ state, descriptors, navigation }) {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: 8,
+          gap: isMobile ? 4 : 8,
         }}
       >
         {/* LADO IZQUIERDO: Nombre de la página Campus Técnica 5 con flecha en móvil */}
@@ -156,11 +156,12 @@ function UnifiedTopNavBar({ state, descriptors, navigation }) {
           style={({ pressed }) => ({
             flexDirection: 'row',
             alignItems: 'center',
-            gap: 7,
+            gap: isMobile ? 5 : 7,
             marginRight: 2,
             paddingVertical: 4,
-            paddingHorizontal: isMobile ? 6 : 0,
+            paddingHorizontal: isMobile ? 4 : 0,
             borderRadius: 8,
+            flexShrink: 1,
             backgroundColor:
               isMobile && menuOpen
                 ? isDark
@@ -175,8 +176,8 @@ function UnifiedTopNavBar({ state, descriptors, navigation }) {
         >
           <View
             style={{
-              width: 36,
-              height: 28,
+              width: isMobile ? 30 : 36,
+              height: isMobile ? 24 : 28,
               borderRadius: 6,
               backgroundColor: '#ffffff',
               borderWidth: 1,
@@ -193,11 +194,12 @@ function UnifiedTopNavBar({ state, descriptors, navigation }) {
             />
           </View>
           <Text
+            numberOfLines={1}
             style={{
-              fontSize: 17,
+              fontSize: isMobile ? 14.5 : 17,
               fontWeight: '900',
               color: colors.text,
-              letterSpacing: 0.3,
+              letterSpacing: isMobile ? 0 : 0.3,
             }}
           >
             Campus <Text style={{ color: colors.primary }}>Técnica 5</Text>
@@ -209,9 +211,9 @@ function UnifiedTopNavBar({ state, descriptors, navigation }) {
           {isMobile && (
             <Ionicons
               name={menuOpen ? 'chevron-down' : 'chevron-up'}
-              size={18}
+              size={isMobile ? 15 : 18}
               color={colors.text}
-              style={{ marginLeft: 2 }}
+              style={{ marginLeft: 1 }}
             />
           )}
         </Pressable>
@@ -292,7 +294,7 @@ function UnifiedTopNavBar({ state, descriptors, navigation }) {
         )}
 
         {/* LADO DERECHO: Botón de Modo Oscuro / Claro + Botón para la Cuenta */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: isMobile ? 4 : 6, flexShrink: 0 }}>
           {/* BOTÓN MODO OSCURO / CLARO ACCESIBLE */}
           <Pressable
             onPress={toggleTheme}
@@ -301,9 +303,9 @@ function UnifiedTopNavBar({ state, descriptors, navigation }) {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              gap: 5,
-              paddingVertical: 6,
-              paddingHorizontal: 9,
+              gap: isMobile ? 3.5 : 5,
+              paddingVertical: isMobile ? 5 : 6,
+              paddingHorizontal: isMobile ? 7 : 9,
               borderRadius: 18,
               backgroundColor: isDark ? 'rgba(251, 191, 36, 0.14)' : 'rgba(245, 158, 11, 0.12)',
               borderWidth: 1,
@@ -312,12 +314,12 @@ function UnifiedTopNavBar({ state, descriptors, navigation }) {
           >
             <Ionicons
               name={isDark ? 'moon' : 'sunny'}
-              size={15}
+              size={isMobile ? 13 : 15}
               color={isDark ? '#fbbf24' : '#d97706'}
             />
             <Text
               style={{
-                fontSize: 11,
+                fontSize: isMobile ? 10 : 11,
                 fontWeight: '800',
                 color: isDark ? '#fbbf24' : '#d97706',
               }}
@@ -345,9 +347,9 @@ function UnifiedTopNavBar({ state, descriptors, navigation }) {
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                gap: 5,
-                paddingVertical: 6,
-                paddingHorizontal: 9,
+                gap: isMobile ? 3.5 : 5,
+                paddingVertical: isMobile ? 5 : 6,
+                paddingHorizontal: isMobile ? 7 : 9,
                 borderRadius: 18,
                 backgroundColor: isProfileFocused
                   ? isDark
@@ -362,12 +364,12 @@ function UnifiedTopNavBar({ state, descriptors, navigation }) {
             >
               <Ionicons
                 name="person-circle-outline"
-                size={16}
+                size={isMobile ? 14 : 16}
                 color={isProfileFocused ? colors.primary : colors.textSecondary}
               />
               <Text
                 style={{
-                  fontSize: 11,
+                  fontSize: isMobile ? 10 : 11,
                   fontWeight: '700',
                   color: isProfileFocused ? colors.primary : colors.textSecondary,
                 }}
