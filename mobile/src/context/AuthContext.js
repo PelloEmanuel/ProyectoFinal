@@ -192,7 +192,6 @@ export function AuthProvider({ children }) {
             requiresVerification: Boolean(data?.requiresVerification),
             userId: data?.userId,
             email: data?.email || email.trim(),
-            devVerificationCode: data?.devVerificationCode,
             message: data?.message,
           };
         }

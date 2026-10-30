@@ -57,7 +57,6 @@ export default function ProfileScreen({ navigation }) {
   // 2-Step Verification by Email state
   const [email2faStep, setEmail2faStep] = useState('idle'); // 'idle' | 'input'
   const [email2faCode, setEmail2faCode] = useState('');
-  const [email2faDevCode, setEmail2faDevCode] = useState('');
 
   // 2FA TOTP state
   const [totpSetup, setTotpSetup] = useState(null); // { secret, otpauthUrl }
@@ -137,10 +136,6 @@ export default function ProfileScreen({ navigation }) {
     try {
       const res = await authApi.resendVerification({ userId: user?.id, email: user?.email });
       setSuccess(res.message || 'Código de verificación enviado a tu correo.');
-      if (res.devVerificationCode) {
-        setEmail2faDevCode(res.devVerificationCode);
-        setEmail2faCode(res.devVerificationCode);
-      }
       setEmail2faStep('input');
     } catch (err) {
       setError(extractErrorMessage(err));
@@ -163,7 +158,6 @@ export default function ProfileScreen({ navigation }) {
       setSuccess(res.message || '¡Verificación en 2 pasos completada con éxito en tu cuenta!');
       setEmail2faStep('idle');
       setEmail2faCode('');
-      setEmail2faDevCode('');
     } catch (err) {
       setError(extractErrorMessage(err));
     } finally {
@@ -394,23 +388,14 @@ export default function ProfileScreen({ navigation }) {
             />
           ) : (
             <View>
-              {email2faDevCode ? (
-                <View style={[styles.secretBox, { backgroundColor: colors.surfaceAlt, borderColor: colors.primary, marginBottom: 12 }]}>
-                  <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>
-                    CÓDIGO DE VERIFICACIÓN:
-                  </Text>
-                  <Text selectable style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 4 }}>
-                    {email2faDevCode}
-                  </Text>
-                </View>
-              ) : null}
               <Input
                 label="Código de 6 dígitos recibido por correo"
                 value={email2faCode}
                 onChangeText={setEmail2faCode}
-                placeholder="123456"
+                placeholder="Ingresá los 6 dígitos recibidos"
                 keyboardType="numeric"
                 autoCapitalize="none"
+                maxLength={6}
               />
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
                 <View style={{ flex: 1 }}>

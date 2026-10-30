@@ -59,7 +59,6 @@ export default function LoginScreen({ navigation }) {
           mode: 'verify_email',
           userId: res.userId,
           email: res.email,
-          devCode: res.devVerificationCode,
         });
         return;
       }
@@ -68,7 +67,6 @@ export default function LoginScreen({ navigation }) {
           mode: '2fa',
           userId: res.userId,
           email: res.email,
-          devCode: res.devVerificationCode,
         });
         return;
       }

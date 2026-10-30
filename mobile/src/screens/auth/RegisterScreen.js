@@ -141,7 +141,6 @@ export default function RegisterScreen({ navigation }) {
           mode: 'verify_email',
           userId: res.userId,
           email: res.email || form.email.trim().toLowerCase(),
-          devCode: res.devVerificationCode,
         });
         return;
       }

@@ -17,13 +17,12 @@ export default function VerifyCodeScreen({ navigation, route }) {
   const mode = route.params?.mode || 'verify_email';
   const initialEmail = route.params?.email || '';
   const userId = route.params?.userId;
-  const initialDevCode = route.params?.devCode || route.params?.devVerificationCode || '';
 
   const { verifyTwoFactor, refreshProfile, startSession } = useAuth();
   const { colors } = useTheme();
 
   const [email, setEmail] = useState(initialEmail);
-  const [code, setCode] = useState(initialDevCode);
+  const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [step, setStep] = useState(mode === 'forgot_password' ? 'request' : 'verify');
   const [error, setError] = useState('');
@@ -50,9 +49,6 @@ export default function VerifyCodeScreen({ navigation, route }) {
     try {
       const res = await authApi.forgotPassword(email.trim());
       setSuccess(res.message);
-      if (res.devResetCode) {
-        setCode(res.devResetCode);
-      }
       setStep('reset');
     } catch (e) {
       setError(getErrorMessage(e));
@@ -103,9 +99,6 @@ export default function VerifyCodeScreen({ navigation, route }) {
     try {
       const res = await authApi.resendVerification({ userId, email });
       setSuccess(res.message || 'Código de verificación reenviado a tu correo');
-      if (res.devVerificationCode) {
-        setCode(res.devVerificationCode);
-      }
     } catch (e) {
       setError(getErrorMessage(e));
     } finally {
@@ -124,27 +117,17 @@ export default function VerifyCodeScreen({ navigation, route }) {
             Verificación en 2 Pasos
           </Text>
           <Text style={{ color: colors.muted, marginBottom: 16, lineHeight: 20 }}>
-            Para completar tu registro y acceder al Campus Escolar, ingresá el código de 6 dígitos que enviamos a tu correo electrónico ({email || 'tu casilla'}).
+            Para completar tu registro y acceder al Campus Escolar, revisá tu casilla de correo ({email || 'tu correo'}) e ingresá manualmente el código de 6 dígitos que te enviamos.
           </Text>
-
-          {initialDevCode ? (
-            <View style={{ backgroundColor: colors.surfaceAlt, borderColor: colors.primary, borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 16 }}>
-              <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 12 }}>
-                CÓDIGO DE VERIFICACIÓN:
-              </Text>
-              <Text selectable style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 4 }}>
-                {initialDevCode}
-              </Text>
-            </View>
-          ) : null}
 
           <Input
             label="Código de 6 dígitos"
             value={code}
             onChangeText={setCode}
-            placeholder="123456"
+            placeholder="Ingresá los 6 dígitos"
             keyboardType="number-pad"
             autoCapitalize="none"
+            maxLength={6}
           />
 
           <Button
@@ -178,27 +161,17 @@ export default function VerifyCodeScreen({ navigation, route }) {
             Verificación en 2 Pasos
           </Text>
           <Text style={{ color: colors.muted, marginBottom: 16, lineHeight: 20 }}>
-            Ingresá el código de verificación de 6 dígitos enviado a tu correo ({email}), o el código temporal de tu aplicación autenticadora.
+            Revisá tu casilla de correo ({email}) e ingresá manualmente el código de verificación de 6 dígitos que te enviamos (o el código temporal de tu app autenticadora).
           </Text>
-
-          {initialDevCode ? (
-            <View style={{ backgroundColor: colors.surfaceAlt, borderColor: colors.primary, borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 16 }}>
-              <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 12 }}>
-                CÓDIGO DE VERIFICACIÓN:
-              </Text>
-              <Text selectable style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 4 }}>
-                {initialDevCode}
-              </Text>
-            </View>
-          ) : null}
 
           <Input
             label="Código de Verificación (6 dígitos)"
             value={code}
             onChangeText={setCode}
-            placeholder="123456"
+            placeholder="Ingresá los 6 dígitos"
             keyboardType="number-pad"
             autoCapitalize="characters"
+            maxLength={6}
           />
 
           <Button
@@ -251,7 +224,14 @@ export default function VerifyCodeScreen({ navigation, route }) {
           <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text, marginBottom: 6 }}>
             Definir nueva contraseña
           </Text>
-          <Input label="Código temporal de 6 dígitos" value={code} onChangeText={setCode} placeholder="123456" keyboardType="number-pad" />
+          <Input
+            label="Código temporal de 6 dígitos"
+            value={code}
+            onChangeText={setCode}
+            placeholder="Ingresá los 6 dígitos recibidos por correo"
+            keyboardType="number-pad"
+            maxLength={6}
+          />
           <Input
             label="Nueva contraseña"
             value={newPassword}

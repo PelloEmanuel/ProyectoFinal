@@ -265,11 +265,8 @@ exports.register = asyncHandler(async (req, res) => {
     twoFactorRequired: true,
     userId: result.insertId,
     email: normalizedEmail,
-    message: 'Te enviamos un código de verificación en 2 pasos a tu correo electrónico. Ingresalo para completar tu registro.',
+    message: 'Te enviamos un código de verificación en 2 pasos a tu correo electrónico. Ingresalo manualmente para completar tu registro.',
   };
-  if (!sent || !process.env.SMTP_HOST || process.env.NODE_ENV !== 'production') {
-    response.devVerificationCode = rawToken;
-  }
   res.status(201).json(response);
 });
 
@@ -306,7 +303,7 @@ exports.login = asyncHandler(async (req, res) => {
 
   // Requisito obligatorio: La cuenta debe completar la verificación en 2 pasos antes de entrar
   if (!user.email_verified_at) {
-    const { rawToken, sent } = await issueEmailVerificationToken(user.id, user.email);
+    await issueEmailVerificationToken(user.id, user.email);
     const resp = {
       success: true,
       requiresVerification: true,
@@ -315,9 +312,6 @@ exports.login = asyncHandler(async (req, res) => {
       email: user.email,
       message: 'Debés ingresar el código de verificación en 2 pasos enviado a tu correo antes de acceder al Campus.',
     };
-    if (!sent || !process.env.SMTP_HOST || process.env.NODE_ENV !== 'production') {
-      resp.devVerificationCode = rawToken;
-    }
     return res.status(202).json(resp);
   }
 
@@ -381,16 +375,13 @@ exports.resendVerification = asyncHandler(async (req, res) => {
   const user = userId ? await findById(userId) : email ? await findByEmail(email) : null;
 
   if (user) {
-    const { rawToken, sent } = await issueEmailVerificationToken(user.id, user.email);
+    await issueEmailVerificationToken(user.id, user.email);
     const resp = {
       success: true,
       message: 'Enviamos un nuevo código de verificación en 2 pasos a tu correo electrónico',
       userId: user.id,
       email: user.email,
     };
-    if (!sent || !process.env.SMTP_HOST || process.env.NODE_ENV !== 'production') {
-      resp.devVerificationCode = rawToken;
-    }
     return res.json(resp);
   }
 
@@ -403,7 +394,6 @@ exports.resendVerification = asyncHandler(async (req, res) => {
 exports.forgotPassword = asyncHandler(async (req, res) => {
   const { email } = req.body;
   const user = await findByEmail(email);
-  let devResetCode;
 
   if (user && user.status !== 'suspended') {
     const rawCode = crypto.randomInt(100000, 1000000).toString();
@@ -414,18 +404,12 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
       'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
       [user.id, tokenHash, expiresAt]
     );
-    const sent = await mailer.sendPasswordResetEmail(user.email, rawCode);
-    if (!sent || !process.env.SMTP_HOST || process.env.NODE_ENV !== 'production') {
-      devResetCode = rawCode;
-    }
+    await mailer.sendPasswordResetEmail(user.email, rawCode);
   }
 
   res.json({
     success: true,
-    message: devResetCode
-      ? `Código temporal de recuperación: ${devResetCode}. Ingresalo junto con tu nueva contraseña.`
-      : 'Si el correo está registrado, recibirás un código temporal para restablecer tu contraseña en tu casilla de correo.',
-    ...(devResetCode && { devResetCode }),
+    message: 'Si el correo está registrado, recibirás un código temporal para restablecer tu contraseña en tu casilla de correo.',
   });
 });
 
