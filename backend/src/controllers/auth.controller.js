@@ -424,11 +424,14 @@ exports.mailDiagnostic = asyncHandler(async (_req, res) => {
   const service = process.env.SMTP_SERVICE || 'none';
   const user = process.env.SMTP_USER ? `${process.env.SMTP_USER.slice(0, 3)}***` : 'none';
   const passSet = Boolean(process.env.SMTP_PASS);
+  const hasResend = Boolean(process.env.RESEND_API_KEY);
 
-  let verifyResult = isConfigured ? 'pending' : 'not_configured';
+  let verifyResult = hasResend ? 'resend_active' : isConfigured ? 'pending' : 'not_configured';
   let verifyError = null;
 
-  if (isConfigured) {
+  if (hasResend) {
+    verifyResult = 'resend_https_ready';
+  } else if (isConfigured) {
     try {
       const transport = mailer.getTransporter();
       if (transport) {

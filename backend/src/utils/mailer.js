@@ -44,10 +44,54 @@ function getTransporter() {
 exports.getTransporter = getTransporter;
 
 exports.isConfigured = () => {
-  return Boolean(process.env.SMTP_SERVICE || (process.env.SMTP_HOST && process.env.SMTP_USER));
+  return Boolean(
+    process.env.RESEND_API_KEY ||
+    process.env.BREVO_API_KEY ||
+    process.env.SMTP_SERVICE ||
+    (process.env.SMTP_HOST && process.env.SMTP_USER)
+  );
 };
 
+async function sendViaResend({ to, subject, text, html }) {
+  const apiKey = String(process.env.RESEND_API_KEY || '').trim();
+  if (!apiKey) return false;
+  try {
+    const fromAddress = process.env.MAIL_FROM || 'Campus Técnica 5 <onboarding@resend.dev>';
+    console.log(`[MAILER-RESEND] Enviando correo HTTPS a ${to} desde ${fromAddress}...`);
+    const resp = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: fromAddress,
+        to: [to],
+        subject,
+        text,
+        html,
+      }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) {
+      console.error('[MAILER-RESEND-ERROR] Respuesta de Resend:', data);
+      return false;
+    }
+    console.log(`[MAILER] ✅ Correo entregado exitosamente vía Resend API a ${to}. ID: ${data.id}`);
+    return true;
+  } catch (err) {
+    console.error('[MAILER-RESEND-ERROR] Error de conexión:', err.message);
+    return false;
+  }
+}
+
 async function sendMailSafe({ to, subject, text, html }) {
+  // 1. Resend API vía HTTPS (puerto 443 estándar, inmune a bloqueos de puertos SMTP en Render Free Tier)
+  if (process.env.RESEND_API_KEY) {
+    return sendViaResend({ to, subject, text, html });
+  }
+
+  // 2. Servidor SMTP tradicional (puerto 465 SSL o 587 STARTTLS)
   const transport = getTransporter();
   if (!transport) {
     console.error(`[MAILER] ⚠️ No hay servidor SMTP configurado (SMTP_HOST o SMTP_SERVICE). No se pudo enviar correo a ${to}.`);
