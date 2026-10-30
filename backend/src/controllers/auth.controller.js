@@ -72,8 +72,8 @@ async function issueEmailVerificationToken(userId, email) {
     'INSERT INTO email_verification_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
     [userId, tokenHash, expiresAt]
   );
-  await mailer.sendVerificationEmail(email, rawToken);
-  return rawToken;
+  const sent = await mailer.sendVerificationEmail(email, rawToken);
+  return { rawToken, sent };
 }
 
 exports.registrationStatus = asyncHandler(async (_req, res) => {
@@ -213,7 +213,7 @@ exports.register = asyncHandler(async (req, res) => {
 
   const [result] = await db.execute(
     `INSERT INTO users (first_name, last_name, username, email, password_hash, role_id, status, preferences)
-     VALUES (?, ?, ?, ?, ?, ?, 'active', ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, 'pending_verification', ?)`,
     [
       resolvedFirst,
       resolvedLast,
@@ -234,7 +234,7 @@ exports.register = asyncHandler(async (req, res) => {
     }
   }
 
-  const verificationCode = await issueEmailVerificationToken(result.insertId, normalizedEmail);
+  const { rawToken, sent } = await issueEmailVerificationToken(result.insertId, normalizedEmail);
   const welcomeTitle =
     targetRoleName === 'admin'
       ? '¡Bienvenido/a, Administrador/a General!'
@@ -253,16 +253,22 @@ exports.register = asyncHandler(async (req, res) => {
      VALUES (?, 'welcome', ?, ?, NULL, NULL)`,
     [result.insertId, welcomeTitle, welcomeBody]
   );
-  await logAudit(result.insertId, 'USER_REGISTERED', 'user', result.insertId, {
+  await logAudit(result.insertId, 'USER_REGISTERED_PENDING_2FA', 'user', result.insertId, {
     email: normalizedEmail,
     role: targetRoleName,
     autoPromotedFirstUser: isFirstUser,
   });
 
-  const user = await findById(result.insertId);
-  const response = await buildSessionResponse(user, req);
-  if (process.env.NODE_ENV !== 'production') {
-    response.devVerificationCode = verificationCode;
+  const response = {
+    success: true,
+    requiresVerification: true,
+    twoFactorRequired: true,
+    userId: result.insertId,
+    email: normalizedEmail,
+    message: 'Te enviamos un código de verificación en 2 pasos a tu correo electrónico. Ingresalo para completar tu registro.',
+  };
+  if (!sent || !process.env.SMTP_HOST || process.env.NODE_ENV !== 'production') {
+    response.devVerificationCode = rawToken;
   }
   res.status(201).json(response);
 });
@@ -292,7 +298,32 @@ exports.login = asyncHandler(async (req, res) => {
     throw new AppError('Tu cuenta ha sido suspendida por un administrador', 403, 'ACCOUNT_SUSPENDED');
   }
 
-  if (user.two_factor_enabled) {
+  // Cuentas de ejemplo creadas por el Administrador: NO requieren verificación en 2 pasos
+  if (user.created_by_admin) {
+    await logAudit(user.id, 'USER_LOGIN_ADMIN_TEST_ACCOUNT', 'user', user.id, { method: 'password' });
+    return res.json(await buildSessionResponse(user, req));
+  }
+
+  // Requisito obligatorio: La cuenta debe completar la verificación en 2 pasos antes de entrar
+  if (!user.email_verified_at) {
+    const { rawToken, sent } = await issueEmailVerificationToken(user.id, user.email);
+    const resp = {
+      success: true,
+      requiresVerification: true,
+      twoFactorRequired: true,
+      userId: user.id,
+      email: user.email,
+      message: 'Debés ingresar el código de verificación en 2 pasos enviado a tu correo antes de acceder al Campus.',
+    };
+    if (!sent || !process.env.SMTP_HOST || process.env.NODE_ENV !== 'production') {
+      resp.devVerificationCode = rawToken;
+    }
+    return res.status(202).json(resp);
+  }
+
+  // Si tiene TOTP configurado mediante app autenticadora
+  const [tfRows] = await db.execute('SELECT id, enabled_at FROM user_two_factor WHERE user_id = ? AND enabled_at IS NOT NULL', [user.id]);
+  if (tfRows.length > 0) {
     return res.status(202).json({
       success: true,
       twoFactorRequired: true,
@@ -314,7 +345,7 @@ exports.me = asyncHandler(async (req, res) => {
 });
 
 exports.verifyEmail = asyncHandler(async (req, res) => {
-  const token = String(req.body.token || req.query.token || '').trim();
+  const token = String(req.body.token || req.body.code || req.query.token || '').trim();
   const userId = req.body.userId || req.user?.id;
   if (!token || !userId) {
     throw new AppError('Código de verificación y usuario requeridos', 400, 'MISSING_VERIFICATION_DATA');
@@ -332,14 +363,15 @@ exports.verifyEmail = asyncHandler(async (req, res) => {
   }
 
   await db.execute('UPDATE email_verification_tokens SET used_at = NOW() WHERE id = ?', [rows[0].id]);
-  await db.execute("UPDATE users SET email_verified_at = NOW(), status = 'active' WHERE id = ?", [userId]);
-  await logAudit(userId, 'EMAIL_VERIFIED', 'user', userId);
+  await db.execute("UPDATE users SET email_verified_at = NOW(), two_factor_enabled = 1, status = 'active' WHERE id = ?", [userId]);
+  await logAudit(userId, 'EMAIL_VERIFIED_2FA', 'user', userId);
 
   const updated = await findById(userId);
+  const sessionResponse = await buildSessionResponse(updated, req);
   res.json({
     success: true,
-    message: 'Correo electrónico verificado correctamente',
-    user: publicUser(updated),
+    message: '¡Verificación en 2 pasos completada con éxito! Ya tenés acceso completo al Campus.',
+    ...sessionResponse,
   });
 });
 
@@ -348,19 +380,23 @@ exports.resendVerification = asyncHandler(async (req, res) => {
   const email = req.body.email;
   const user = userId ? await findById(userId) : email ? await findByEmail(email) : null;
 
-  if (user && !user.email_verified_at) {
-    const code = await issueEmailVerificationToken(user.id, user.email);
+  if (user) {
+    const { rawToken, sent } = await issueEmailVerificationToken(user.id, user.email);
     const resp = {
       success: true,
-      message: 'Enviamos un nuevo código de verificación a tu correo electrónico',
+      message: 'Enviamos un nuevo código de verificación en 2 pasos a tu correo electrónico',
+      userId: user.id,
+      email: user.email,
     };
-    if (process.env.NODE_ENV !== 'production') resp.devVerificationCode = code;
+    if (!sent || !process.env.SMTP_HOST || process.env.NODE_ENV !== 'production') {
+      resp.devVerificationCode = rawToken;
+    }
     return res.json(resp);
   }
 
   res.json({
     success: true,
-    message: 'Si la cuenta requiere verificación, enviamos un nuevo código al correo registrado',
+    message: 'Si la cuenta existe, enviamos un nuevo código al correo registrado',
   });
 });
 
@@ -471,7 +507,7 @@ exports.setupTwoFactor = asyncHandler(async (req, res) => {
  */
 exports.verifyTwoFactor = asyncHandler(async (req, res) => {
   const userId = req.user?.id || Number(req.body.userId);
-  const code = String(req.body.code || '').trim();
+  const code = String(req.body.code || req.body.token || '').trim();
   if (!userId || !code) {
     throw new AppError('Usuario y código requeridos', 400, 'MISSING_2FA_CODE');
   }
@@ -481,10 +517,27 @@ exports.verifyTwoFactor = asyncHandler(async (req, res) => {
     throw new AppError('Cuenta no disponible', 403, 'ACCOUNT_UNAVAILABLE');
   }
 
+  // 1. Probar si coincide con código de verificación por correo electrónico (flujo principal de 2 pasos)
+  const tokenHash = tokens.sha256(`verify:${user.id}:${code}`);
+  const [emRows] = await db.execute(
+    `SELECT id FROM email_verification_tokens
+     WHERE user_id = ? AND token_hash = ? AND used_at IS NULL AND expires_at > NOW()
+     ORDER BY id DESC LIMIT 1`,
+    [user.id, tokenHash]
+  );
+  if (emRows.length) {
+    await db.execute('UPDATE email_verification_tokens SET used_at = NOW() WHERE id = ?', [emRows[0].id]);
+    await db.execute("UPDATE users SET email_verified_at = NOW(), two_factor_enabled = 1, status = 'active' WHERE id = ?", [user.id]);
+    await logAudit(user.id, '2FA_EMAIL_VERIFIED', 'user', user.id);
+    const freshUser = await findById(user.id);
+    return res.json(await buildSessionResponse(freshUser, req));
+  }
+
+  // 2. Probar si coincide con TOTP (Google Authenticator)
   const [tfRows] = await db.execute('SELECT * FROM user_two_factor WHERE user_id = ?', [user.id]);
   const tf = tfRows[0];
   if (!tf) {
-    throw new AppError('El segundo factor no está configurado para esta cuenta', 400, '2FA_NOT_CONFIGURED');
+    throw new AppError('Código de verificación incorrecto o vencido', 400, 'INVALID_2FA_CODE');
   }
   if (tf.attempts >= 5) {
     throw new AppError('Demasiados intentos fallidos. Reconfigurá o usá un código de recuperación.', 429, 'TOO_MANY_ATTEMPTS');
@@ -523,7 +576,7 @@ exports.verifyTwoFactor = asyncHandler(async (req, res) => {
   );
 
   if (!user.two_factor_enabled) {
-    await db.execute('UPDATE users SET two_factor_enabled = 1 WHERE id = ?', [user.id]);
+    await db.execute("UPDATE users SET two_factor_enabled = 1, email_verified_at = COALESCE(email_verified_at, NOW()), status = 'active' WHERE id = ?", [user.id]);
     await logAudit(user.id, '2FA_ENABLED', 'user', user.id);
   } else {
     await logAudit(user.id, 'USER_LOGIN_2FA', 'user', user.id);

@@ -223,6 +223,40 @@ export default function StudentHomeScreen({ navigation }) {
         <ErrorBanner message={error} onRetry={load} />
         <SuccessBanner message={success} />
 
+        {!user?.twoFactorEnabled && !user?.createdByAdmin && (
+          <View
+            style={{
+              marginBottom: 16,
+              backgroundColor: colors.warningSoft || '#fef3c7',
+              borderColor: colors.warning || '#f59e0b',
+              borderWidth: 1,
+              borderRadius: 12,
+              padding: 14,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+            }}
+          >
+            <Ionicons name="shield-outline" size={24} color={colors.warning || '#b45309'} />
+            <View style={{ flex: 1, minWidth: 200 }}>
+              <Text style={{ fontWeight: '800', color: colors.mode === 'light' ? '#78350f' : '#fef3c7', fontSize: 13 }}>
+                Verificación en 2 pasos pendiente
+              </Text>
+              <Text style={{ fontSize: 12, color: colors.mode === 'light' ? '#92400e' : '#fde68a', marginTop: 2 }}>
+                Tu cuenta no está verificada. Completá la verificación en 2 pasos para proteger tu cuenta.
+              </Text>
+            </View>
+            <Button
+              title="Verificación en 2 pasos"
+              small
+              variant="warning"
+              icon="shield-checkmark-outline"
+              onPress={() => navigation.navigate('Profile')}
+            />
+          </View>
+        )}
+
         {/* Resumen rápido */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, width: '100%' }}>
           <StatCard

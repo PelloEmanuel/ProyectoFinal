@@ -174,6 +174,40 @@ export default function DashboardScreen({ navigation }) {
 
       <AlertBanner type="error" message={error} />
 
+      {!user?.twoFactorEnabled && !user?.createdByAdmin && (
+        <View
+          style={{
+            marginBottom: 16,
+            backgroundColor: colors.warningSoft || '#fef3c7',
+            borderColor: colors.warning || '#f59e0b',
+            borderWidth: 1,
+            borderRadius: 12,
+            padding: 14,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+          }}
+        >
+          <Ionicons name="shield-outline" size={24} color={colors.warning || '#b45309'} />
+          <View style={{ flex: 1, minWidth: 200 }}>
+            <Text style={{ fontWeight: '800', color: colors.mode === 'light' ? '#78350f' : '#fef3c7', fontSize: 13 }}>
+              Verificación en 2 pasos pendiente
+            </Text>
+            <Text style={{ fontSize: 12, color: colors.mode === 'light' ? '#92400e' : '#fde68a', marginTop: 2 }}>
+              Completá la verificación en 2 pasos por correo para proteger el acceso administrativo.
+            </Text>
+          </View>
+          <Button
+            title="Verificación en 2 pasos"
+            small
+            variant="warning"
+            icon="shield-checkmark-outline"
+            onPress={() => navigation.navigate('Profile')}
+          />
+        </View>
+      )}
+
       {/* Acceso directo destacado a Gestión de Cursos y Gestión de Materias */}
       <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
         <TouchableOpacity

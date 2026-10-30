@@ -54,6 +54,11 @@ export default function ProfileScreen({ navigation }) {
   const [newPassword, setNewPassword] = useState('');
   const [savingPassword, setSavingPassword] = useState(false);
 
+  // 2-Step Verification by Email state
+  const [email2faStep, setEmail2faStep] = useState('idle'); // 'idle' | 'input'
+  const [email2faCode, setEmail2faCode] = useState('');
+  const [email2faDevCode, setEmail2faDevCode] = useState('');
+
   // 2FA TOTP state
   const [totpSetup, setTotpSetup] = useState(null); // { secret, otpauthUrl }
   const [totpCode, setTotpCode] = useState('');
@@ -122,6 +127,47 @@ export default function ProfileScreen({ navigation }) {
       setError(extractErrorMessage(err));
     } finally {
       setSavingPassword(false);
+    }
+  };
+
+  const handleRequestEmail2FA = async () => {
+    setError('');
+    setSuccess('');
+    setLoading2FA(true);
+    try {
+      const res = await authApi.resendVerification({ userId: user?.id, email: user?.email });
+      setSuccess(res.message || 'Código de verificación enviado a tu correo.');
+      if (res.devVerificationCode) {
+        setEmail2faDevCode(res.devVerificationCode);
+        setEmail2faCode(res.devVerificationCode);
+      }
+      setEmail2faStep('input');
+    } catch (err) {
+      setError(extractErrorMessage(err));
+    } finally {
+      setLoading2FA(false);
+    }
+  };
+
+  const handleConfirmEmail2FA = async () => {
+    if (!email2faCode.trim()) {
+      setError('Ingresá el código de 6 dígitos recibido en tu correo.');
+      return;
+    }
+    setError('');
+    setSuccess('');
+    setLoading2FA(true);
+    try {
+      const res = await authApi.verifyEmail({ userId: user?.id, token: email2faCode.trim(), code: email2faCode.trim() });
+      await refreshProfile();
+      setSuccess(res.message || '¡Verificación en 2 pasos completada con éxito en tu cuenta!');
+      setEmail2faStep('idle');
+      setEmail2faCode('');
+      setEmail2faDevCode('');
+    } catch (err) {
+      setError(extractErrorMessage(err));
+    } finally {
+      setLoading2FA(false);
     }
   };
 
@@ -320,99 +366,77 @@ export default function ProfileScreen({ navigation }) {
         />
       </Card>
 
-      {/* Two-Factor Authentication (RFC 6238 TOTP) */}
+      {/* Two-Factor Authentication (Verificación en 2 pasos por Correo) */}
       <Card>
         <View style={styles.rowBetween}>
           <Text style={[styles.cardTitle, { color: colors.text }]}>
-            Verificación en 2 pasos (TOTP 2FA)
+            Verificación en 2 pasos
           </Text>
           <Badge
-            label={user?.twoFactorEnabled ? 'Activo' : 'Inactivo'}
-            tone={user?.twoFactorEnabled ? 'success' : 'neutral'}
+            label={user?.twoFactorEnabled ? 'Activa y Verificada' : 'No verificada'}
+            tone={user?.twoFactorEnabled ? 'success' : 'warning'}
           />
         </View>
-        <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4, marginBottom: 12 }}>
-          Protegé tu cuenta con códigos temporales RFC 6238 compatibles con Google Authenticator, Authy o Microsoft Authenticator.
+        <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4, marginBottom: 14, lineHeight: 18 }}>
+          {user?.twoFactorEnabled
+            ? `Tu cuenta tiene activa la verificación en 2 pasos asociada a tu correo ${user?.email}. Tu acceso al Campus está protegido.`
+            : `Tu cuenta no tiene la verificación en 2 pasos activa. Completala ahora recibiendo un código de 6 dígitos en tu correo (${user?.email}) para mantener tu cuenta segura.`}
         </Text>
 
         {!user?.twoFactorEnabled ? (
-          totpSetup ? (
-            <View>
-              {totpSetup.otpauthUrl ? (
-                <View style={{ alignItems: 'center', marginVertical: 10 }}>
-                  <Image
-                    source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(totpSetup.otpauthUrl)}` }}
-                    style={{ width: 170, height: 170, backgroundColor: '#ffffff', borderRadius: 8, padding: 6 }}
-                    resizeMode="contain"
-                  />
-                  <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 6, textAlign: 'center' }}>
-                    Escaneá este código QR con Google Authenticator o Authy
-                  </Text>
-                  {totpSetup.currentCodeHint ? (
-                    <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4, textAlign: 'center' }}>
-                      Código actual de prueba: <Text style={{ color: colors.primary, fontWeight: '700' }}>{totpSetup.currentCodeHint}</Text>
-                    </Text>
-                  ) : null}
-                </View>
-              ) : null}
-              <View style={[styles.secretBox, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
-                <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700' }}>
-                  CLAVE SECRETA MANUAL (BASE32):
-                </Text>
-                <Text selectable style={{ color: colors.primary, fontSize: 16, fontWeight: '800', marginTop: 4 }}>
-                  {totpSetup.secret}
-                </Text>
-                <Text selectable style={{ color: colors.textMuted, fontSize: 11, marginTop: 6 }}>
-                  URI: {totpSetup.otpauthUrl}
-                </Text>
-              </View>
-              <Input
-                label="Código de 6 dígitos generado por tu app"
-                value={totpCode}
-                onChangeText={setTotpCode}
-                placeholder="123456"
-                keyboardType="numeric"
-              />
-              <Button
-                title="Confirmar y activar 2FA"
-                variant="success"
-                loading={loading2FA}
-                onPress={handleConfirm2FA}
-              />
-            </View>
-          ) : (
+          email2faStep === 'idle' ? (
             <Button
-              title="Configurar 2FA (TOTP)"
-              variant="outline"
+              title="Verificación en 2 pasos"
+              variant="primary"
               icon="shield-checkmark-outline"
               loading={loading2FA}
-              onPress={handleStart2FA}
+              onPress={handleRequestEmail2FA}
             />
+          ) : (
+            <View>
+              {email2faDevCode ? (
+                <View style={[styles.secretBox, { backgroundColor: colors.surfaceAlt, borderColor: colors.primary, marginBottom: 12 }]}>
+                  <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>
+                    CÓDIGO DE VERIFICACIÓN:
+                  </Text>
+                  <Text selectable style={{ color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 4 }}>
+                    {email2faDevCode}
+                  </Text>
+                </View>
+              ) : null}
+              <Input
+                label="Código de 6 dígitos recibido por correo"
+                value={email2faCode}
+                onChangeText={setEmail2faCode}
+                placeholder="123456"
+                keyboardType="numeric"
+                autoCapitalize="none"
+              />
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title="Confirmar y Activar"
+                    variant="success"
+                    loading={loading2FA}
+                    onPress={handleConfirmEmail2FA}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button
+                    title="Reenviar código"
+                    variant="outline"
+                    loading={loading2FA}
+                    onPress={handleRequestEmail2FA}
+                  />
+                </View>
+              </View>
+            </View>
           )
         ) : (
-          <View>
-            <Input
-              label="Contraseña o código actual para desactivar 2FA"
-              value={disablePassword}
-              onChangeText={setDisablePassword}
-              secureTextEntry
-            />
-            <Button
-              title="Desactivar 2FA"
-              variant="danger"
-              loading={loading2FA}
-              onPress={handleDisable2FA}
-            />
-          </View>
-        )}
-
-        {recoveryCodes && recoveryCodes.length > 0 && (
-          <View style={[styles.secretBox, { backgroundColor: colors.warningSoft, borderColor: colors.warning, marginTop: 12 }]}>
-            <Text style={{ color: colors.warning, fontWeight: '800', fontSize: 13 }}>
-              Códigos de recuperación de un solo uso (guardalos en un lugar seguro):
-            </Text>
-            <Text selectable style={{ color: colors.text, fontWeight: '700', marginTop: 6 }}>
-              {recoveryCodes.join('   •   ')}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+            <Ionicons name="checkmark-done-circle" size={22} color="#16a34a" />
+            <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>
+              Identidad asegurada y verificada en 2 pasos
             </Text>
           </View>
         )}

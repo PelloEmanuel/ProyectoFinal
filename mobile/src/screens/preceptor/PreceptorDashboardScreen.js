@@ -127,6 +127,40 @@ export default function PreceptorDashboardScreen({ navigation }) {
 
       <AlertBanner type="error" message={error} />
 
+      {!user?.twoFactorEnabled && !user?.createdByAdmin && (
+        <View
+          style={{
+            marginBottom: 16,
+            backgroundColor: colors.warningSoft || '#fef3c7',
+            borderColor: colors.warning || '#f59e0b',
+            borderWidth: 1,
+            borderRadius: 12,
+            padding: 14,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            flexWrap: 'wrap',
+          }}
+        >
+          <Ionicons name="shield-outline" size={24} color={colors.warning || '#b45309'} />
+          <View style={{ flex: 1, minWidth: 200 }}>
+            <Text style={{ fontWeight: '800', color: colors.mode === 'light' ? '#78350f' : '#fef3c7', fontSize: 13 }}>
+              Verificación en 2 pasos pendiente
+            </Text>
+            <Text style={{ fontSize: 12, color: colors.mode === 'light' ? '#92400e' : '#fde68a', marginTop: 2 }}>
+              Tu cuenta de preceptoría no está verificada. Completá la verificación en 2 pasos para proteger tu cuenta.
+            </Text>
+          </View>
+          <Button
+            title="Verificación en 2 pasos"
+            small
+            variant="warning"
+            icon="shield-checkmark-outline"
+            onPress={() => navigation.navigate('Profile')}
+          />
+        </View>
+      )}
+
       {/* Métricas Rápidas */}
       <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
         <Card style={{ flex: 1, padding: 12, alignItems: 'center' }}>

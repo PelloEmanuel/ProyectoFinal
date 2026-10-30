@@ -49,8 +49,23 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
     try {
       const res = await login(payload.email, payload.password);
+      if (res.requiresVerification) {
+        navigation.navigate('VerifyCode', {
+          mode: 'verify_email',
+          userId: res.userId,
+          email: res.email,
+          devCode: res.devVerificationCode,
+        });
+        return;
+      }
       if (res.twoFactorRequired) {
-        navigation.navigate('VerifyCode', { mode: '2fa', userId: res.userId, email: res.email });
+        navigation.navigate('VerifyCode', {
+          mode: '2fa',
+          userId: res.userId,
+          email: res.email,
+          devCode: res.devVerificationCode,
+        });
+        return;
       }
     } catch (e) {
       setErrors(getFieldErrors(e));

@@ -32,11 +32,11 @@ async function sendMailSafe({ to, subject, text }) {
 }
 
 exports.sendVerificationEmail = async (to, token) => {
-  const baseUrl = process.env.APP_PUBLIC_URL || 'http://localhost:3000';
+  const baseUrl = process.env.APP_PUBLIC_URL || 'https://campus-58oe.onrender.com';
   return sendMailSafe({
     to,
-    subject: 'SkillTrack - Verificá tu correo electrónico',
-    text: `Bienvenido/a a SkillTrack.\n\nCódigo de verificación: ${token}\nEnlace directo: ${baseUrl}/api/v1/auth/verify-email?token=${token}\n\nEste código vence en 24 horas.`,
+    subject: 'Campus Técnica 5 - Código de Verificación en 2 Pasos',
+    text: `¡Hola!\n\nTu código de verificación en 2 pasos para acceder al Campus Escolar es:\n\n${token}\n\nIngresá este código de 6 dígitos en la pantalla de verificación para completar tu registro y acceder al campus.\n\nEste código vence en 24 horas.\n\nSi no creaste una cuenta, podés desestimar este mensaje.`,
   });
 };
 

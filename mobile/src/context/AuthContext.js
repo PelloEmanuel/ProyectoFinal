@@ -185,25 +185,46 @@ export function AuthProvider({ children }) {
     () => ({
       async login(email, password) {
         const res = await authApi.login({ email: email.trim(), password });
-        if (res.status === 202 || res.data?.twoFactorRequired) {
+        const data = res.data || res;
+        if (res.status === 202 || data?.twoFactorRequired || data?.requiresVerification) {
           return {
-            twoFactorRequired: true,
-            userId: res.data.userId,
-            email: res.data.email || email.trim(),
+            twoFactorRequired: Boolean(data?.twoFactorRequired),
+            requiresVerification: Boolean(data?.requiresVerification),
+            userId: data?.userId,
+            email: data?.email || email.trim(),
+            devVerificationCode: data?.devVerificationCode,
+            message: data?.message,
           };
         }
-        await startSession(res.data);
-        return { twoFactorRequired: false };
+        await startSession(data);
+        return { twoFactorRequired: false, requiresVerification: false };
       },
       async verifyTwoFactor(userId, code) {
         const res = await authApi.verify2fa({ userId, code });
         await startSession(res);
         return res;
       },
+      async verifyEmail(userId, token) {
+        const res = await authApi.verifyEmail({ userId, token });
+        if (res?.accessToken || res?.data?.accessToken) {
+          await startSession(res);
+        } else {
+          const fresh = await usersApi.me().catch(() => null);
+          if (fresh) {
+            await saveSession({ user: fresh });
+            dispatch({ type: 'SET_USER', user: fresh });
+          }
+        }
+        return res;
+      },
       async register(payload) {
         const res = await authApi.register(payload);
+        const data = res.data || res;
+        if (data?.requiresVerification || data?.twoFactorRequired) {
+          return data;
+        }
         await startSession(res);
-        return res;
+        return data;
       },
       async socialLogin(provider, body) {
         if (body?.token || body?.accessToken) {

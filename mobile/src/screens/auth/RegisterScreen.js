@@ -116,7 +116,7 @@ export default function RegisterScreen({ navigation }) {
     }
     setLoading(true);
     try {
-      await register({
+      const res = await register({
         role: form.role,
         instructorKey: form.role === 'instructor' ? form.instructorKey.trim() : undefined,
         preceptorKey: form.role === 'preceptor' ? form.preceptorKey.trim() : undefined,
@@ -129,6 +129,17 @@ export default function RegisterScreen({ navigation }) {
         password: form.password,
         acceptTerms: form.acceptTerms,
       });
+
+      if (res?.requiresVerification || res?.twoFactorRequired) {
+        setLoading(false);
+        navigation.navigate('VerifyCode', {
+          mode: 'verify_email',
+          userId: res.userId,
+          email: res.email || form.email.trim().toLowerCase(),
+          devCode: res.devVerificationCode,
+        });
+        return;
+      }
     } catch (e) {
       const fieldErrs = getFieldErrors(e);
       setErrors(fieldErrs);
