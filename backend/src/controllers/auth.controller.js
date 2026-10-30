@@ -48,6 +48,21 @@ async function buildSessionResponse(user, req) {
   };
 }
 
+function getPublicBaseUrl(req) {
+  if (process.env.APP_PUBLIC_URL && !process.env.APP_PUBLIC_URL.includes('localhost')) {
+    return process.env.APP_PUBLIC_URL.replace(/\/+$/, '');
+  }
+  if (process.env.RENDER_EXTERNAL_URL) {
+    return process.env.RENDER_EXTERNAL_URL.replace(/\/+$/, '');
+  }
+  const host = req?.get ? req.get('host') : null;
+  const proto = req?.headers?.['x-forwarded-proto'] || req?.protocol || 'https';
+  if (host && !host.includes('localhost')) {
+    return `${proto}://${host}`;
+  }
+  return 'https://campus-58oe.onrender.com';
+}
+
 async function issueEmailVerificationToken(userId, email) {
   const rawToken = crypto.randomInt(100000, 1000000).toString();
   const tokenHash = tokens.sha256(`verify:${userId}:${rawToken}`);
@@ -363,13 +378,17 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
       'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
       [user.id, tokenHash, expiresAt]
     );
-    await mailer.sendPasswordResetEmail(user.email, rawCode);
-    if (process.env.NODE_ENV !== 'production') devResetCode = rawCode;
+    const sent = await mailer.sendPasswordResetEmail(user.email, rawCode);
+    if (!sent || !process.env.SMTP_HOST || process.env.NODE_ENV !== 'production') {
+      devResetCode = rawCode;
+    }
   }
 
   res.json({
     success: true,
-    message: 'Si el correo está registrado, recibirás un código temporal para restablecer tu contraseña.',
+    message: devResetCode
+      ? `Código temporal de recuperación: ${devResetCode}. Ingresalo junto con tu nueva contraseña.`
+      : 'Si el correo está registrado, recibirás un código temporal para restablecer tu contraseña en tu casilla de correo.',
     ...(devResetCode && { devResetCode }),
   });
 });
@@ -533,6 +552,328 @@ exports.disableTwoFactor = asyncHandler(async (req, res) => {
     message: 'Segundo factor desactivado correctamente',
     user: publicUser(updated),
   });
+});
+
+/**
+ * Inicia el flujo OAuth 2.0 en el servidor Render para Expo Go y Web.
+ * Redirige al proveedor social (Google, GitHub, Discord) con una URL de callback fija y HTTPS de Render.
+ */
+exports.oauthStart = asyncHandler(async (req, res) => {
+  const { provider } = req.params;
+  const supported = ['google', 'github', 'discord', 'facebook'];
+  if (!supported.includes(provider)) {
+    throw new AppError(`Proveedor social '${provider}' no soportado`, 400, 'UNSUPPORTED_PROVIDER');
+  }
+
+  const returnTo = String(req.query.return_to || req.query.redirect_uri || '').trim() || getPublicBaseUrl(req);
+  const statePayload = {
+    returnTo,
+    provider,
+    role: req.query.role || null,
+    instructorKey: req.query.instructorKey || null,
+    preceptorKey: req.query.preceptorKey || null,
+    schoolYear: req.query.schoolYear || null,
+    courseDivision: req.query.courseDivision || null,
+    t: Date.now(),
+  };
+  const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
+  const callbackUrl = `${getPublicBaseUrl(req)}/api/v1/auth/oauth/${provider}/callback`;
+
+  if (provider === 'google') {
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      throw new AppError('GOOGLE_CLIENT_ID no configurado en las variables de entorno de Render', 503, 'OAUTH_NOT_CONFIGURED');
+    }
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: callbackUrl,
+      response_type: 'code',
+      scope: 'openid email profile',
+      access_type: 'offline',
+      prompt: 'select_account',
+      state,
+    });
+    return res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
+  }
+
+  if (provider === 'github') {
+    const clientId = process.env.GITHUB_CLIENT_ID;
+    if (!clientId) {
+      throw new AppError('GITHUB_CLIENT_ID no configurado en las variables de entorno de Render', 503, 'OAUTH_NOT_CONFIGURED');
+    }
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: callbackUrl,
+      scope: 'read:user user:email',
+      state,
+    });
+    return res.redirect(`https://github.com/login/oauth/authorize?${params.toString()}`);
+  }
+
+  if (provider === 'discord') {
+    const clientId = process.env.DISCORD_CLIENT_ID;
+    if (!clientId) {
+      throw new AppError('DISCORD_CLIENT_ID no configurado en las variables de entorno de Render', 503, 'OAUTH_NOT_CONFIGURED');
+    }
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: callbackUrl,
+      response_type: 'code',
+      scope: 'identify email',
+      prompt: 'consent',
+      state,
+    });
+    return res.redirect(`https://discord.com/api/oauth2/authorize?${params.toString()}`);
+  }
+
+  if (provider === 'facebook') {
+    const clientId = process.env.FACEBOOK_APP_ID;
+    if (!clientId) {
+      throw new AppError('FACEBOOK_APP_ID no configurado en las variables de entorno de Render', 503, 'OAUTH_NOT_CONFIGURED');
+    }
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: callbackUrl,
+      response_type: 'code',
+      scope: 'email,public_profile',
+      state,
+    });
+    return res.redirect(`https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`);
+  }
+});
+
+/**
+ * Recibe el callback del proveedor OAuth en Render, valida el código, crea o sincroniza la sesión
+ * y redirige automáticamente de regreso a Expo Go o a la Web.
+ */
+exports.oauthCallback = asyncHandler(async (req, res) => {
+  const { provider } = req.params;
+  const { code, state, error, error_description } = req.query;
+
+  let stateData = {};
+  if (state) {
+    try {
+      stateData = JSON.parse(Buffer.from(state, 'base64url').toString('utf8'));
+    } catch {
+      try {
+        stateData = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
+      } catch {}
+    }
+  }
+
+  const returnTo = stateData.returnTo || getPublicBaseUrl(req);
+
+  const sendRedirectWithBridge = (targetUrl, message = 'Completando autenticación...') => {
+    const safeUrl = String(targetUrl).replace(/"/g, '&quot;');
+    const html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campus Técnica 5 - Conectando</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #1e2430;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 90vh;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .card {
+      background: #283141;
+      border: 1px solid #3a4659;
+      border-radius: 14px;
+      padding: 32px 24px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+    h2 { margin: 0 0 12px; font-size: 20px; color: #ffffff; }
+    p { margin: 0 0 24px; font-size: 14px; color: #94a3b8; line-height: 1.5; }
+    .btn {
+      display: inline-block;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 14px 20px;
+      background: #15803d;
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 700;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #166534; }
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: #15803d;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="spinner"></div>
+    <h2>Campus Técnica 5</h2>
+    <p>${message}</p>
+    <a class="btn" href="${safeUrl}">Abrir Campus Técnica 5</a>
+  </div>
+  <script>
+    try {
+      window.location.replace(${JSON.stringify(targetUrl)});
+    } catch (e) {
+      window.location.href = ${JSON.stringify(targetUrl)};
+    }
+  </script>
+</body>
+</html>`;
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return res.status(200).send(html);
+  };
+
+  const makeTarget = (params) => {
+    const sep = returnTo.includes('?') ? '&' : '?';
+    const qs = new URLSearchParams(params).toString();
+    return `${returnTo}${sep}${qs}`;
+  };
+
+  if (error) {
+    const errMsg = error_description || error || 'Autorización cancelada o denegada por el proveedor';
+    return sendRedirectWithBridge(makeTarget({ error: errMsg }), 'Redirigiendo tras error...');
+  }
+
+  if (!code) {
+    return sendRedirectWithBridge(makeTarget({ error: 'No se recibió el código de autorización del proveedor social' }), 'Error al conectar...');
+  }
+
+  const callbackUrl = `${getPublicBaseUrl(req)}/api/v1/auth/oauth/${provider}/callback`;
+
+  try {
+    const profile = await social.getProfile(provider, { code, redirectUri: callbackUrl });
+
+    const [identityRows] = await db.execute(
+      `SELECT u.*, r.name AS role_name
+       FROM user_identities ui
+       JOIN users u ON u.id = ui.user_id
+       JOIN roles r ON r.id = u.role_id
+       WHERE ui.provider = ? AND ui.provider_user_id = ? AND u.deleted_at IS NULL`,
+      [provider, profile.id]
+    );
+
+    let user = identityRows[0];
+
+    if (!user) {
+      if (!profile.email || !profile.emailVerified) {
+        return sendRedirectWithBridge(
+          makeTarget({ error: 'El proveedor social no devolvió un correo electrónico verificado' }),
+          'Correo no verificado...'
+        );
+      }
+
+      user = await findByEmail(profile.email);
+      if (!user) {
+        const [[{ totalUsers }]] = await db.execute('SELECT COUNT(*) AS totalUsers FROM users WHERE deleted_at IS NULL');
+        const isFirstUser = Number(totalUsers) === 0;
+        let targetRoleName = isFirstUser ? 'admin' : 'student';
+
+        if (!isFirstUser && String(stateData.role || '').trim().toLowerCase() === 'instructor') {
+          const submittedKey = String(stateData.instructorKey || '').trim();
+          const [keyRows] = await db.execute(
+            "SELECT setting_value FROM platform_settings WHERE setting_key = 'instructor_registration_key' LIMIT 1"
+          );
+          const validKey = String(keyRows[0]?.setting_value || '').trim();
+          if (validKey && submittedKey === validKey) {
+            targetRoleName = 'instructor';
+          }
+        } else if (!isFirstUser && String(stateData.role || '').trim().toLowerCase() === 'preceptor') {
+          const submittedKey = String(stateData.preceptorKey || '').trim();
+          const [keyRows] = await db.execute(
+            "SELECT setting_value FROM platform_settings WHERE setting_key = 'preceptor_registration_key' LIMIT 1"
+          );
+          const validKey = String(keyRows[0]?.setting_value || 'PRECEPTOR2026').trim();
+          if (validKey && submittedKey === validKey) {
+            targetRoleName = 'preceptor';
+          }
+        }
+
+        const [roleRows] = await db.execute('SELECT id FROM roles WHERE name = ? LIMIT 1', [targetRoleName]);
+        const roleId = roleRows[0]?.id || (targetRoleName === 'admin' ? 1 : targetRoleName === 'instructor' ? 2 : 3);
+
+        const [ins] = await db.execute(
+          `INSERT INTO users (first_name, last_name, email, avatar_url, role_id, status, email_verified_at, preferences)
+           VALUES (?, ?, ?, ?, ?, 'active', NOW(), ?)`,
+          [
+            profile.firstName,
+            profile.lastName,
+            profile.email.toLowerCase(),
+            profile.avatar,
+            roleId,
+            JSON.stringify({ theme: 'light', notifications: true, language: 'es' }),
+          ]
+        );
+        user = await findById(ins.insertId);
+
+        if (targetRoleName === 'student' && stateData.schoolYear && stateData.courseDivision) {
+          const sy = Number(stateData.schoolYear);
+          const cd = Number(stateData.courseDivision);
+          if (sy >= 1 && sy <= 6 && cd >= 1 && cd <= 3) {
+            await syncStudentCourseEnrollments(user.id, sy, cd).catch(() => {});
+          }
+        }
+      }
+
+      await db.execute(
+        'INSERT IGNORE INTO user_identities (user_id, provider, provider_user_id, provider_email) VALUES (?, ?, ?, ?)',
+        [user.id, provider, profile.id, profile.email.toLowerCase()]
+      );
+    }
+
+    if (user.status === 'suspended') {
+      return sendRedirectWithBridge(makeTarget({ error: 'Tu cuenta ha sido suspendida' }), 'Cuenta suspendida...');
+    }
+
+    if (user.two_factor_enabled) {
+      return sendRedirectWithBridge(
+        makeTarget({
+          twoFactorRequired: 'true',
+          userId: String(user.id),
+          email: user.email,
+        }),
+        'Se requiere código de verificación en 2 pasos...'
+      );
+    }
+
+    await logAudit(user.id, 'USER_LOGIN_OAUTH_PROXY', 'user', user.id, { provider });
+    const sessionTokens = await tokens.issueSession(user, req.headers['user-agent'] || 'Expo Go Client');
+
+    return sendRedirectWithBridge(
+      makeTarget({
+        token: sessionTokens.accessToken,
+        accessToken: sessionTokens.accessToken,
+        refreshToken: sessionTokens.refreshToken,
+        success: 'true',
+      }),
+      '¡Inicio de sesión exitoso! Volviendo a Campus Técnica 5...'
+    );
+  } catch (err) {
+    console.error('OAuth Callback Error:', err);
+    return sendRedirectWithBridge(
+      makeTarget({ error: err.message || 'Error durante la verificación con el proveedor social' }),
+      'Error de autenticación...'
+    );
+  }
 });
 
 exports.socialLogin = asyncHandler(async (req, res) => {

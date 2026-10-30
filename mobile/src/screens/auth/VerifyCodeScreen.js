@@ -47,11 +47,10 @@ export default function VerifyCodeScreen({ navigation, route }) {
     setLoading(true);
     try {
       const res = await authApi.forgotPassword(email.trim());
-      setSuccess(
-        res.devResetCode
-          ? `${res.message} (Código de entorno de desarrollo: ${res.devResetCode})`
-          : res.message
-      );
+      setSuccess(res.message);
+      if (res.devResetCode) {
+        setCode(res.devResetCode);
+      }
       setStep('reset');
     } catch (e) {
       setError(getErrorMessage(e));

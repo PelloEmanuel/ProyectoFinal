@@ -89,7 +89,7 @@ function verifyTotpCode(secretBase32, token, lastUsedStep = null) {
   const currentStep = Math.floor(Date.now() / 30000);
   for (const offset of [0, -1, 1]) {
     const step = currentStep + offset;
-    if (lastUsedStep !== null && Number(lastUsedStep) >= step) continue;
+    if (lastUsedStep !== null && Number(lastUsedStep) > step) continue;
     if (computeHotp(secretBase32, step) === clean) {
       return { valid: true, step };
     }

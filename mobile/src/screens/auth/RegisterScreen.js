@@ -495,10 +495,17 @@ export default function RegisterScreen({ navigation }) {
           style={{ flex: 1 }}
           small
           onPress={() => {
+            const meta = {
+              role: form.role,
+              instructorKey: form.instructorKey,
+              preceptorKey: form.preceptorKey,
+              schoolYear: form.schoolYear,
+              courseDivision: form.courseDivision,
+            };
             if (typeof window !== 'undefined' && window.sessionStorage) {
-              sessionStorage.setItem('oauth_meta', JSON.stringify({ role: form.role, instructorKey: form.instructorKey }));
+              sessionStorage.setItem('oauth_meta', JSON.stringify(meta));
             }
-            startSocial('google');
+            startSocial('google', meta);
           }}
         />
         <Button
@@ -508,10 +515,17 @@ export default function RegisterScreen({ navigation }) {
           style={{ flex: 1 }}
           small
           onPress={() => {
+            const meta = {
+              role: form.role,
+              instructorKey: form.instructorKey,
+              preceptorKey: form.preceptorKey,
+              schoolYear: form.schoolYear,
+              courseDivision: form.courseDivision,
+            };
             if (typeof window !== 'undefined' && window.sessionStorage) {
-              sessionStorage.setItem('oauth_meta', JSON.stringify({ role: form.role, instructorKey: form.instructorKey }));
+              sessionStorage.setItem('oauth_meta', JSON.stringify(meta));
             }
-            startSocial('github');
+            startSocial('github', meta);
           }}
         />
         <Button
@@ -521,10 +535,17 @@ export default function RegisterScreen({ navigation }) {
           style={{ flex: 1 }}
           small
           onPress={() => {
+            const meta = {
+              role: form.role,
+              instructorKey: form.instructorKey,
+              preceptorKey: form.preceptorKey,
+              schoolYear: form.schoolYear,
+              courseDivision: form.courseDivision,
+            };
             if (typeof window !== 'undefined' && window.sessionStorage) {
-              sessionStorage.setItem('oauth_meta', JSON.stringify({ role: form.role, instructorKey: form.instructorKey }));
+              sessionStorage.setItem('oauth_meta', JSON.stringify(meta));
             }
-            startSocial('discord');
+            startSocial('discord', meta);
           }}
         />
       </View>

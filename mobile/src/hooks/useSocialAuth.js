@@ -1,106 +1,75 @@
 /**
  * Archivo: mobile/src/hooks/useSocialAuth.js
- * Descripción: Hook para autenticación OAuth 2.0 / OpenID Connect en React Native
- * con Google (obligatorio), GitHub y Discord.
+ * Descripción: Hook para autenticación OAuth 2.0 (Google, GitHub, Discord, Facebook)
+ * mediante el flujo proxy de Render:
+ * 1) Inicia en https://campus-58oe.onrender.com/api/v1/auth/oauth/:provider/start
+ * 2) El handshake con el proveedor se realiza de servidor a servidor usando URLs HTTPS autorizadas en Render.
+ * 3) Render devuelve los tokens de sesión JWT directamente a Expo Go (scheme: 'skilltrack' o exp://...) o Web.
  */
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import * as Facebook from 'expo-auth-session/providers/facebook';
-import { makeRedirectUri, useAuthRequest } from 'expo-auth-session';
-import { OAUTH } from '../config';
+import { makeRedirectUri } from 'expo-auth-session';
+import { API_URL } from '../config';
 
 WebBrowser.maybeCompleteAuthSession({ skipRedirectCheck: true });
 
-function resolveRedirectUri(provider) {
+function getBackendBase() {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
+    if (!window.location.origin.includes('localhost')) {
+      return window.location.origin;
+    }
+  }
+  const cleanApi = (API_URL || '').replace(/\/api\/v1\/?$/, '').trim();
+  if (cleanApi && !cleanApi.includes('localhost') && !cleanApi.includes('10.0.2.2')) {
+    return cleanApi;
+  }
+  return 'https://campus-58oe.onrender.com';
+}
+
+function resolveRedirectUri() {
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin;
   }
-  return makeRedirectUri({ scheme: 'skilltrack', path: `oauth/${provider}` });
+  return makeRedirectUri({
+    scheme: 'skilltrack',
+    preferLocalhost: false,
+  });
 }
 
-const githubDiscovery = {
-  authorizationEndpoint: 'https://github.com/login/oauth/authorize',
-  tokenEndpoint: 'https://github.com/login/oauth/access_token',
-};
-
-const discordDiscovery = {
-  authorizationEndpoint: 'https://discord.com/api/oauth2/authorize',
-  tokenEndpoint: 'https://discord.com/api/oauth2/token',
-};
-
 export default function useSocialAuth({ onCredential, onError }) {
-  const googleRedirect = useMemo(() => resolveRedirectUri('google'), []);
-  const githubRedirect = useMemo(() => resolveRedirectUri('github'), []);
-  const discordRedirect = useMemo(() => resolveRedirectUri('discord'), []);
-  const handledCodeRef = useRef(new Set());
+  const handledRef = useRef(new Set());
 
-  const [gReq, gRes, gPrompt] = Google.useAuthRequest({
-    clientId: OAUTH.googleWeb,
-    androidClientId: OAUTH.googleAndroid || OAUTH.googleWeb,
-    webClientId: OAUTH.googleWeb,
-    redirectUri: googleRedirect,
-    scopes: ['profile', 'email', 'openid'],
-  });
-  const [fReq, fRes, fPrompt] = Facebook.useAuthRequest({
-    clientId: OAUTH.facebook || 'missing',
-  });
-  const [hReq, hRes, hPrompt] = useAuthRequest(
-    {
-      clientId: OAUTH.github || 'missing',
-      scopes: ['read:user', 'user:email'],
-      redirectUri: githubRedirect,
-    },
-    githubDiscovery
-  );
-  const [dReq, dRes, dPrompt] = useAuthRequest(
-    {
-      clientId: OAUTH.discord || 'missing',
-      scopes: ['identify', 'email'],
-      redirectUri: discordRedirect,
-      responseType: 'code',
-    },
-    discordDiscovery
-  );
-
-  // Escucha multicanal para Web (BroadcastChannel, LocalStorage, Polling, PostMessage)
+  // Escucha de retorno para Web (por si regresa a la misma pestaña o ventana)
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
 
-    const processOAuthUrl = (urlStr) => {
+    const parseUrl = (href) => {
       try {
-        const u = new URL(urlStr, window.location.origin);
-        const searchParams = new URLSearchParams(u.search);
-        const hashStr = u.hash.startsWith('#') ? u.hash.slice(1) : u.hash;
-        const hashParams = new URLSearchParams(hashStr);
+        const u = new URL(href, window.location.origin);
+        const search = u.search || '';
+        const hash = u.hash.startsWith('#') ? u.hash.slice(1) : u.hash;
+        const sp = new URLSearchParams(search);
+        const hp = new URLSearchParams(hash);
 
-        const error = searchParams.get('error') || hashParams.get('error');
+        const error = sp.get('error') || hp.get('error');
         if (error) {
           onError(`Error de autenticación: ${error}`);
           return true;
         }
 
-        const code = searchParams.get('code') || hashParams.get('code');
-        const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
-        const idToken = hashParams.get('id_token') || searchParams.get('id_token');
+        const token = sp.get('token') || hp.get('token') || sp.get('accessToken') || hp.get('accessToken');
+        const refreshToken = sp.get('refreshToken') || hp.get('refreshToken');
+        const key = token || sp.get('code');
 
-        const key = code || accessToken || idToken;
-        if (!key || handledCodeRef.current.has(key)) return false;
-        handledCodeRef.current.add(key);
+        if (!key || handledRef.current.has(key)) return false;
+        handledRef.current.add(key);
 
-        if (code) {
-          onCredential('google', {
-            code,
-            redirectUri: googleRedirect,
-            codeVerifier: gReq?.codeVerifier,
-          });
-          return true;
-        } else if (accessToken) {
-          onCredential('google', { accessToken });
-          return true;
-        } else if (idToken) {
-          onCredential('google', { idToken });
+        if (token && refreshToken) {
+          onCredential('oauth_proxy', { token, accessToken: token, refreshToken });
+          try {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } catch (e) {}
           return true;
         }
       } catch (e) {
@@ -109,199 +78,77 @@ export default function useSocialAuth({ onCredential, onError }) {
       return false;
     };
 
-    // 1. Si la ventana actual tiene parámetros OAuth en URL (mismo tab / redirect)
-    if (window.location.search?.includes('code=') || window.location.hash?.includes('access_token=') || window.location.hash?.includes('id_token=')) {
-      const handled = processOAuthUrl(window.location.href);
-      if (handled) {
-        try {
-          window.history.replaceState({}, document.title, window.location.pathname);
-        } catch (e) {}
-      }
+    if (
+      window.location.search?.includes('token=') ||
+      window.location.search?.includes('error=') ||
+      window.location.hash?.includes('token=')
+    ) {
+      parseUrl(window.location.href);
     }
+  }, [onCredential, onError]);
 
-    // 2. BroadcastChannel
-    let bc = null;
-    try {
-      if (typeof BroadcastChannel !== 'undefined') {
-        bc = new BroadcastChannel('skilltrack_oauth_channel');
-        bc.onmessage = (e) => {
-          if (e.data?.url) processOAuthUrl(e.data.url);
-        };
-      }
-    } catch (e) {}
+  return async (provider, options = {}) => {
+    const backendBase = getBackendBase();
+    const returnTo = resolveRedirectUri();
 
-    // 3. Storage event
-    const handleStorage = (e) => {
-      if (e.key === 'SKILLTRACK_OAUTH_RESULT' && e.newValue) {
-        try {
-          const payload = JSON.parse(e.newValue);
-          if (payload?.url) {
-            processOAuthUrl(payload.url);
-            window.localStorage.removeItem('SKILLTRACK_OAUTH_RESULT');
-          }
-        } catch (err) {}
-      }
-    };
+    const query = new URLSearchParams({
+      return_to: returnTo,
+    });
 
-    // 4. Polling de respaldo cada 300ms
-    const pollInterval = setInterval(() => {
-      try {
-        const raw = window.localStorage.getItem('SKILLTRACK_OAUTH_RESULT');
-        if (raw) {
-          const payload = JSON.parse(raw);
-          if (payload?.url) {
-            processOAuthUrl(payload.url);
-            window.localStorage.removeItem('SKILLTRACK_OAUTH_RESULT');
-          }
-        }
-      } catch (e) {}
-    }, 300);
+    if (options?.role) query.append('role', options.role);
+    if (options?.instructorKey) query.append('instructorKey', options.instructorKey);
+    if (options?.preceptorKey) query.append('preceptorKey', options.preceptorKey);
+    if (options?.schoolYear) query.append('schoolYear', options.schoolYear);
+    if (options?.courseDivision) query.append('courseDivision', options.courseDivision);
 
-    // 5. PostMessage directo
-    const handleMessage = (e) => {
-      if (e.origin !== window.location.origin) return;
-      if (e.data?.url && typeof e.data.url === 'string') {
-        processOAuthUrl(e.data.url);
-      }
-    };
+    const startUrl = `${backendBase}/api/v1/auth/oauth/${provider}/start?${query.toString()}`;
 
-    window.addEventListener('storage', handleStorage);
-    window.addEventListener('message', handleMessage);
-
-    return () => {
-      clearInterval(pollInterval);
-      if (bc) bc.close();
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('message', handleMessage);
-    };
-  }, [googleRedirect, gReq, onCredential, onError]);
-
-  // Hook nativo de Expo Auth Session como vía primaria
-  useEffect(() => {
-    if (gRes?.type === 'success') {
-      const code = gRes.params?.code;
-      const accessToken = gRes.authentication?.accessToken || gRes.params?.access_token;
-      const idToken = gRes.authentication?.idToken || gRes.params?.id_token;
-      const key = code || accessToken || idToken;
-
-      if (key && !handledCodeRef.current.has(key)) {
-        handledCodeRef.current.add(key);
-        if (code) {
-          onCredential('google', {
-            code,
-            redirectUri: gReq?.redirectUri || googleRedirect,
-            codeVerifier: gReq?.codeVerifier,
-          });
-        } else if (accessToken) {
-          onCredential('google', { accessToken });
-        } else if (idToken) {
-          onCredential('google', { idToken });
-        }
-      }
-    } else if (gRes?.type === 'error') {
-      onError('No se pudo completar el inicio de sesión con Google.');
-    }
-  }, [gRes]);
-
-  useEffect(() => {
-    if (fRes?.type === 'success') onCredential('facebook', { accessToken: fRes.authentication.accessToken });
-    else if (fRes?.type === 'error') onError('No se pudo completar el inicio de sesión con Facebook.');
-  }, [fRes]);
-
-  useEffect(() => {
-    if (hRes?.type === 'success') {
-      onCredential('github', {
-        code: hRes.params.code,
-        redirectUri: hReq?.redirectUri || githubRedirect,
-        codeVerifier: hReq?.codeVerifier,
-      });
-    } else if (hRes?.type === 'error') {
-      onError('No se pudo completar el inicio de sesión con GitHub.');
-    }
-  }, [hRes]);
-
-  useEffect(() => {
-    if (dRes?.type === 'success') {
-      onCredential('discord', {
-        code: dRes.params.code,
-        redirectUri: dReq?.redirectUri || discordRedirect,
-        codeVerifier: dReq?.codeVerifier,
-      });
-    } else if (dRes?.type === 'error') {
-      onError('No se pudo completar el inicio de sesión con Discord.');
-    }
-  }, [dRes]);
-
-  const configured = {
-    google: !!(OAUTH.googleAndroid || OAUTH.googleWeb || OAUTH.googleIos),
-    github: !!OAUTH.github,
-    discord: !!OAUTH.discord,
-    facebook: !!OAUTH.facebook,
-  };
-  const prompts = {
-    google: [gReq, gPrompt],
-    github: [hReq, hPrompt],
-    discord: [dReq, dPrompt],
-    facebook: [fReq, fPrompt],
-  };
-
-  return (provider) => {
-    if (!configured[provider]) {
-      const names = { google: 'Google', github: 'GitHub', discord: 'Discord', facebook: 'Facebook' };
-      return onError(
-        `El proveedor ${names[provider] || provider} requiere configurar su Client ID real en mobile/.env (ver docs/GUIA_INSTALACION.md).`
-      );
-    }
-
-    // En entorno Web: redirección directa en la misma ventana (sin popups bloqueados ni ventanas hijas)
+    // Flujo Web: redirección directa
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       try {
-        sessionStorage.setItem('oauth_provider', provider);
-        const state = Math.random().toString(36).substring(2) + Date.now().toString(36);
-        sessionStorage.setItem('oauth_state', state);
-
-        if (provider === 'google') {
-          const params = new URLSearchParams({
-            client_id: OAUTH.googleWeb,
-            redirect_uri: window.location.origin,
-            response_type: 'code',
-            scope: 'openid email profile',
-            prompt: 'select_account',
-            state: state,
-          });
-          window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-          return;
-        }
-
-        if (provider === 'github') {
-          const params = new URLSearchParams({
-            client_id: OAUTH.github,
-            redirect_uri: window.location.origin,
-            scope: 'read:user user:email',
-            state: state,
-          });
-          window.location.href = `https://github.com/login/oauth/authorize?${params.toString()}`;
-          return;
-        }
-
-        if (provider === 'discord') {
-          const params = new URLSearchParams({
-            client_id: OAUTH.discord,
-            redirect_uri: window.location.origin,
-            response_type: 'code',
-            scope: 'identify email',
-            state: state,
-          });
-          window.location.href = `https://discord.com/api/oauth2/authorize?${params.toString()}`;
-          return;
-        }
-      } catch (e) {
-        console.error('Error al redirigir para autenticación web:', e);
+        window.location.href = startUrl;
+      } catch (err) {
+        console.error('Error al redirigir para autenticación web:', err);
+        onError('No se pudo abrir el enlace de autenticación');
       }
+      return;
     }
 
-    // En app móvil nativa (Android / iOS):
-    const [req, prompt] = prompts[provider];
-    if (req) prompt();
+    // Flujo Nativo / Expo Go: abrir navegador seguro con retorno automático
+    try {
+      const result = await WebBrowser.openAuthSessionAsync(startUrl, returnTo);
+
+      if (result.type === 'success' && result.url) {
+        const u = new URL(result.url);
+        const search = u.search || '';
+        const hash = u.hash.startsWith('#') ? u.hash.slice(1) : u.hash;
+        const sp = new URLSearchParams(search);
+        const hp = new URLSearchParams(hash);
+
+        const error = sp.get('error') || hp.get('error');
+        if (error) {
+          return onError(`Error de autenticación: ${error}`);
+        }
+
+        const token = sp.get('token') || hp.get('token') || sp.get('accessToken') || hp.get('accessToken');
+        const refreshToken = sp.get('refreshToken') || hp.get('refreshToken');
+
+        if (token && refreshToken) {
+          return onCredential(provider, { token, accessToken: token, refreshToken });
+        }
+
+        const code = sp.get('code') || hp.get('code');
+        if (code) {
+          return onCredential(provider, { code, redirectUri: returnTo });
+        }
+
+        onError('No se recibieron credenciales de sesión del servidor');
+      } else if (result.type === 'cancel' || result.type === 'dismiss') {
+        // Ventana cerrada por el usuario
+      }
+    } catch (err) {
+      console.error('Error en autenticación móvil con Expo Go:', err);
+      onError(err.message || 'No se pudo completar la autenticación con el proveedor');
+    }
   };
 }

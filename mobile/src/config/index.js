@@ -50,7 +50,7 @@ export function resolveApiUrls() {
     return { primary: directUrl, fallback: proxyUrl };
   }
 
-  const def = 'http://10.0.2.2:3000/api/v1';
+  const def = 'https://campus-58oe.onrender.com/api/v1';
   return { primary: def, fallback: def };
 }
 

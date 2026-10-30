@@ -11,16 +11,37 @@ const path = require('path');
 const { notFound, errorHandler } = require('./middlewares/error');
 
 const app = express();
+app.set('trust proxy', 1);
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
     contentSecurityPolicy: {
       directives: {
         defaultSrc: ["'self'"],
-        connectSrc: ["'self'", 'https://*.google.com', 'https://*.googleapis.com', 'https://accounts.google.com', 'https://*.onrender.com', 'https://campus-58oe.onrender.com'],
+        connectSrc: [
+          "'self'",
+          'https://*.google.com',
+          'https://*.googleapis.com',
+          'https://accounts.google.com',
+          'https://*.onrender.com',
+          'https://campus-58oe.onrender.com',
+          'https://*.discord.com',
+          'https://discord.com',
+          'https://*.github.com',
+          'https://api.github.com'
+        ],
         scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'blob:', 'https://*.googleusercontent.com', 'https://*.gstatic.com'],
+        imgSrc: [
+          "'self'",
+          'data:',
+          'blob:',
+          'https://*.googleusercontent.com',
+          'https://*.gstatic.com',
+          'https://cdn.discordapp.com',
+          'https://*.githubusercontent.com',
+          'https://api.qrserver.com'
+        ],
         fontSrc: ["'self'", 'data:'],
       },
     },

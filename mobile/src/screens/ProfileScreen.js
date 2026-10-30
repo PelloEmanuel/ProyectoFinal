@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
+  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -131,7 +132,9 @@ export default function ProfileScreen({ navigation }) {
       setSuccess('');
       const data = await setup2FA();
       setTotpSetup(data);
-      setRecoveryCodes(null);
+      if (data?.recoveryCodes) {
+        setRecoveryCodes(data.recoveryCodes);
+      }
     } catch (err) {
       setError(extractErrorMessage(err));
     } finally {
@@ -147,11 +150,12 @@ export default function ProfileScreen({ navigation }) {
     try {
       setLoading2FA(true);
       setError('');
+      const prevCodes = recoveryCodes || totpSetup?.recoveryCodes || [];
       const data = await confirm2FA(totpCode.trim());
-      setRecoveryCodes(data?.recoveryCodes || []);
+      setRecoveryCodes(data?.recoveryCodes || prevCodes);
       setTotpSetup(null);
       setTotpCode('');
-      setSuccess('Autenticación en 2 pasos (TOTP) activada. Guardá tus códigos de respaldo.');
+      setSuccess('¡Autenticación en 2 pasos (TOTP) activada con éxito! Guardá tus códigos de respaldo.');
     } catch (err) {
       setError(extractErrorMessage(err));
     } finally {
@@ -334,6 +338,23 @@ export default function ProfileScreen({ navigation }) {
         {!user?.twoFactorEnabled ? (
           totpSetup ? (
             <View>
+              {totpSetup.otpauthUrl ? (
+                <View style={{ alignItems: 'center', marginVertical: 10 }}>
+                  <Image
+                    source={{ uri: `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(totpSetup.otpauthUrl)}` }}
+                    style={{ width: 170, height: 170, backgroundColor: '#ffffff', borderRadius: 8, padding: 6 }}
+                    resizeMode="contain"
+                  />
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 6, textAlign: 'center' }}>
+                    Escaneá este código QR con Google Authenticator o Authy
+                  </Text>
+                  {totpSetup.currentCodeHint ? (
+                    <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4, textAlign: 'center' }}>
+                      Código actual de prueba: <Text style={{ color: colors.primary, fontWeight: '700' }}>{totpSetup.currentCodeHint}</Text>
+                    </Text>
+                  ) : null}
+                </View>
+              ) : null}
               <View style={[styles.secretBox, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
                 <Text style={{ color: colors.textMuted, fontSize: 11, fontWeight: '700' }}>
                   CLAVE SECRETA MANUAL (BASE32):

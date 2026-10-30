@@ -79,12 +79,13 @@ export function AuthProvider({ children }) {
       onExpired: () => signOutLocal(),
     });
     (async () => {
-      // 1. Interceptar retorno de OAuth en Web (flujo de redirección estándar)
+      // 1. Interceptar retorno de OAuth en Web (flujo de redirección estándar o proxy)
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         const search = window.location.search || '';
         const hash = window.location.hash || '';
+        const hasDirectToken = search.includes('token=') || hash.includes('token=');
         const hasCode = search.includes('code=') || hash.includes('code=');
-        const hasToken = hash.includes('access_token=') || search.includes('access_token=');
+        const hasToken = hash.includes('access_token=') || search.includes('access_token=') || hasDirectToken;
         const hasIdToken = hash.includes('id_token=') || search.includes('id_token=');
 
         if (hasCode || hasToken || hasIdToken) {
@@ -92,6 +93,19 @@ export function AuthProvider({ children }) {
             const searchParams = new URLSearchParams(search);
             const hashStr = hash.startsWith('#') ? hash.slice(1) : hash;
             const hashParams = new URLSearchParams(hashStr);
+
+            const directToken = searchParams.get('token') || searchParams.get('accessToken') || searchParams.get('access_token') || hashParams.get('token') || hashParams.get('access_token');
+            const directRefresh = searchParams.get('refreshToken') || searchParams.get('refresh_token') || hashParams.get('refreshToken') || hashParams.get('refresh_token');
+
+            if (directToken && directRefresh) {
+              try {
+                window.history.replaceState({}, document.title, window.location.pathname);
+              } catch (e) {}
+              setSessionTokens({ accessToken: directToken, refreshToken: directRefresh });
+              const fresh = await usersApi.me();
+              await startSession({ accessToken: directToken, refreshToken: directRefresh, user: fresh });
+              return;
+            }
 
             const code = searchParams.get('code') || hashParams.get('code');
             const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
@@ -192,6 +206,17 @@ export function AuthProvider({ children }) {
         return res;
       },
       async socialLogin(provider, body) {
+        if (body?.token || body?.accessToken) {
+          const tokens = {
+            accessToken: body.token || body.accessToken,
+            refreshToken: body.refreshToken,
+          };
+          setSessionTokens(tokens);
+          const fresh = await usersApi.me();
+          const sessionData = { ...tokens, user: fresh };
+          await startSession(sessionData);
+          return sessionData;
+        }
         const res = await authApi.social(provider, body);
         await startSession(res);
         return res;

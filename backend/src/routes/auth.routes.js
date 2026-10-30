@@ -64,7 +64,9 @@ router.post(
   c.resetPassword
 );
 
-// Proveedores OAuth 2.0 (Google, GitHub, Facebook)
+// Proveedores OAuth 2.0 (Google, GitHub, Discord, Facebook)
+router.get('/oauth/:provider/start', c.oauthStart);
+router.get('/oauth/:provider/callback', c.oauthCallback);
 router.post('/oauth/:provider', c.socialLogin);
 router.post('/social/:provider', c.socialLogin);
 
