@@ -609,45 +609,60 @@ export default function InstructorDashboardScreen({ navigation }) {
             onAction={() => setDashboardGroupFilter('ALL')}
           />
         ) : (
-          filteredRecentCourses.map((course) => (
-            <Card
-              key={course.id}
-              onPress={() => navigation.navigate('InstructorCourses', { editCourseId: course.id })}
-            >
-              <View style={styles.rowBetween}>
-                <Badge
-                  label={
-                    course.schoolGroupLabel ||
-                    `${course.schoolYear || 1}° Año - ${course.courseDivision || 1}° Curso`
-                  }
-                  tone="primary"
-                />
-                <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '700' }}>
-                  {course.enrolledCount || 0} alumnos
-                </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+            {filteredRecentCourses.map((course) => (
+              <View
+                key={course.id}
+                style={{
+                  width: Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : '100%',
+                  minWidth: 280,
+                  flexGrow: 1,
+                }}
+              >
+                <Card
+                  onPress={() => navigation.navigate('InstructorCourses', { editCourseId: course.id })}
+                  style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}
+                >
+                  <View>
+                    <View style={styles.rowBetween}>
+                      <Badge
+                        label={
+                          course.schoolGroupLabel ||
+                          `${course.schoolYear || 1}° Año - ${course.courseDivision || 1}° Curso`
+                        }
+                        tone="primary"
+                      />
+                      <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '700' }}>
+                        {course.enrolledCount || 0} alumnos
+                      </Text>
+                    </View>
+                    <Text style={[styles.itemTitle, { color: colors.text, marginTop: 8 }]}>
+                      {course.title}
+                    </Text>
+                    {(course.schedules || []).length > 0 && (
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                        {course.schedules.map((sch) => (
+                          <Badge
+                            key={sch.id}
+                            label={`${sch.dayOfWeek} ${sch.startTime} a ${sch.endTime} hs`}
+                            tone="info"
+                          />
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                  <View style={[styles.rowBetween, { marginTop: 14 }]}>
+                    <Text style={{ color: colors.textMuted, fontSize: 12 }}>
+                      {course.modulesCount || 0} módulos
+                    </Text>
+                    <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 12 }}>
+                      Abrir materia →
+                    </Text>
+                  </View>
+                </Card>
               </View>
-              <Text style={[styles.itemTitle, { color: colors.text }]}>{course.title}</Text>
-              {(course.schedules || []).length > 0 && (
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
-                  {course.schedules.map((sch) => (
-                    <Badge
-                      key={sch.id}
-                      label={`${sch.dayOfWeek} ${sch.startTime} a ${sch.endTime} hs`}
-                      tone="info"
-                    />
-                  ))}
-                </View>
-              )}
-              <View style={[styles.rowBetween, { marginTop: 10 }]}>
-                <Text style={{ color: colors.textMuted, fontSize: 12 }}>
-                  {course.modulesCount || 0} módulos de material teórico
-                </Text>
-                <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 12 }}>
-                  Abrir materia →
-                </Text>
-              </View>
-            </Card>
-          ))
+            ))}
+          </View>
         )}
       </View>
     </ScrollView>

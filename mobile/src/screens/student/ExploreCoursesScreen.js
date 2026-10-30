@@ -4,7 +4,7 @@
  * Permite búsqueda por texto, filtros por categoría, nivel, duración y ordenamiento.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { FlatList, RefreshControl, Text, View } from 'react-native';
+import { FlatList, Platform, RefreshControl, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Button, Chips, Empty, ErrorBanner, Input, Loading, Screen } from '../../components/ui';
 import CourseCard from '../../components/CourseCard';
@@ -84,9 +84,12 @@ export default function ExploreCoursesScreen({ navigation }) {
   return (
     <Screen scroll={false} style={{ padding: 0 }}>
       <FlatList
+        key={Platform.OS === 'web' ? 'grid-3' : 'list-1'}
+        numColumns={Platform.OS === 'web' ? 3 : 1}
+        columnWrapperStyle={Platform.OS === 'web' ? { gap: 14 } : undefined}
         data={courses}
         keyExtractor={(c) => String(c.id)}
-        contentContainerStyle={{ padding: 16, paddingBottom: 36 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 36, gap: 14 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
         ListHeaderComponent={
           <View>
@@ -111,11 +114,13 @@ export default function ExploreCoursesScreen({ navigation }) {
           </View>
         }
         renderItem={({ item }) => (
-          <CourseCard
-            course={item}
-            actionLabel="Ver detalles y programa"
-            onPress={() => navigation.navigate('CourseDetail', { courseId: item.id })}
-          />
+          <View style={{ flex: 1, minWidth: 280 }}>
+            <CourseCard
+              course={item}
+              actionLabel="Ver detalles y programa"
+              onPress={() => navigation.navigate('CourseDetail', { courseId: item.id })}
+            />
+          </View>
         )}
         ListEmptyComponent={
           !error && (

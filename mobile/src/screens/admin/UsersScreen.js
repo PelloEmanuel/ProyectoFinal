@@ -296,91 +296,104 @@ export default function UsersScreen() {
             message="Ajustá los filtros de búsqueda o creá un nuevo usuario institucional."
           />
         ) : (
-          users.map((u) => {
-            const rBadge = getRoleBadge(u.role);
-            const isSelf = u.id === currentUser?.id;
-            const canAdminEditOrDelete = Boolean(u.createdByAdmin) && !isSelf;
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+            {users.map((u) => {
+              const rBadge = getRoleBadge(u.role);
+              const isSelf = u.id === currentUser?.id;
+              const canAdminEditOrDelete = Boolean(u.createdByAdmin) && !isSelf;
 
-            return (
-              <Card key={u.id}>
-                <View style={[styles.rowBetween, { flexWrap: 'wrap', gap: 6 }]}>
-                  <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
-                    <Badge label={rBadge.label} tone={rBadge.tone} />
-                    <Badge
-                      label={u.createdByAdmin ? 'Creado por Admin' : 'Registro propio'}
-                      tone={u.createdByAdmin ? 'primary' : 'neutral'}
-                    />
-                  </View>
-                  <Badge
-                    label={u.status === 'active' ? 'Activo' : 'Suspendido'}
-                    tone={u.status === 'active' ? 'success' : 'danger'}
-                  />
-                </View>
-
-                <Text style={[styles.name, { color: colors.text }]}>
-                  {u.firstName} {u.lastName} {isSelf ? '(Vos)' : ''}
-                </Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{u.email}</Text>
-                <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>
-                  Alta: {formatDateAR(u.createdAt)} • Verificado: {u.emailVerified ? 'Sí' : 'No'} • 2FA: {u.twoFactorEnabled ? 'Activo' : 'Inactivo'}
-                </Text>
-
-                {!isSelf && (
-                  <View style={{ marginTop: 12 }}>
-                    <View style={styles.actionsRow}>
-                      <Button
-                        title={u.createdByAdmin ? 'Editar usuario' : 'Editar rol / estado'}
-                        variant="primary"
-                        icon="create-outline"
-                        onPress={() => openEditUserModal(u)}
-                        style={{ flex: 1, minHeight: 38, paddingVertical: 8, marginBottom: 0 }}
-                      />
-                      <Button
-                        title={u.status === 'active' ? 'Suspender' : 'Reactivar'}
-                        variant={u.status === 'active' ? 'outline' : 'success'}
-                        icon={u.status === 'active' ? 'ban-outline' : 'checkmark-circle-outline'}
-                        onPress={() => handleToggleStatus(u)}
-                        style={{ flex: 1, minHeight: 38, paddingVertical: 8, marginBottom: 0 }}
-                      />
-                      {canAdminEditOrDelete && (
-                        <Button
-                          title="Eliminar"
-                          variant="danger"
-                          icon="trash-outline"
-                          onPress={() => setUserToDelete(u)}
-                          style={{ minHeight: 38, paddingVertical: 8, marginBottom: 0 }}
+              return (
+                <View
+                  key={u.id}
+                  style={{
+                    width: Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : '100%',
+                    minWidth: 280,
+                    flexGrow: 1,
+                  }}
+                >
+                  <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>
+                    <View>
+                      <View style={[styles.rowBetween, { flexWrap: 'wrap', gap: 6 }]}>
+                        <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                          <Badge label={rBadge.label} tone={rBadge.tone} />
+                          <Badge
+                            label={u.createdByAdmin ? 'Creado por Admin' : 'Registro propio'}
+                            tone={u.createdByAdmin ? 'primary' : 'neutral'}
+                          />
+                        </View>
+                        <Badge
+                          label={u.status === 'active' ? 'Activo' : 'Suspendido'}
+                          tone={u.status === 'active' ? 'success' : 'danger'}
                         />
-                      )}
+                      </View>
+
+                      <Text style={[styles.name, { color: colors.text, marginTop: 8 }]}>
+                        {u.firstName} {u.lastName} {isSelf ? '(Vos)' : ''}
+                      </Text>
+                      <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>{u.email}</Text>
+                      <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 4 }}>
+                        Alta: {formatDateAR(u.createdAt)} • Verificado: {u.emailVerified ? 'Sí' : 'No'} • 2FA: {u.twoFactorEnabled ? 'Activo' : 'Inactivo'}
+                      </Text>
                     </View>
-                    {!u.createdByAdmin && (
-                      <View
-                        style={{
-                          marginTop: 8,
-                          padding: 8,
-                          borderRadius: 8,
-                          backgroundColor: colors.surfaceAlt || colors.background,
-                          borderWidth: 1,
-                          borderColor: colors.border,
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                        }}
-                      >
-                        <Ionicons
-                          name="information-circle-outline"
-                          size={16}
-                          color={colors.primary}
-                          style={{ marginRight: 6 }}
-                        />
-                        <Text style={{ flex: 1, fontSize: 11, color: colors.textSecondary }}>
-                          Registro propio: podés cambiar si es estudiante o docente y suspender su acceso. Su correo y contraseña solo pueden ser modificados por él mismo desde su perfil.
-                        </Text>
+
+                    {!isSelf && (
+                      <View style={{ marginTop: 14 }}>
+                        <View style={styles.actionsRow}>
+                          <Button
+                            title={u.createdByAdmin ? 'Editar' : 'Editar rol'}
+                            variant="primary"
+                            icon="create-outline"
+                            onPress={() => openEditUserModal(u)}
+                            style={{ flex: 1, minHeight: 38, paddingVertical: 8, marginBottom: 0 }}
+                          />
+                          <Button
+                            title={u.status === 'active' ? 'Suspender' : 'Reactivar'}
+                            variant={u.status === 'active' ? 'outline' : 'success'}
+                            icon={u.status === 'active' ? 'ban-outline' : 'checkmark-circle-outline'}
+                            onPress={() => handleToggleStatus(u)}
+                            style={{ flex: 1, minHeight: 38, paddingVertical: 8, marginBottom: 0 }}
+                          />
+                          {canAdminEditOrDelete && (
+                            <Button
+                              title=""
+                              variant="danger"
+                              icon="trash-outline"
+                              onPress={() => setUserToDelete(u)}
+                              style={{ minHeight: 38, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 0 }}
+                            />
+                          )}
+                        </View>
+                        {!u.createdByAdmin && (
+                          <View
+                            style={{
+                              marginTop: 8,
+                              padding: 8,
+                              borderRadius: 8,
+                              backgroundColor: colors.surfaceAlt || colors.background,
+                              borderWidth: 1,
+                              borderColor: colors.border,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <Ionicons
+                              name="information-circle-outline"
+                              size={15}
+                              color={colors.primary}
+                              style={{ marginRight: 6 }}
+                            />
+                            <Text style={{ flex: 1, fontSize: 11, color: colors.textSecondary }}>
+                              Registro propio: solo rol y estado modificables.
+                            </Text>
+                          </View>
+                        )}
                       </View>
                     )}
-                  </View>
-                )}
-              </Card>
-            );
-          })
+                  </Card>
+                </View>
+              );
+            })}
+          </View>
         )}
       </ScrollView>
 

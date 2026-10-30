@@ -5,7 +5,7 @@
  * personalizado que el profesor configuró para cada materia.
  */
 import React, { useCallback, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Empty, ErrorBanner, Input, Loading, Screen } from '../../components/ui';
@@ -117,176 +117,189 @@ export default function MyLearningScreen({ navigation }) {
             text="Las materias asignadas a tu curso aparecerán automáticamente aquí."
           />
         ) : (
-          filteredSubjects.map((item) => {
-            const hasTeacher =
-              item.instructorId &&
-              item.instructorName &&
-              item.instructorName !== 'Sin profesor asignado';
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+            {filteredSubjects.map((item) => {
+              const hasTeacher =
+                item.instructorId &&
+                item.instructorName &&
+                item.instructorName !== 'Sin profesor asignado';
 
-            // Obtener paleta de color elegida por el profesor para esta materia
-            const palette = item.themeColor
-              ? buildCoursePaletteFromHex(item.themeColor)
-              : COURSE_THEME_PALETTES[
-                  Math.abs(Number(item.courseId || item.id || 0)) %
-                    COURSE_THEME_PALETTES.length
-                ];
+              // Obtener paleta de color elegida por el profesor para esta materia
+              const palette = item.themeColor
+                ? buildCoursePaletteFromHex(item.themeColor)
+                : COURSE_THEME_PALETTES[
+                    Math.abs(Number(item.courseId || item.id || 0)) %
+                      COURSE_THEME_PALETTES.length
+                  ];
 
-            return (
-              <Pressable
-                key={item.courseId}
-                onPress={() =>
-                  navigation.navigate('CourseDetail', { courseId: item.courseId })
-                }
-                style={{
-                  backgroundColor: palette.solidBg,
-                  borderRadius: 18,
-                  padding: 18,
-                  marginBottom: 14,
-                  borderWidth: 1.5,
-                  borderColor: palette.borderColor,
-                  overflow: 'hidden',
-                  shadowColor: palette.solidBg,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.28,
-                  shadowRadius: 8,
-                  elevation: 4,
-                }}
-              >
-                {/* Birrete decorativo marca de agua */}
+              return (
                 <View
+                  key={item.courseId}
                   style={{
-                    position: 'absolute',
-                    right: 14,
-                    top: -10,
-                    transform: [{ rotate: '-18deg' }],
-                    pointerEvents: 'none',
+                    width: Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : '100%',
+                    minWidth: 280,
+                    flexGrow: 1,
                   }}
                 >
-                  <Ionicons
-                    name="school"
-                    size={90}
-                    color="rgba(255, 255, 255, 0.16)"
-                  />
-                </View>
-
-                {/* Encabezado con insignias */}
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                  }}
-                >
-                  <View
+                  <Pressable
+                    onPress={() =>
+                      navigation.navigate('CourseDetail', { courseId: item.courseId })
+                    }
                     style={{
-                      backgroundColor: palette.badgeBg,
-                      borderColor: palette.badgeBorder,
-                      borderWidth: 1,
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
-                      borderRadius: 10,
+                      backgroundColor: palette.solidBg,
+                      borderRadius: 18,
+                      padding: 18,
+                      borderWidth: 1.5,
+                      borderColor: palette.borderColor,
+                      overflow: 'hidden',
+                      shadowColor: palette.solidBg,
+                      shadowOffset: { width: 0, height: 4 },
+                      shadowOpacity: 0.28,
+                      shadowRadius: 8,
+                      elevation: 4,
+                      height: '100%',
+                      justifyContent: 'space-between',
                     }}
                   >
-                    <Text
+                    {/* Birrete decorativo marca de agua */}
+                    <View
                       style={{
-                        color: '#ffffff',
-                        fontWeight: '800',
-                        fontSize: 12,
+                        position: 'absolute',
+                        right: 14,
+                        top: -10,
+                        transform: [{ rotate: '-18deg' }],
+                        pointerEvents: 'none',
                       }}
                     >
-                      {item.categoryName || 'Materia'}
-                    </Text>
-                  </View>
-                  <View
-                    style={{
-                      backgroundColor: palette.badgeBg,
-                      borderColor: palette.badgeBorder,
-                      borderWidth: 1,
-                      paddingHorizontal: 10,
-                      paddingVertical: 4,
-                      borderRadius: 10,
-                    }}
-                  >
-                    <Text
+                      <Ionicons
+                        name="school"
+                        size={90}
+                        color="rgba(255, 255, 255, 0.16)"
+                      />
+                    </View>
+
+                    <View>
+                      {/* Encabezado con insignias */}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <View
+                          style={{
+                            backgroundColor: palette.badgeBg,
+                            borderColor: palette.badgeBorder,
+                            borderWidth: 1,
+                            paddingHorizontal: 10,
+                            paddingVertical: 4,
+                            borderRadius: 10,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: '#ffffff',
+                              fontWeight: '800',
+                              fontSize: 12,
+                            }}
+                          >
+                            {item.categoryName || 'Materia'}
+                          </Text>
+                        </View>
+                        <View
+                          style={{
+                            backgroundColor: palette.badgeBg,
+                            borderColor: palette.badgeBorder,
+                            borderWidth: 1,
+                            paddingHorizontal: 10,
+                            paddingVertical: 4,
+                            borderRadius: 10,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: '#ffffff',
+                              fontWeight: '800',
+                              fontSize: 12,
+                            }}
+                          >
+                            {formatSchoolGroupShort(
+                              item.schoolYear || user?.schoolYear || 6,
+                              item.courseDivision || user?.courseDivision || 1
+                            )}
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Título de la materia */}
+                      <Text
+                        style={{
+                          fontSize: 19,
+                          fontWeight: '900',
+                          color: '#ffffff',
+                          marginTop: 10,
+                        }}
+                      >
+                        {item.title}
+                      </Text>
+
+                      {/* Docente a cargo */}
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          marginTop: 6,
+                        }}
+                      >
+                        <Ionicons
+                          name="person-circle-outline"
+                          size={18}
+                          color="#ffffff"
+                          style={{ marginRight: 6, opacity: 0.9 }}
+                        />
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: '700',
+                            color: '#f8fafc',
+                          }}
+                        >
+                          Profesor/a:{' '}
+                          {hasTeacher
+                            ? item.instructorName
+                            : 'Sin profesor asignado (Vacante)'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Pie de tarjeta con llamado a la acción */}
+                    <View
                       style={{
-                        color: '#ffffff',
-                        fontWeight: '800',
-                        fontSize: 12,
+                        flexDirection: 'row',
+                        justifyContent: 'flex-end',
+                        alignItems: 'center',
+                        marginTop: 14,
+                        paddingTop: 10,
+                        borderTopWidth: 1,
+                        borderTopColor: 'rgba(255, 255, 255, 0.2)',
                       }}
                     >
-                      {formatSchoolGroupShort(
-                        item.schoolYear || user?.schoolYear || 6,
-                        item.courseDivision || user?.courseDivision || 1
-                      )}
-                    </Text>
-                  </View>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: '800',
+                          color: '#ffffff',
+                        }}
+                      >
+                        Entrar al tablón de la materia →
+                      </Text>
+                    </View>
+                  </Pressable>
                 </View>
-
-                {/* Título de la materia */}
-                <Text
-                  style={{
-                    fontSize: 19,
-                    fontWeight: '900',
-                    color: '#ffffff',
-                    marginTop: 10,
-                  }}
-                >
-                  {item.title}
-                </Text>
-
-                {/* Docente a cargo */}
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    marginTop: 6,
-                  }}
-                >
-                  <Ionicons
-                    name="person-circle-outline"
-                    size={18}
-                    color="#ffffff"
-                    style={{ marginRight: 6, opacity: 0.9 }}
-                  />
-                  <Text
-                    style={{
-                      fontSize: 13,
-                      fontWeight: '700',
-                      color: '#f8fafc',
-                    }}
-                  >
-                    Profesor/a:{' '}
-                    {hasTeacher
-                      ? item.instructorName
-                      : 'Sin profesor asignado (Vacante)'}
-                  </Text>
-                </View>
-
-                {/* Pie de tarjeta con llamado a la acción */}
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'flex-end',
-                    alignItems: 'center',
-                    marginTop: 12,
-                    paddingTop: 10,
-                    borderTopWidth: 1,
-                    borderTopColor: 'rgba(255, 255, 255, 0.2)',
-                  }}
-                >
-                  <Text
-                    style={{
-                      fontSize: 13,
-                      fontWeight: '800',
-                      color: '#ffffff',
-                    }}
-                  >
-                    Entrar al tablón de la materia →
-                  </Text>
-                </View>
-              </Pressable>
-            );
-          })
+              );
+            })}
+          </View>
         )}
       </ScrollView>
     </Screen>

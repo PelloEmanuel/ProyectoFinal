@@ -41,24 +41,24 @@ export const lightColors = {
 
 export const darkColors = {
   mode: 'dark',
-  navy: '#060913',
-  navySurface: '#0d1322',
+  navy: '#222b38',           // Gris azulado suave, menor contraste con respecto al modo claro
+  navySurface: '#2f3a4c',
   primary: '#ef4444',        // Rojo brillante armónico sobre fondo oscuro
   primaryLight: '#450a0a',
   secondary: '#22c55e',      // Verde vibrante armónico sobre fondo oscuro
   secondaryLight: '#052e16',
   accent: '#22c55e',
   info: '#22c55e',
-  bg: '#0b0f19',             // Color base negro/azul actual
-  background: '#0b0f19',
-  card: '#131b2e',
-  surface: '#131b2e',
-  surfaceAlt: '#1c263f',
+  bg: '#1e2430',             // Gris suave elegante para modo oscuro (menos contraste)
+  background: '#1e2430',
+  card: '#283141',           // Tarjeta en gris medio suave
+  surface: '#283141',
+  surfaceAlt: '#333e52',
   text: '#f8fafc',
   textSecondary: '#cbd5e1',
   muted: '#94a3b8',
   textMuted: '#94a3b8',
-  border: '#24324f',
+  border: '#3a4659',
   success: '#22c55e',        // Verde Técnica 5 en modo oscuro
   successLight: '#064e3b',
   warning: '#f59e0b',
@@ -66,7 +66,7 @@ export const darkColors = {
   warningSoft: '#451a03',
   danger: '#ef4444',         // Rojo Técnica 5 en modo oscuro
   dangerLight: '#4c0519',
-  overlay: 'rgba(6, 9, 19, 0.82)',
+  overlay: 'rgba(18, 22, 30, 0.75)',
   // Acentos para campus escolar
   amber: '#fbbf24',
   emerald: '#22c55e',

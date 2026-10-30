@@ -284,105 +284,118 @@ export default function InstructorStudentsScreen() {
           }
         />
       ) : (
-        filteredStudents.map((item) => {
-          const subjects = item.subjects || [];
-          return (
-            <Card key={item.studentId} style={{ marginBottom: 12 }}>
-              {/* Encabezado de la tarjeta: Curso y total de materias */}
-              <View style={styles.rowBetween}>
-                <View
-                  style={{
-                    backgroundColor: '#1d4ed8',
-                    paddingHorizontal: 10,
-                    paddingVertical: 4,
-                    borderRadius: 10,
-                  }}
-                >
-                  <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 12 }}>
-                    🎓 Curso: {item.schoolGroupLabel || formatSchoolGroupShort(item.schoolYear, item.courseDivision)}
-                  </Text>
-                </View>
-
-                <Badge
-                  label={subjects.length > 0 ? `${subjects.length} ${subjects.length === 1 ? 'materia' : 'materias'}` : 'Sin materias'}
-                  tone={subjects.length > 0 ? 'success' : 'neutral'}
-                />
-              </View>
-
-              {/* Datos personales del estudiante */}
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
-                <View
-                  style={{
-                    width: 44,
-                    height: 44,
-                    borderRadius: 22,
-                    backgroundColor: colors.primary,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginRight: 12,
-                  }}
-                >
-                  <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '800' }}>
-                    {(item.firstName?.[0] || 'A').toUpperCase()}
-                    {(item.lastName?.[0] || '').toUpperCase()}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.studentName, { color: colors.text }]}>
-                    {item.firstName} {item.lastName}
-                  </Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
-                    {item.email}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Materias a las que está inscripto (agrupadas aquí sin repetir la tarjeta) */}
-              <View style={[styles.subjectsContainer, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
-                  <Ionicons name="book-outline" size={14} color={colors.primary} style={{ marginRight: 6 }} />
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: colors.text }}>
-                    Materias inscriptas ({subjects.length}):
-                  </Text>
-                </View>
-
-                {subjects.length === 0 ? (
-                  <Text style={{ fontSize: 12, color: colors.textMuted, fontStyle: 'italic' }}>
-                    El estudiante aún no tiene materias asignadas.
-                  </Text>
-                ) : (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                    {subjects.map((sub) => (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+          {filteredStudents.map((item) => {
+            const subjects = item.subjects || [];
+            return (
+              <View
+                key={item.studentId}
+                style={{
+                  width: Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : '100%',
+                  minWidth: 280,
+                  flexGrow: 1,
+                }}
+              >
+                <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>
+                  <View>
+                    {/* Encabezado de la tarjeta: Curso y total de materias */}
+                    <View style={styles.rowBetween}>
                       <View
-                        key={sub.id}
-                        style={[
-                          styles.subjectBadge,
-                          {
-                            backgroundColor: colors.card,
-                            borderColor: colors.border,
-                          },
-                        ]}
+                        style={{
+                          backgroundColor: '#1d4ed8',
+                          paddingHorizontal: 10,
+                          paddingVertical: 4,
+                          borderRadius: 10,
+                        }}
                       >
-                        <Text style={[styles.subjectBadgeText, { color: colors.text }]}>
-                          {sub.title}
+                        <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 12 }}>
+                          🎓 Curso: {item.schoolGroupLabel || formatSchoolGroupShort(item.schoolYear, item.courseDivision)}
                         </Text>
                       </View>
-                    ))}
-                  </View>
-                )}
-              </View>
 
-              {/* Fecha de registro */}
-              {item.enrolledAt && (
-                <View style={{ marginTop: 8 }}>
-                  <Text style={{ color: colors.textMuted, fontSize: 11 }}>
-                    Registrado en el campus: {formatDateAR(item.enrolledAt)}
-                  </Text>
-                </View>
-              )}
-            </Card>
-          );
-        })
+                      <Badge
+                        label={subjects.length > 0 ? `${subjects.length} ${subjects.length === 1 ? 'materia' : 'materias'}` : 'Sin materias'}
+                        tone={subjects.length > 0 ? 'success' : 'neutral'}
+                      />
+                    </View>
+
+                    {/* Datos personales del estudiante */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12 }}>
+                      <View
+                        style={{
+                          width: 44,
+                          height: 44,
+                          borderRadius: 22,
+                          backgroundColor: colors.primary,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: 12,
+                        }}
+                      >
+                        <Text style={{ color: '#ffffff', fontSize: 16, fontWeight: '800' }}>
+                          {(item.firstName?.[0] || 'A').toUpperCase()}
+                          {(item.lastName?.[0] || '').toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.studentName, { color: colors.text }]}>
+                          {item.firstName} {item.lastName}
+                        </Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
+                          {item.email}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Materias a las que está inscripto */}
+                    <View style={[styles.subjectsContainer, { backgroundColor: colors.surfaceAlt, borderColor: colors.border, marginTop: 12 }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                        <Ionicons name="book-outline" size={14} color={colors.primary} style={{ marginRight: 6 }} />
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: colors.text }}>
+                          Materias inscriptas ({subjects.length}):
+                        </Text>
+                      </View>
+
+                      {subjects.length === 0 ? (
+                        <Text style={{ fontSize: 12, color: colors.textMuted, fontStyle: 'italic' }}>
+                          El estudiante aún no tiene materias asignadas.
+                        </Text>
+                      ) : (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                          {subjects.map((sub) => (
+                            <View
+                              key={sub.id}
+                              style={[
+                                styles.subjectBadge,
+                                {
+                                  backgroundColor: colors.card,
+                                  borderColor: colors.border,
+                                },
+                              ]}
+                            >
+                              <Text style={[styles.subjectBadgeText, { color: colors.text }]}>
+                                {sub.title}
+                              </Text>
+                            </View>
+                          ))}
+                        </View>
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Fecha de registro */}
+                  {item.enrolledAt && (
+                    <View style={{ marginTop: 12, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border }}>
+                      <Text style={{ color: colors.textMuted, fontSize: 11 }}>
+                        Registrado en el campus: {formatDateAR(item.enrolledAt)}
+                      </Text>
+                    </View>
+                  )}
+                </Card>
+              </View>
+            );
+          })}
+        </View>
       )}
     </ScrollView>
   );

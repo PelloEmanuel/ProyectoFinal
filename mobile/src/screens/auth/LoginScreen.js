@@ -96,7 +96,10 @@ export default function LoginScreen({ navigation }) {
         error={errors.password}
         placeholder="••••••••"
         secureTextEntry
-        autoComplete="password"
+        autoComplete="off"
+        textContentType="none"
+        autoCorrect={false}
+        spellCheck={false}
       />
 
       <Pressable

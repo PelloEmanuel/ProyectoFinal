@@ -60,7 +60,11 @@ export function AuthProvider({ children }) {
       const data = payload?.data || payload;
       setSessionTokens(data);
       await saveSession(data);
-      if (data.user?.preferences?.theme) {
+      const localSavedTheme =
+        typeof window !== 'undefined' && window.localStorage
+          ? window.localStorage.getItem('skt_theme_mode')
+          : null;
+      if (!localSavedTheme && data.user?.preferences?.theme) {
         await setThemeMode(data.user.preferences.theme);
       }
       dispatch({ type: 'SET_USER', user: data.user });
@@ -145,7 +149,11 @@ export function AuthProvider({ children }) {
       try {
         const fresh = await usersApi.me();
         await saveSession({ user: fresh });
-        if (fresh?.preferences?.theme) {
+        const localSavedTheme =
+          typeof window !== 'undefined' && window.localStorage
+            ? window.localStorage.getItem('skt_theme_mode')
+            : null;
+        if (!localSavedTheme && fresh?.preferences?.theme) {
           await setThemeMode(fresh.preferences.theme);
         }
         dispatch({ type: 'SET_USER', user: fresh });

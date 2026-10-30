@@ -1469,47 +1469,60 @@ export default function InstructorCoursesScreen({ route, navigation }) {
                 }
               />
             ) : (
-              filteredCourses.map((course) => (
-                <Card key={course.id}>
-                  <View style={styles.rowBetween}>
-                    <Badge
-                      label={
-                        course.schoolGroupLabel ||
-                        `${course.schoolYear || 1}° Año - ${course.courseDivision || 1}° Curso`
-                      }
-                      tone="primary"
-                    />
-                    <Badge label={`${course.enrolledCount || 0} alumnos`} tone="success" />
-                  </View>
-                  <Text style={[styles.courseTitle, { color: colors.text }]}>
-                    {course.title}
-                  </Text>
-                  {(course.schedules || []).length > 0 && (
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
-                      {course.schedules.map((sch) => (
-                        <Badge
-                          key={sch.id}
-                          label={`${sch.dayOfWeek} ${sch.startTime} a ${sch.endTime}`}
-                          tone="info"
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+                {filteredCourses.map((course) => (
+                  <View
+                    key={course.id}
+                    style={{
+                      width: Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : '100%',
+                      minWidth: 280,
+                      flexGrow: 1,
+                    }}
+                  >
+                    <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>
+                      <View>
+                        <View style={styles.rowBetween}>
+                          <Badge
+                            label={
+                              course.schoolGroupLabel ||
+                              `${course.schoolYear || 1}° Año - ${course.courseDivision || 1}° Curso`
+                            }
+                            tone="primary"
+                          />
+                          <Badge label={`${course.enrolledCount || 0} alumnos`} tone="success" />
+                        </View>
+                        <Text style={[styles.courseTitle, { color: colors.text, marginTop: 8 }]}>
+                          {course.title}
+                        </Text>
+                        {(course.schedules || []).length > 0 && (
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                            {course.schedules.map((sch) => (
+                              <Badge
+                                key={sch.id}
+                                label={`${sch.dayOfWeek} ${sch.startTime} a ${sch.endTime}`}
+                                tone="info"
+                              />
+                            ))}
+                          </View>
+                        )}
+                        <View style={[styles.rowBetween, { marginTop: 10 }]}>
+                          <Text style={{ color: colors.textMuted, fontSize: 12 }}>
+                            {course.modulesCount || 0} módulos • {course.assignmentsCount || 0} actividades
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={[styles.actionRow, { marginTop: 14 }]}>
+                        <Button
+                          title="Abrir materia"
+                          icon="folder-open-outline"
+                          onPress={() => openCourseWorkspace(course.id)}
+                          style={{ flex: 1, minHeight: 40, paddingVertical: 8, marginBottom: 0 }}
                         />
-                      ))}
-                    </View>
-                  )}
-                  <View style={[styles.rowBetween, { marginTop: 10 }]}>
-                    <Text style={{ color: colors.textMuted, fontSize: 12 }}>
-                      {course.modulesCount || 0} módulos de teoría • {course.assignmentsCount || 0} actividades
-                    </Text>
+                      </View>
+                    </Card>
                   </View>
-                  <View style={styles.actionRow}>
-                    <Button
-                      title="Abrir materia (Teoría y Materiales)"
-                      icon="folder-open-outline"
-                      onPress={() => openCourseWorkspace(course.id)}
-                      style={{ flex: 1, minHeight: 40, paddingVertical: 8, marginBottom: 0 }}
-                    />
-                  </View>
-                </Card>
-              ))
+                ))}
+              </View>
             )}
           </View>
         )}

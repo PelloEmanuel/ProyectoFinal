@@ -757,56 +757,70 @@ export default function AdminCoursesScreen({ route }) {
                 message="Usá el formulario de arriba para crear tus materias (ej. Matemática, Lengua, Historia) y luego asignarlas en el cronograma."
               />
             ) : (
-              subjectsCatalog.map((subj) => (
-                <Card key={subj.id}>
-                  <View style={styles.rowBetween}>
-                    <Badge
-                      label={
-                        Number(subj.coursesCount) > 0
-                          ? `Asignada en ${subj.coursesCount} ${Number(subj.coursesCount) === 1 ? 'curso' : 'cursos'}`
-                          : 'Sin asignar aún'
-                      }
-                      tone={Number(subj.coursesCount) > 0 ? 'success' : 'neutral'}
-                    />
-                  </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+                {subjectsCatalog.map((subj) => (
+                  <View
+                    key={subj.id}
+                    style={{
+                      width: Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : '100%',
+                      minWidth: 280,
+                      flexGrow: 1,
+                    }}
+                  >
+                    <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>
+                      <View>
+                        <View style={styles.rowBetween}>
+                          <Badge
+                            label={
+                              Number(subj.coursesCount) > 0
+                                ? `Asignada en ${subj.coursesCount} ${Number(subj.coursesCount) === 1 ? 'curso' : 'cursos'}`
+                                : 'Sin asignar aún'
+                            }
+                            tone={Number(subj.coursesCount) > 0 ? 'success' : 'neutral'}
+                          />
+                        </View>
 
-                  <Text style={[styles.title, { color: colors.text }]}>{subj.name}</Text>
-                  {subj.description ? (
-                    <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>
-                      {subj.description}
-                    </Text>
-                  ) : null}
+                        <Text style={[styles.title, { color: colors.text, marginTop: 8 }]}>{subj.name}</Text>
+                        {subj.description ? (
+                          <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>
+                            {subj.description}
+                          </Text>
+                        ) : null}
+                      </View>
 
-                  <View style={[styles.actionsRow, { marginTop: 12 }]}>
-                    <Button
-                      title="Usar en Cronograma"
-                      icon="calendar-outline"
-                      variant="primary"
-                      small
-                      style={{ flex: 1, marginBottom: 0 }}
-                      onPress={() => {
-                        setSection('schedule');
-                        openAssignNewSubjectToCourse(subj.id);
-                      }}
-                    />
-                    <Button
-                      title="Editar"
-                      icon="create-outline"
-                      variant="outline"
-                      small
-                      style={{ marginBottom: 0 }}
-                      onPress={() => openEditCatalogModal(subj)}
-                    />
-                    <Button
-                      title="Borrar"
-                      variant="danger"
-                      small
-                      style={{ marginBottom: 0 }}
-                      onPress={() => setCatalogSubjectToDelete(subj)}
-                    />
+                      <View style={[styles.actionsRow, { marginTop: 14 }]}>
+                        <Button
+                          title="Usar"
+                          icon="calendar-outline"
+                          variant="primary"
+                          small
+                          style={{ flex: 1, marginBottom: 0 }}
+                          onPress={() => {
+                            setSection('schedule');
+                            openAssignNewSubjectToCourse(subj.id);
+                          }}
+                        />
+                        <Button
+                          title="Editar"
+                          icon="create-outline"
+                          variant="outline"
+                          small
+                          style={{ marginBottom: 0 }}
+                          onPress={() => openEditCatalogModal(subj)}
+                        />
+                        <Button
+                          title=""
+                          icon="trash-outline"
+                          variant="danger"
+                          small
+                          style={{ marginBottom: 0 }}
+                          onPress={() => setCatalogSubjectToDelete(subj)}
+                        />
+                      </View>
+                    </Card>
                   </View>
-                </Card>
-              ))
+                ))}
+              </View>
             )}
           </View>
         )}
@@ -1010,82 +1024,95 @@ export default function AdminCoursesScreen({ route }) {
                     }
                   />
                 ) : (
-                  courses.map((course) => {
-                    const hasTeacher =
-                      course.instructorId &&
-                      course.instructorName &&
-                      course.instructorName !== 'Sin profesor asignado';
-                    return (
-                      <Card key={course.id}>
-                        <View style={styles.rowBetween}>
-                          <Badge label={`${schoolYear}° Año - ${courseDivision}° Curso`} tone="info" />
-                          <Badge label={`${course.studentsCount || 0} alumnos`} tone="success" />
-                        </View>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+                    {courses.map((course) => {
+                      const hasTeacher =
+                        course.instructorId &&
+                        course.instructorName &&
+                        course.instructorName !== 'Sin profesor asignado';
+                      return (
+                        <View
+                          key={course.id}
+                          style={{
+                            width: Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : '100%',
+                            minWidth: 280,
+                            flexGrow: 1,
+                          }}
+                        >
+                          <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>
+                            <View>
+                              <View style={styles.rowBetween}>
+                                <Badge label={`${schoolYear}° Año - ${courseDivision}° Curso`} tone="info" />
+                                <Badge label={`${course.studentsCount || 0} alumnos`} tone="success" />
+                              </View>
 
-                        <Text style={[styles.title, { color: colors.text, fontSize: 17 }]}>
-                          {course.title}
-                        </Text>
-
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
-                          <Ionicons
-                            name="person-circle-outline"
-                            size={17}
-                            color={hasTeacher ? colors.primary : colors.warning}
-                            style={{ marginRight: 6 }}
-                          />
-                          <Text
-                            style={{
-                              color: hasTeacher ? colors.textSecondary : colors.warning,
-                              fontSize: 13,
-                              fontWeight: '700',
-                            }}
-                          >
-                            Profesor/a: {hasTeacher ? course.instructorName : 'Sin profesor a cargo (Vacante)'}
-                          </Text>
-                        </View>
-
-                        {/* Días y horarios asignados a esta materia en este curso */}
-                        <View style={{ marginTop: 10 }}>
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, marginBottom: 6 }}>
-                            Días y horarios cursados:
-                          </Text>
-                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                            {(course.schedules || []).length === 0 ? (
-                              <Text style={{ fontSize: 12, color: colors.textMuted }}>
-                                Sin horarios asignados
+                              <Text style={[styles.title, { color: colors.text, fontSize: 17, marginTop: 8 }]}>
+                                {course.title}
                               </Text>
-                            ) : (
-                              course.schedules.map((s) => (
-                                <Badge
-                                  key={s.id}
-                                  label={`${s.dayOfWeek}: ${s.startTime} a ${s.endTime} hs`}
-                                  tone="primary"
-                                />
-                              ))
-                            )}
-                          </View>
-                        </View>
 
-                        <View style={[styles.actionsRow, { marginTop: 14 }]}>
-                          <Button
-                            title="Editar Materia / Días / Horarios"
-                            icon="create-outline"
-                            variant="primary"
-                            small
-                            onPress={() => openEditCourseScheduleModal(course)}
-                            style={{ flex: 1, marginBottom: 0 }}
-                          />
-                          <Button
-                            title="Quitar"
-                            variant="danger"
-                            small
-                            onPress={() => setCourseToDelete(course)}
-                            style={{ marginBottom: 0 }}
-                          />
+                              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                                <Ionicons
+                                  name="person-circle-outline"
+                                  size={17}
+                                  color={hasTeacher ? colors.primary : colors.warning}
+                                  style={{ marginRight: 6 }}
+                                />
+                                <Text
+                                  style={{
+                                    color: hasTeacher ? colors.textSecondary : colors.warning,
+                                    fontSize: 13,
+                                    fontWeight: '700',
+                                  }}
+                                >
+                                  Profesor: {hasTeacher ? course.instructorName : 'Vacante'}
+                                </Text>
+                              </View>
+
+                              {/* Días y horarios */}
+                              <View style={{ marginTop: 10 }}>
+                                <Text style={{ fontSize: 12, fontWeight: '700', color: colors.textSecondary, marginBottom: 6 }}>
+                                  Días y horarios:
+                                </Text>
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                                  {(course.schedules || []).length === 0 ? (
+                                    <Text style={{ fontSize: 12, color: colors.textMuted }}>
+                                      Sin horarios asignados
+                                    </Text>
+                                  ) : (
+                                    course.schedules.map((s) => (
+                                      <Badge
+                                        key={s.id}
+                                        label={`${s.dayOfWeek}: ${s.startTime}-${s.endTime}`}
+                                        tone="primary"
+                                      />
+                                    ))
+                                  )}
+                                </View>
+                              </View>
+                            </View>
+
+                            <View style={[styles.actionsRow, { marginTop: 14 }]}>
+                              <Button
+                                title="Editar"
+                                icon="create-outline"
+                                variant="primary"
+                                small
+                                onPress={() => openEditCourseScheduleModal(course)}
+                                style={{ flex: 1, marginBottom: 0 }}
+                              />
+                              <Button
+                                title="Quitar"
+                                variant="danger"
+                                small
+                                onPress={() => setCourseToDelete(course)}
+                                style={{ marginBottom: 0 }}
+                              />
+                            </View>
+                          </Card>
                         </View>
-                      </Card>
-                    );
-                  })
+                      );
+                    })}
+                  </View>
                 )}
               </View>
             ) : (
@@ -1259,104 +1286,114 @@ export default function AdminCoursesScreen({ route }) {
                 description="Abrí el primer curso con el formulario superior."
               />
             ) : (
-              schoolGroups.map((grp) => {
-                const isOpen = grp.status === 'open';
-                return (
-                  <Card key={grp.id} style={{ marginBottom: 10 }}>
-                    <View style={styles.rowBetween}>
-                      <View style={{ flex: 1, marginRight: 10 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>
-                            Curso {grp.label || `${grp.schoolYear}° ${grp.courseDivision}ª`}
-                          </Text>
-                          <Badge
-                            label={isOpen ? 'Abierto' : 'Cerrado'}
-                            variant={isOpen ? 'success' : 'danger'}
-                          />
-                        </View>
-                        <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>
-                          {grp.courseCount || 0} materias dictándose • {grp.studentCount || 0} alumnos matriculados
-                        </Text>
-                        <View
-                          style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
-                            backgroundColor: colors.surfaceAlt,
-                            paddingHorizontal: 8,
-                            paddingVertical: 4,
-                            borderRadius: 8,
-                            marginTop: 6,
-                            alignSelf: 'flex-start',
-                            gap: 6,
-                          }}
-                        >
-                          <Ionicons name="key-outline" size={13} color={colors.primary} />
-                          <Text style={{ fontSize: 12, fontWeight: '700', color: colors.text }}>
-                            Código alumnos:{' '}
-                            <Text style={{ color: colors.primary, fontWeight: '800' }}>
-                              {grp.accessCode || `${grp.schoolYear}TO${grp.courseDivision}RA`}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+                {schoolGroups.map((grp) => {
+                  const isOpen = grp.status === 'open';
+                  return (
+                    <View
+                      key={grp.id}
+                      style={{
+                        width: Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : '100%',
+                        minWidth: 280,
+                        flexGrow: 1,
+                      }}
+                    >
+                      <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>
+                        <View>
+                          <View style={styles.rowBetween}>
+                            <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>
+                              Curso {grp.label || `${grp.schoolYear}° ${grp.courseDivision}ª`}
                             </Text>
+                            <Badge
+                              label={isOpen ? 'Abierto' : 'Cerrado'}
+                              variant={isOpen ? 'success' : 'danger'}
+                            />
+                          </View>
+                          <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>
+                            {grp.courseCount || 0} materias dictándose • {grp.studentCount || 0} alumnos
                           </Text>
-                          <TouchableOpacity
-                            onPress={() => {
-                              setEditingCodeGroup(grp);
-                              setEditCodeValue(grp.accessCode || `${grp.schoolYear}TO${grp.courseDivision}RA`);
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              backgroundColor: colors.surfaceAlt,
+                              paddingHorizontal: 8,
+                              paddingVertical: 4,
+                              borderRadius: 8,
+                              marginTop: 8,
+                              alignSelf: 'flex-start',
+                              gap: 6,
                             }}
-                            style={{ padding: 2, marginLeft: 4 }}
                           >
-                            <Ionicons name="pencil-outline" size={13} color={colors.textSecondary} />
-                          </TouchableOpacity>
+                            <Ionicons name="key-outline" size={13} color={colors.primary} />
+                            <Text style={{ fontSize: 12, fontWeight: '700', color: colors.text }}>
+                              Código:{' '}
+                              <Text style={{ color: colors.primary, fontWeight: '800' }}>
+                                {grp.accessCode || `${grp.schoolYear}TO${grp.courseDivision}RA`}
+                              </Text>
+                            </Text>
+                            <TouchableOpacity
+                              onPress={() => {
+                                setEditingCodeGroup(grp);
+                                setEditCodeValue(grp.accessCode || `${grp.schoolYear}TO${grp.courseDivision}RA`);
+                              }}
+                              style={{ padding: 2, marginLeft: 4 }}
+                            >
+                              <Ionicons name="pencil-outline" size={13} color={colors.textSecondary} />
+                            </TouchableOpacity>
+                          </View>
                         </View>
-                      </View>
 
-                      <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                        <Button
-                          title="Ver Horarios"
-                          variant="outline"
-                          small
-                          style={{ marginBottom: 0 }}
-                          onPress={() => {
-                            handleSelectGroupDirect(grp);
-                            setSection('schedule');
-                          }}
-                        />
-                        {isOpen ? (
+                        <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 14 }}>
                           <Button
-                            title="Cerrar Curso"
-                            variant="danger"
+                            title="Horarios"
+                            variant="outline"
                             small
-                            loading={togglingGroupId === grp.id}
-                            disabled={togglingGroupId === grp.id}
-                            style={{ marginBottom: 0 }}
-                            onPress={() => handleToggleGroup(grp)}
+                            style={{ flex: 1, marginBottom: 0 }}
+                            onPress={() => {
+                              handleSelectGroupDirect(grp);
+                              setSection('schedule');
+                            }}
                           />
-                        ) : (
-                          <>
+                          {isOpen ? (
                             <Button
-                              title="Reabrir Curso"
-                              variant="success"
+                              title="Cerrar"
+                              variant="danger"
                               small
                               loading={togglingGroupId === grp.id}
                               disabled={togglingGroupId === grp.id}
                               style={{ marginBottom: 0 }}
                               onPress={() => handleToggleGroup(grp)}
                             />
-                            <Button
-                              title="Eliminar Curso"
-                              variant="danger"
-                              small
-                              loading={deletingGroupId === grp.id}
-                              disabled={deletingGroupId === grp.id}
-                              style={{ marginBottom: 0 }}
-                              onPress={() => setConfirmDeleteGroup(grp)}
-                            />
-                          </>
-                        )}
-                      </View>
+                          ) : (
+                            <>
+                              <Button
+                                title="Reabrir"
+                                variant="success"
+                                small
+                                loading={togglingGroupId === grp.id}
+                                disabled={togglingGroupId === grp.id}
+                                style={{ marginBottom: 0 }}
+                                onPress={() => handleToggleGroup(grp)}
+                              />
+                              <Button
+                                title=""
+                                icon="trash-outline"
+                                variant="danger"
+                                small
+                                loading={deletingGroupId === grp.id}
+                                disabled={deletingGroupId === grp.id}
+                                style={{ marginBottom: 0 }}
+                                onPress={() => setConfirmDeleteGroup(grp)}
+                              />
+                            </>
+                          )}
+                        </View>
+                      </Card>
                     </View>
-                  </Card>
-                );
-              })
+                  );
+                })}
+              </View>
             )}
           </View>
         )}
