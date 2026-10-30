@@ -173,7 +173,6 @@ export default function DashboardScreen({ navigation }) {
       </View>
 
       <AlertBanner type="error" message={error} />
-      <AlertBanner type="success" message={keyMessage} />
 
       {/* Acceso directo destacado a Gestión de Cursos y Gestión de Materias */}
       <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>

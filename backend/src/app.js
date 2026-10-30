@@ -14,6 +14,16 @@ const app = express();
 app.use(
   helmet({
     crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        connectSrc: ["'self'", 'https://*.google.com', 'https://*.googleapis.com', 'https://accounts.google.com', 'https://*.onrender.com', 'https://campus-58oe.onrender.com'],
+        scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https://*.googleusercontent.com', 'https://*.gstatic.com'],
+        fontSrc: ["'self'", 'data:'],
+      },
+    },
   })
 );
 app.use(cors());

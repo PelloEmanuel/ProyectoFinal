@@ -35,10 +35,9 @@ export function resolveApiUrls() {
   if (envUrl) return { primary: envUrl, fallback: envUrl };
 
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location) {
-    const host = window.location.hostname || 'localhost';
-    const directWebUrl = `http://${host}:3000/api/v1`;
-    const proxyWebUrl = `${window.location.origin}/api/v1`;
-    return { primary: directWebUrl, fallback: proxyWebUrl };
+    const origin = window.location.origin;
+    const sameOriginUrl = `${origin}/api/v1`;
+    return { primary: sameOriginUrl, fallback: sameOriginUrl };
   }
 
   const origin = getExpoOrigin();
