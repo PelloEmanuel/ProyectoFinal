@@ -8,6 +8,8 @@
  */
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 import { API_URL } from '../config';
@@ -31,7 +33,28 @@ function resolveRedirectUri() {
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin;
   }
+
+  // Detectar si estamos ejecutando dentro de Expo Go
+  const isExpoGo =
+    Constants.appOwnership === 'expo' ||
+    Constants.executionEnvironment === 'storeClient' ||
+    Constants.executionEnvironment === ExecutionEnvironment?.StoreClient;
+
+  if (isExpoGo) {
+    // En Expo Go, Android e iOS reconocen exclusivamente el scheme 'exp://' o 'exps://'
+    const linked = Linking.createURL('/');
+    if (linked && (linked.startsWith('exp://') || linked.startsWith('exps://'))) {
+      return linked;
+    }
+    if (Constants.linkingUri && (Constants.linkingUri.startsWith('exp://') || Constants.linkingUri.startsWith('exps://'))) {
+      return Constants.linkingUri;
+    }
+    return makeRedirectUri({ preferLocalhost: false });
+  }
+
+  // En builds nativas independientes (APK / EAS Build): usar el scheme institucional 'skilltrack://'
   return makeRedirectUri({
+    native: 'skilltrack://',
     scheme: 'skilltrack',
     preferLocalhost: false,
   });
@@ -119,15 +142,30 @@ export default function useSocialAuth({ onCredential, onError }) {
       const result = await WebBrowser.openAuthSessionAsync(startUrl, returnTo);
 
       if (result.type === 'success' && result.url) {
-        const u = new URL(result.url);
-        const search = u.search || '';
-        const hash = u.hash.startsWith('#') ? u.hash.slice(1) : u.hash;
+        let search = '';
+        let hash = '';
+        try {
+          const u = new URL(result.url);
+          search = u.search || '';
+          hash = u.hash.startsWith('#') ? u.hash.slice(1) : u.hash;
+        } catch {
+          const parts = result.url.split('?');
+          if (parts[1]) search = '?' + parts[1];
+        }
+
         const sp = new URLSearchParams(search);
         const hp = new URLSearchParams(hash);
 
         const error = sp.get('error') || hp.get('error');
         if (error) {
           return onError(`Error de autenticación: ${error}`);
+        }
+
+        const twoFactor = sp.get('twoFactorRequired') || hp.get('twoFactorRequired');
+        if (twoFactor === 'true') {
+          const userId = sp.get('userId') || hp.get('userId');
+          const email = sp.get('email') || hp.get('email');
+          return onCredential(provider, { twoFactorRequired: true, userId, email });
         }
 
         const token = sp.get('token') || hp.get('token') || sp.get('accessToken') || hp.get('accessToken');

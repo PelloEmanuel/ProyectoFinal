@@ -762,6 +762,7 @@ exports.oauthCallback = asyncHandler(async (req, res) => {
       border-radius: 8px;
       font-size: 15px;
       transition: background 0.2s;
+      cursor: pointer;
     }
     .btn:hover { background: #166534; }
     .spinner {
@@ -781,14 +782,22 @@ exports.oauthCallback = asyncHandler(async (req, res) => {
     <div class="spinner"></div>
     <h2>Campus Técnica 5</h2>
     <p>${message}</p>
-    <a class="btn" href="${safeUrl}">Abrir Campus Técnica 5</a>
+    <a id="openBtn" class="btn" href="${safeUrl}">Abrir Campus Técnica 5</a>
   </div>
   <script>
-    try {
-      window.location.replace(${JSON.stringify(targetUrl)});
-    } catch (e) {
-      window.location.href = ${JSON.stringify(targetUrl)};
+    var target = ${JSON.stringify(targetUrl)};
+    function doRedirect() {
+      try {
+        var btn = document.getElementById('openBtn');
+        if (btn) btn.click();
+      } catch (e) {}
+      try {
+        window.location.href = target;
+      } catch (e) {}
     }
+    doRedirect();
+    setTimeout(doRedirect, 300);
+    setTimeout(doRedirect, 1000);
   </script>
 </body>
 </html>`;
@@ -897,14 +906,16 @@ exports.oauthCallback = asyncHandler(async (req, res) => {
       return sendRedirectWithBridge(makeTarget({ error: 'Tu cuenta ha sido suspendida' }), 'Cuenta suspendida...');
     }
 
-    if (user.two_factor_enabled) {
+    // Solo requerir segundo factor en OAuth si el usuario configuró una app autenticadora TOTP específica
+    const [tfRows] = await db.execute('SELECT id, enabled_at FROM user_two_factor WHERE user_id = ? AND enabled_at IS NOT NULL', [user.id]);
+    if (tfRows.length > 0) {
       return sendRedirectWithBridge(
         makeTarget({
           twoFactorRequired: 'true',
           userId: String(user.id),
           email: user.email,
         }),
-        'Se requiere código de verificación en 2 pasos...'
+        'Se requiere código de tu aplicación autenticadora...'
       );
     }
 

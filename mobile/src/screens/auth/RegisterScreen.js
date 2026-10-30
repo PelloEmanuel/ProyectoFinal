@@ -63,6 +63,11 @@ export default function RegisterScreen({ navigation }) {
   const startSocial = useSocialAuth({
     onCredential: async (provider, body) => {
       setBanner('');
+      if (body?.twoFactorRequired) {
+        setLoading(false);
+        navigation.navigate('VerifyCode', { mode: '2fa', userId: body.userId, email: body.email });
+        return;
+      }
       if (!isFirstUser && form.role === 'instructor' && !String(form.instructorKey || '').trim()) {
         setErrors((prev) => ({
           ...prev,

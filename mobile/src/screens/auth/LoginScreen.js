@@ -26,6 +26,11 @@ export default function LoginScreen({ navigation }) {
   const startSocial = useSocialAuth({
     onCredential: async (provider, body) => {
       setBanner('');
+      if (body?.twoFactorRequired) {
+        setLoading(false);
+        navigation.navigate('VerifyCode', { mode: '2fa', userId: body.userId, email: body.email });
+        return;
+      }
       setLoading(true);
       try {
         await socialLogin(provider, body);
