@@ -19,7 +19,7 @@ export const bindSessionHandlers = ({ onTokens, onExpired }) => {
   session.onExpired = onExpired;
 };
 
-const api = axios.create({ baseURL: API_URL, timeout: 10000 });
+const api = axios.create({ baseURL: API_URL, timeout: 25000 });
 
 api.interceptors.request.use((cfg) => {
   const { primary, fallback } = resolveApiUrls();

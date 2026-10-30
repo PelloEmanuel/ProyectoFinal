@@ -6,25 +6,33 @@
 const nodemailer = require('nodemailer');
 
 function getTransporter() {
-  if (process.env.SMTP_SERVICE) {
+  const service = process.env.SMTP_SERVICE;
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const port = Number(process.env.SMTP_PORT) || 587;
+
+  // 1. Si es Gmail, usar directamente service: 'gmail' (optimizado para puertos y handshake de Google)
+  if (service === 'gmail' || host === 'smtp.gmail.com') {
     return nodemailer.createTransport({
-      service: process.env.SMTP_SERVICE,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
+      service: 'gmail',
+      auth: { user, pass },
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 10000,
     });
   }
-  if (process.env.SMTP_HOST) {
-    const port = Number(process.env.SMTP_PORT) || 587;
+
+  // 2. Si hay host y credenciales genéricas (puerto 465 SSL o 587 STARTTLS)
+  if (host) {
     return nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
+      host,
       port,
       secure: port === 465,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
+      auth: user ? { user, pass } : undefined,
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 10000,
       tls: {
         rejectUnauthorized: false,
       },
@@ -32,6 +40,8 @@ function getTransporter() {
   }
   return null;
 }
+
+exports.getTransporter = getTransporter;
 
 exports.isConfigured = () => {
   return Boolean(process.env.SMTP_SERVICE || (process.env.SMTP_HOST && process.env.SMTP_USER));

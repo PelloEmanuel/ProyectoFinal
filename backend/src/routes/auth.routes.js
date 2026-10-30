@@ -52,6 +52,7 @@ router.get('/verify-email', c.verifyEmail);
 router.post('/verify-email', optionalAuth, c.verifyEmail);
 router.post('/resend-verification', optionalAuth, c.resendVerification);
 
+router.get('/mail-diagnostic', c.mailDiagnostic);
 router.post('/forgot-password', emailRule, validate, c.forgotPassword);
 router.post(
   '/reset-password',

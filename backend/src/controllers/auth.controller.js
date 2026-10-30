@@ -72,8 +72,10 @@ async function issueEmailVerificationToken(userId, email) {
     'INSERT INTO email_verification_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
     [userId, tokenHash, expiresAt]
   );
-  const sent = await mailer.sendVerificationEmail(email, rawToken);
-  return { rawToken, sent };
+  mailer.sendVerificationEmail(email, rawToken).catch((err) => {
+    console.error(`[MAILER] Error en segundo plano enviando verificación a ${email}:`, err.message);
+  });
+  return { rawToken, sent: true };
 }
 
 exports.registrationStatus = asyncHandler(async (_req, res) => {
@@ -404,12 +406,60 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
       'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)',
       [user.id, tokenHash, expiresAt]
     );
-    await mailer.sendPasswordResetEmail(user.email, rawCode);
+    mailer.sendPasswordResetEmail(user.email, rawCode).catch((err) => {
+      console.error(`[MAILER] Error en segundo plano enviando reset password a ${user.email}:`, err.message);
+    });
   }
 
   res.json({
     success: true,
     message: 'Si el correo está registrado, recibirás un código temporal para restablecer tu contraseña en tu casilla de correo.',
+  });
+});
+
+exports.mailDiagnostic = asyncHandler(async (_req, res) => {
+  const isConfigured = mailer.isConfigured();
+  const host = process.env.SMTP_HOST || 'none';
+  const port = process.env.SMTP_PORT || 'none';
+  const service = process.env.SMTP_SERVICE || 'none';
+  const user = process.env.SMTP_USER ? `${process.env.SMTP_USER.slice(0, 3)}***` : 'none';
+  const passSet = Boolean(process.env.SMTP_PASS);
+
+  let verifyResult = isConfigured ? 'pending' : 'not_configured';
+  let verifyError = null;
+
+  if (isConfigured) {
+    try {
+      const transport = mailer.getTransporter();
+      if (transport) {
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => reject(new Error('transporter.verify timeout tras 6 segundos')), 6000);
+          transport.verify((err, success) => {
+            clearTimeout(timeout);
+            if (err) reject(err);
+            else resolve(success);
+          });
+        });
+        verifyResult = 'verified_ok';
+      }
+    } catch (err) {
+      verifyResult = 'verify_failed';
+      verifyError = err.message;
+    }
+  }
+
+  res.json({
+    success: true,
+    data: {
+      isConfigured,
+      host,
+      port,
+      service,
+      user,
+      passSet,
+      verifyResult,
+      verifyError,
+    },
   });
 });
 
