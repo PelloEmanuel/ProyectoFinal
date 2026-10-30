@@ -5,6 +5,66 @@
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
     <title>SkillTrack</title>
+    <!-- OAuth redirect handler for popup/tab auth flow -->
+    <script>
+      (function() {
+        try {
+          var search = window.location.search || '';
+          var hash = window.location.hash || '';
+          var hasCode = search.indexOf('code=') !== -1;
+          var hasToken = hash.indexOf('access_token=') !== -1;
+          var hasError = search.indexOf('error=') !== -1 || hash.indexOf('error=') !== -1;
+          var hasState = search.indexOf('state=') !== -1 || hash.indexOf('state=') !== -1;
+
+          if (hasCode || hasToken || hasError || hasState) {
+            var fullUrl = window.location.href;
+            var handle = null;
+            try {
+              handle = window.localStorage.getItem('ExpoWebBrowserRedirectHandle');
+            } catch(e) {}
+
+            if (handle) {
+              try {
+                window.localStorage.setItem('ExpoWebBrowser_OriginUrl_' + handle, fullUrl);
+              } catch(e) {}
+            }
+
+            try {
+              window.localStorage.setItem('SKILLTRACK_OAUTH_RESULT', JSON.stringify({
+                url: fullUrl,
+                time: Date.now()
+              }));
+            } catch(e) {}
+
+            var opener = window.opener || (window.parent !== window ? window.parent : null);
+            if (opener) {
+              var messageData = {
+                url: fullUrl,
+                expoSender: handle || 'ExpoWebBrowserRedirectHandle'
+              };
+              try {
+                opener.postMessage(messageData, window.location.origin);
+              } catch (e1) {
+                try {
+                  opener.postMessage(messageData, '*');
+                } catch (e2) {}
+              }
+            }
+
+            // If running inside a popup window, close it immediately after notifying opener
+            if (window.opener && window.opener !== window) {
+              setTimeout(function() {
+                try {
+                  window.close();
+                } catch(e) {}
+              }, 120);
+            }
+          }
+        } catch (err) {
+          console.error('OAuth redirect handler error:', err);
+        }
+      })();
+    </script>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* These styles make the body full-height */
@@ -30,6 +90,6 @@
     <noscript> You need to enable JavaScript to run this app. </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
-  <script src="/_expo/static/js/web/index-2ed1b5180cae56abad9c1ca707b5a0d9.js" defer></script>
+  <script src="/_expo/static/js/web/index-318cdec9b5096e34095135186e7432be.js" defer></script>
 </body>
 </html>

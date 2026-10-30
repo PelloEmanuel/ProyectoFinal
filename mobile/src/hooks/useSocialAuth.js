@@ -3,7 +3,7 @@
  * Descripción: Hook para autenticación OAuth 2.0 / OpenID Connect en React Native
  * con Google (obligatorio), GitHub y Discord.
  */
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Platform } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
@@ -11,7 +11,7 @@ import * as Facebook from 'expo-auth-session/providers/facebook';
 import { makeRedirectUri, useAuthRequest } from 'expo-auth-session';
 import { OAUTH } from '../config';
 
-WebBrowser.maybeCompleteAuthSession();
+WebBrowser.maybeCompleteAuthSession({ skipRedirectCheck: true });
 
 function resolveRedirectUri(provider) {
   if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
@@ -34,6 +34,7 @@ export default function useSocialAuth({ onCredential, onError }) {
   const googleRedirect = useMemo(() => resolveRedirectUri('google'), []);
   const githubRedirect = useMemo(() => resolveRedirectUri('github'), []);
   const discordRedirect = useMemo(() => resolveRedirectUri('discord'), []);
+  const handledCodeRef = useRef(new Set());
 
   const [gReq, gRes, gPrompt] = Google.useAuthRequest({
     clientId: OAUTH.googleWeb,
@@ -63,11 +64,77 @@ export default function useSocialAuth({ onCredential, onError }) {
     discordDiscovery
   );
 
+  // Listener para web: intercepta redirects, postMessages y storage events entre popup y ventana principal
+  useEffect(() => {
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
+
+    const processOAuthUrl = (urlStr) => {
+      try {
+        const u = new URL(urlStr, window.location.origin);
+        const code = u.searchParams.get('code');
+        const error = u.searchParams.get('error');
+        if (error) {
+          onError(`Error de autenticación: ${error}`);
+          return true;
+        }
+        if (code && !handledCodeRef.current.has(code)) {
+          handledCodeRef.current.add(code);
+          onCredential('google', {
+            code,
+            redirectUri: googleRedirect,
+            codeVerifier: gReq?.codeVerifier,
+          });
+          return true;
+        }
+      } catch (e) {}
+      return false;
+    };
+
+    // 1. Redirección en la misma ventana (móvil web / fallback)
+    if (window.location.search && window.location.search.includes('code=')) {
+      const handled = processOAuthUrl(window.location.href);
+      if (handled) {
+        try {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } catch (e) {}
+      }
+    }
+
+    // 2. Storage event cuando el popup guarda la URL de respuesta
+    const handleStorage = (e) => {
+      if (e.key === 'SKILLTRACK_OAUTH_RESULT' && e.newValue) {
+        try {
+          const payload = JSON.parse(e.newValue);
+          if (payload?.url) {
+            processOAuthUrl(payload.url);
+            window.localStorage.removeItem('SKILLTRACK_OAUTH_RESULT');
+          }
+        } catch (err) {}
+      }
+    };
+
+    // 3. PostMessage directo desde el popup a la ventana principal
+    const handleMessage = (e) => {
+      if (e.origin !== window.location.origin) return;
+      if (e.data?.url && typeof e.data.url === 'string') {
+        processOAuthUrl(e.data.url);
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('message', handleMessage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('message', handleMessage);
+    };
+  }, [googleRedirect, gReq, onCredential, onError]);
+
   useEffect(() => {
     if (gRes?.type === 'success') {
       const code = gRes.params?.code;
       const accessToken = gRes.authentication?.accessToken || gRes.params?.access_token;
-      if (code) {
+      if (code && !handledCodeRef.current.has(code)) {
+        handledCodeRef.current.add(code);
         onCredential('google', {
           code,
           redirectUri: gReq?.redirectUri || googleRedirect,
