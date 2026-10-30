@@ -435,8 +435,12 @@ export default function SchoolScheduleGrid({
         </Pressable>
       </View>
 
-      {/* Tabla desplazable horizontalmente para pantallas chicas y completa en Web/Tablet */}
-      <ScrollView horizontal showsHorizontalScrollIndicator>
+      {/* Tabla desplazable horizontalmente para pantallas chicas y centrada en Web/Tablet */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+      >
         <View style={styles.tableContainer}>
           {/* Cabecera de columnas: Horario | Lunes | Martes | Miércoles | Jueves | Viernes */}
           <View
@@ -536,6 +540,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     marginBottom: 14,
+    width: '100%',
+    alignSelf: 'center',
   },
   banner: {
     paddingVertical: 12,
@@ -575,6 +581,7 @@ const styles = StyleSheet.create({
   },
   tableContainer: {
     minWidth: 740,
+    alignSelf: 'center',
   },
   headerRow: {
     flexDirection: 'row',

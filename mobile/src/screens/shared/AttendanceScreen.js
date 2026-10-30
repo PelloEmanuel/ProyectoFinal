@@ -177,7 +177,11 @@ export default function AttendanceScreen({ route, navigation }) {
           year: yearToLoad,
         });
 
-        const data = res?.days ? res : res?.data || res;
+        const raw = res?.days ? res : res?.data || res;
+        const data = {
+          ...raw,
+          days: (raw?.days || []).filter((d) => d.dayOfWeek === undefined || (d.dayOfWeek >= 1 && d.dayOfWeek <= 5)),
+        };
         setSheetData(data);
       } catch (err) {
         setError(extractErrorMessage(err));

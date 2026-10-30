@@ -86,25 +86,24 @@ export function SkillTrackLogo({ size = 'md', showSubtitle = true }) {
  */
 export function Screen({ children, scroll = true, edges = ['left', 'right', 'bottom'], style, contentContainerStyle }) {
   const { colors } = useTheme();
-  const { contentWidth } = useResponsive();
-  const inner = { width: contentWidth, flex: scroll ? undefined : 1, padding: 16 };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={edges}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <SafeAreaView style={{ flex: 1, width: '100%', backgroundColor: colors.bg }} edges={edges}>
+      <KeyboardAvoidingView style={{ flex: 1, width: '100%' }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {scroll ? (
           <ScrollView
             keyboardShouldPersistTaps="handled"
+            style={{ flex: 1, width: '100%' }}
             contentContainerStyle={[
-              { alignItems: 'center', flexGrow: 1 },
+              { width: '100%', flexGrow: 1, padding: 16 },
               contentContainerStyle,
             ]}
           >
-            <View style={[inner, style]}>{children}</View>
+            <View style={[{ width: '100%', maxWidth: '100%' }, style]}>{children}</View>
           </ScrollView>
         ) : (
-          <View style={[{ flex: 1, alignItems: 'center' }, contentContainerStyle]}>
-            <View style={[inner, style]}>{children}</View>
+          <View style={[{ flex: 1, width: '100%' }, contentContainerStyle]}>
+            <View style={[{ flex: 1, width: '100%', maxWidth: '100%' }, style]}>{children}</View>
           </View>
         )}
       </KeyboardAvoidingView>

@@ -86,12 +86,15 @@ exports.getAttendanceSheet = asyncHandler(async (req, res) => {
     throw new AppError('El mes debe estar entre 1 (Enero) y 12 (Diciembre).', 422);
   }
 
-  // 1. Calcular días del mes (concordancia exacta con el calendario oficial: incluye todos los días 1 a 31)
+  // 1. Calcular días del mes (concordancia exacta con el calendario escolar: Lunes a Viernes únicamente)
   const days = [];
   const daysInMonth = new Date(year, month, 0).getDate();
   for (let d = 1; d <= daysInMonth; d++) {
     const dObj = new Date(year, month - 1, d);
     const dayOfWeek = dObj.getDay();
+    if (dayOfWeek === 0 || dayOfWeek === 6) {
+      continue; // Sábados y domingos no hay clases escolares
+    }
     const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     days.push({
       date: dateStr,

@@ -110,19 +110,29 @@
     </style>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
-      /* These styles make the body full-height */
+      /* These styles make the body full-height and prevent horizontal scrolling */
       html,
       body {
         height: 100%;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
+        margin: 0;
+        padding: 0;
+        background-color: #1e2430;
       }
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {
-        overflow: hidden;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
       }
       /* These styles make the root element full-height */
       #root {
         display: flex;
         height: 100%;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
         flex: 1;
       }
     </style>

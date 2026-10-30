@@ -110,19 +110,29 @@
     </style>
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
-      /* These styles make the body full-height */
+      /* These styles make the body full-height and prevent horizontal scrolling */
       html,
       body {
         height: 100%;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
+        margin: 0;
+        padding: 0;
+        background-color: #1e2430;
       }
       /* These styles disable body scrolling if you are using <ScrollView> */
       body {
-        overflow: hidden;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
       }
       /* These styles make the root element full-height */
       #root {
         display: flex;
         height: 100%;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
         flex: 1;
       }
     </style>
@@ -133,6 +143,6 @@
     <noscript> You need to enable JavaScript to run this app. </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
-  <script src="/_expo/static/js/web/index-e45adc584a84304715c9571c9700c617.js" defer></script>
+  <script src="/_expo/static/js/web/index-0ed754ed6864f18919c2f4f063d23664.js" defer></script>
 </body>
 </html>

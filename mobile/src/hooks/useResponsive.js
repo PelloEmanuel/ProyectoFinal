@@ -6,8 +6,11 @@ export default function useResponsive() {
   const isLandscape = width > height;
   const isTablet = width >= 768;
   return {
-    width, height, isLandscape, isTablet,
-    columns: isTablet ? 2 : 1,
-    contentWidth: Math.min(width, isTablet ? 900 : 640),
+    width,
+    height,
+    isLandscape,
+    isTablet,
+    columns: isTablet ? 3 : 1,
+    contentWidth: '100%',
   };
 }

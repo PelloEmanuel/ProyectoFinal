@@ -18,7 +18,7 @@ import { formatDate } from '../../utils/dates';
 import { getErrorMessage } from '../../utils/errors';
 import SchoolScheduleGrid, { formatSchoolGroupShort } from '../../components/SchoolScheduleGrid';
 
-const DAYS_ORDER = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const DAYS_ORDER = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
 
 export default function StudentHomeScreen({ navigation }) {
   const { user, setSchoolGroup } = useAuth();
@@ -224,7 +224,7 @@ export default function StudentHomeScreen({ navigation }) {
         <SuccessBanner message={success} />
 
         {/* Resumen rápido */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, width: '100%' }}>
           <StatCard
             label="Materias inscriptas"
             value={subjects.length}
