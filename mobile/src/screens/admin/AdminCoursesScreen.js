@@ -626,7 +626,7 @@ export default function AdminCoursesScreen({ route }) {
                 textAlign: 'center',
               }}
             >
-              1. Materias en BD ({subjectsCatalog.length})
+              Gestionar Materias ({subjectsCatalog.length})
             </Text>
           </Pressable>
 
@@ -661,7 +661,7 @@ export default function AdminCoursesScreen({ route }) {
                 textAlign: 'center',
               }}
             >
-              2. Cronograma por Curso
+              Gestionar Horarios
             </Text>
           </Pressable>
 

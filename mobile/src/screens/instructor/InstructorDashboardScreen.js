@@ -268,10 +268,6 @@ export default function InstructorDashboardScreen({ navigation }) {
                 label={`${nextClassInfo.item.dayOfWeek} ${nextClassInfo.item.startTime} a ${nextClassInfo.item.endTime} hs`}
                 tone="info"
               />
-              <Badge
-                label={nextClassInfo.item.classroom ? `Aula: ${nextClassInfo.item.classroom}` : 'Aula asignada'}
-                tone="neutral"
-              />
             </View>
 
             <View style={[styles.rowBetween, { marginTop: 12 }]}>

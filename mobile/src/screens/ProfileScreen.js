@@ -60,34 +60,12 @@ export default function ProfileScreen({ navigation }) {
   const [disablePassword, setDisablePassword] = useState('');
   const [loading2FA, setLoading2FA] = useState(false);
 
-  // Active sessions
-  const [sessions, setSessions] = useState([]);
-  const [refreshing, setRefreshing] = useState(false);
-
   // Modals & messages
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-
-  const loadSessions = useCallback(async (isRefresh = false) => {
-    try {
-      if (isRefresh) setRefreshing(true);
-      const res = await authApi.getSessions();
-      setSessions(res.data.data || []);
-    } catch {
-      // ignore background error
-    } finally {
-      setRefreshing(false);
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadSessions(false);
-    }, [loadSessions])
-  );
 
   const handleSaveProfile = async () => {
     if (!firstName.trim() || !lastName.trim() || !email.trim()) {
@@ -199,16 +177,6 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
-  const handleRevokeSession = async (sessionId) => {
-    try {
-      await authApi.revokeSession(sessionId);
-      setSuccess('Sesión revocada.');
-      await loadSessions(true);
-    } catch (err) {
-      setError(extractErrorMessage(err));
-    }
-  };
-
   const handleDeleteAccount = async () => {
     try {
       await deleteOwnAccount({ password: deletePassword });
@@ -266,32 +234,6 @@ export default function ProfileScreen({ navigation }) {
 
       <AlertBanner type="error" message={error} />
       <AlertBanner type="success" message={success} />
-
-      {/* Student Extras Shortcut */}
-      {user?.role === 'student' && (
-        <Card>
-          <SectionHeader
-            title="Herramientas del estudiante"
-            subtitle="Certificados, estadísticas, calendario y favoritos"
-          />
-          <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
-            <Button
-              title="Certificados"
-              variant="secondary"
-              icon="ribbon-outline"
-              onPress={() => navigation.navigate('StudentExtras', { initialTab: 'certificates' })}
-              style={{ flex: 1 }}
-            />
-            <Button
-              title="Estadísticas"
-              variant="secondary"
-              icon="bar-chart-outline"
-              onPress={() => navigation.navigate('StudentExtras', { initialTab: 'stats' })}
-              style={{ flex: 1 }}
-            />
-          </View>
-        </Card>
-      )}
 
       {/* Personal Data & Preferences */}
       <Card>
@@ -469,39 +411,6 @@ export default function ProfileScreen({ navigation }) {
           loading={savingPassword}
           onPress={handleChangePassword}
         />
-      </Card>
-
-      {/* Active Sessions */}
-      <Card>
-        <SectionHeader
-          title="Sesiones y dispositivos activos"
-          subtitle="Tokens de refresco emitidos para tu cuenta"
-        />
-        {sessions.length === 0 ? (
-          <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-            Sesión actual autenticada mediante JWT.
-          </Text>
-        ) : (
-          sessions.map((s) => (
-            <View key={s.id} style={[styles.sessionRow, { borderColor: colors.border }]}>
-              <Ionicons name="phone-portrait-outline" size={20} color={colors.primary} />
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>
-                  {s.deviceInfo || 'Dispositivo móvil / cliente API'}
-                </Text>
-                <Text style={{ color: colors.textMuted, fontSize: 11 }}>
-                  IP: {s.ipAddress || 'local'} • Creada: {formatDateAR(s.createdAt, true)}
-                </Text>
-              </View>
-              <Button
-                title="Revocar"
-                variant="outline"
-                onPress={() => handleRevokeSession(s.id)}
-                style={{ minHeight: 34, paddingVertical: 6, paddingHorizontal: 10 }}
-              />
-            </View>
-          ))
-        )}
       </Card>
 
       {/* Account Actions */}

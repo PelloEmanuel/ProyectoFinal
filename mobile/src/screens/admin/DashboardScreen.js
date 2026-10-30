@@ -45,9 +45,6 @@ export default function DashboardScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [instructorKey, setInstructorKey] = useState('');
-  const [savingKey, setSavingKey] = useState(false);
-  const [keyMessage, setKeyMessage] = useState('');
 
   // Cursos abiertos y visualizador de cronogramas 1 por 1
   const [openCourses, setOpenCourses] = useState([]);
@@ -128,26 +125,6 @@ export default function DashboardScreen({ navigation }) {
   const handleSelectGroup = (grp) => {
     setSelectedGroup(grp);
     loadScheduleForGroup(grp);
-  };
-
-  const handleSaveInstructorKey = async () => {
-    const clean = String(instructorKey || '').trim();
-    if (!clean) {
-      setError('La clave para docentes no puede estar vacía.');
-      return;
-    }
-    try {
-      setSavingKey(true);
-      setError('');
-      setKeyMessage('');
-      await adminApi.updateSettings({ instructor_registration_key: clean });
-      setInstructorKey(clean);
-      setKeyMessage('Clave para registro de docentes actualizada correctamente.');
-    } catch (err) {
-      setError(extractErrorMessage(err));
-    } finally {
-      setSavingKey(false);
-    }
   };
 
   useFocusEffect(
@@ -321,49 +298,6 @@ export default function DashboardScreen({ navigation }) {
           </View>
         </TouchableOpacity>
       </View>
-
-      {/* Clave de habilitación para registro de Docentes */}
-      <Card style={{ marginBottom: 14 }}>
-        <View style={styles.rowBetween}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Ionicons
-              name="key-outline"
-              size={20}
-              color={colors.primary}
-              style={{ marginRight: 8 }}
-            />
-            <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>
-              Clave para Registro de Docentes
-            </Text>
-          </View>
-          <Badge label="Editable en todo momento" tone="primary" />
-        </View>
-        <Text
-          style={{
-            color: colors.textSecondary,
-            fontSize: 12,
-            marginTop: 6,
-            marginBottom: 10,
-          }}
-        >
-          Compartí esta clave únicamente con los profesores que deban registrarse como Docentes:
-        </Text>
-        <Input
-          label="Clave vigente para nuevos docentes"
-          value={instructorKey}
-          onChangeText={setInstructorKey}
-          placeholder="Ej. DOCENTE2026"
-          autoCapitalize="none"
-        />
-        <Button
-          title="Guardar nueva clave de docente"
-          icon="save-outline"
-          loading={savingKey}
-          onPress={handleSaveInstructorKey}
-          small
-          style={{ marginBottom: 0 }}
-        />
-      </Card>
 
       {/* Global Metrics */}
       <View style={styles.metricsRow}>

@@ -97,8 +97,8 @@ router.post(
   authenticate,
   authorize('instructor', 'admin'),
   idParam,
-  body('title').trim().isLength({ min: 2, max: 160 }).withMessage('El título del anuncio es obligatorio'),
-  body('content').trim().isLength({ min: 2 }).withMessage('El mensaje del anuncio es obligatorio'),
+  body('title').optional().trim(),
+  body('content').trim().isLength({ min: 2 }).withMessage('El mensaje del aviso es obligatorio'),
   validate,
   c.createAnnouncement
 );

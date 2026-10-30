@@ -29,22 +29,16 @@ import { formatDate, formatDateTime } from '../../utils/dates';
 import { getErrorMessage } from '../../utils/errors';
 
 const SECTIONS = [
-  { value: 'statistics', label: 'Estadísticas' },
   { value: 'calendar', label: 'Calendario' },
-  { value: 'certificates', label: 'Certificados' },
   { value: 'notifications', label: 'Notificaciones' },
 ];
 
 export default function StudentExtrasScreen({ navigation, route }) {
-  const initialSection = route.params?.section || 'statistics';
+  const initialSection = route.params?.section || 'calendar';
   const { colors } = useTheme();
   const [section, setSection] = useState(initialSection);
-  const [stats, setStats] = useState(null);
   const [calendar, setCalendar] = useState([]);
-  const [certificates, setCertificates] = useState([]);
   const [notifications, setNotifications] = useState([]);
-  const [verifyCode, setVerifyCode] = useState('');
-  const [verifyResult, setVerifyResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -52,15 +46,11 @@ export default function StudentExtrasScreen({ navigation, route }) {
   const load = useCallback(async () => {
     try {
       setError('');
-      const [st, cal, certs, notifs] = await Promise.all([
-        usersApi.myStatistics(),
+      const [cal, notifs] = await Promise.all([
         usersApi.myCalendar(),
-        usersApi.myCertificates(),
         notificationsApi.list(),
       ]);
-      setStats(st);
       setCalendar(cal || []);
-      setCertificates(certs || []);
       setNotifications(notifs || []);
     } catch (e) {
       setError(getErrorMessage(e));
@@ -85,48 +75,11 @@ export default function StudentExtrasScreen({ navigation, route }) {
     }
   };
 
-  const handleVerifyCode = async () => {
-    if (!verifyCode.trim()) return;
-    setError('');
-    setVerifyResult(null);
-    try {
-      const res = await certificatesApi.verifyPublic(verifyCode.trim());
-      setVerifyResult(res.data);
-    } catch (e) {
-      setError(getErrorMessage(e));
-    }
-  };
-
-  const shareCertificate = (cert) => {
-    Share.share({
-      title: `Certificado SkillTrack - ${cert.courseTitle}`,
-      message: `Certificado Oficial de Finalización SkillTrack\nEstudiante: ${cert.studentName}\nCurso: ${cert.courseTitle}\nInstructor: ${cert.instructorName}\nFecha de emisión: ${formatDate(cert.issuedAt)}\nCódigo único de verificación: ${cert.verificationCode}`,
-    }).catch(() => {});
-  };
-
   return (
     <Screen>
       <Chips options={SECTIONS} value={section} onChange={setSection} />
       <ErrorBanner message={error} onRetry={load} />
       <SuccessBanner message={success} />
-
-      {/* 7.14. Estadísticas y progreso personal */}
-      {section === 'statistics' && stats && (
-        <View>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5 }}>
-            <StatCard label="Cursos matriculados" value={stats.startedCourses} icon="book-outline" color={colors.primary} />
-            <StatCard label="Lecciones vistas" value={stats.completedLessons} icon="reader-outline" color={colors.secondary} />
-            <StatCard label="Certificados obtenidos" value={stats.certificatesCount} icon="ribbon-outline" color={colors.success} />
-          </View>
-
-          <SectionHeader title="Habilidades en desarrollo" />
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-            {stats.skillsAcquired?.map((sk) => (
-              <Badge key={sk.id} text={sk.name} color={colors.primary} />
-            ))}
-          </View>
-        </View>
-      )}
 
       {/* 7.15. Calendario */}
       {section === 'calendar' && (
@@ -160,83 +113,6 @@ export default function StudentExtrasScreen({ navigation, route }) {
                 <Text style={{ color: colors.muted, fontSize: 12, marginTop: 2 }}>{ev.courseTitle}</Text>
               </View>
             ))
-          )}
-        </View>
-      )}
-
-      {/* 8. Certificados de finalización y verificación de autenticidad */}
-      {section === 'certificates' && (
-        <View>
-          <SectionHeader title="Mis Certificados Emitidos" subtitle="Emitidos al completar todas las lecciones obligatorias" />
-          {certificates.length === 0 ? (
-            <Empty
-              icon="ribbon-outline"
-              title="Todavía no tenés certificados"
-              text="Completá el 100% de las lecciones obligatorias de un curso para emitir tu certificado verificable."
-            />
-          ) : (
-            certificates.map((cert) => (
-              <View
-                key={cert.id}
-                style={{
-                  backgroundColor: colors.navy,
-                  borderRadius: 18,
-                  padding: 18,
-                  marginBottom: 12,
-                  borderWidth: 2,
-                  borderColor: colors.success,
-                }}
-              >
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Badge text="CERTIFICADO OFICIAL SKILLTRACK" color="#4ade80" />
-                  <Ionicons name="ribbon" size={26} color="#4ade80" />
-                </View>
-                <Text style={{ color: colors.mode === 'light' ? colors.text : '#ffffff', fontSize: 18, fontWeight: '800', marginTop: 10 }}>{cert.courseTitle}</Text>
-                <Text style={{ color: colors.mode === 'light' ? colors.textSecondary : '#cbd5e1', fontSize: 13, marginTop: 4 }}>Otorgado a: {cert.studentName}</Text>
-                <Text style={{ color: colors.mode === 'light' ? colors.textSecondary : '#cbd5e1', fontSize: 12, marginTop: 2 }}>
-                  Instructor: {cert.instructorName} • Duración: {cert.estimatedDuration} h
-                </Text>
-                <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 6 }}>
-                  Fecha de emisión: {formatDate(cert.issuedAt)} • Código: {cert.verificationCode}
-                </Text>
-                <Button
-                  title="Compartir / Exportar Certificado"
-                  icon="share-social-outline"
-                  variant="success"
-                  small
-                  style={{ marginTop: 12, marginBottom: 0 }}
-                  onPress={() => shareCertificate(cert)}
-                />
-              </View>
-            ))
-          )}
-
-          <SectionHeader title="Verificador Público de Certificados" subtitle="Comprobá la validez de cualquier código" />
-          <Input
-            label="Código de verificación"
-            value={verifyCode}
-            onChangeText={setVerifyCode}
-            placeholder="Ej. SKT-2026-UXUI-0004"
-            autoCapitalize="characters"
-          />
-          <Button title="Verificar autenticidad" icon="shield-checkmark-outline" variant="outline" onPress={handleVerifyCode} />
-          {verifyResult && (
-            <View
-              style={{
-                backgroundColor: colors.successLight,
-                borderRadius: 12,
-                padding: 12,
-                borderWidth: 1,
-                borderColor: colors.success,
-              }}
-            >
-              <Text style={{ color: colors.success, fontWeight: '800' }}>
-                ✓ Certificado Auténtico ({verifyResult.verificationCode})
-              </Text>
-              <Text style={{ color: colors.text, fontSize: 13, marginTop: 4 }}>
-                Estudiante: {verifyResult.studentName} • Curso: {verifyResult.courseTitle} ({formatDate(verifyResult.issuedAt)})
-              </Text>
-            </View>
           )}
         </View>
       )}

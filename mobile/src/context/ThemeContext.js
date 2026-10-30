@@ -4,9 +4,21 @@
  * seguro y sincronización con la preferencia del sistema Android.
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { useColorScheme } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import { colors as mutableColors, darkColors, lightColors } from '../theme';
 import { loadThemePreference, saveThemePreference } from '../utils/storage';
+
+const getInitialTheme = () => {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.localStorage) {
+    try {
+      const saved = window.localStorage.getItem('skt_theme_mode');
+      if (saved === 'dark' || saved === 'light') return saved;
+    } catch {
+      // Ignorar fallback
+    }
+  }
+  return 'dark';
+};
 
 const ThemeContext = createContext({
   mode: 'dark',
@@ -17,17 +29,13 @@ const ThemeContext = createContext({
 });
 
 export function ThemeProvider({ children }) {
-  const [mode, setMode] = useState('dark');
+  const [mode, setMode] = useState(getInitialTheme);
 
   useEffect(() => {
     (async () => {
       const saved = await loadThemePreference();
       if (saved === 'dark' || saved === 'light') {
         setMode(saved);
-      } else {
-        // Modo oscuro predeterminado siempre
-        setMode('dark');
-        await saveThemePreference('dark');
       }
     })();
   }, []);

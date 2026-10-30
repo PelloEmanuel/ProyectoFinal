@@ -15,8 +15,8 @@ export default function WelcomeScreen({ navigation }) {
   const [legalModal, setLegalModal] = useState(false);
 
   return (
-    <Screen edges={['top', 'left', 'right', 'bottom']}>
-      <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
+    <Screen edges={['top', 'left', 'right', 'bottom']} style={{ flex: 1, justifyContent: 'center' }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 10 }}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Cambiar tema claro u oscuro"
@@ -68,9 +68,9 @@ export default function WelcomeScreen({ navigation }) {
           </View>
           <View style={{ alignItems: 'center' }}>
             <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#d9770633', alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="ribbon-outline" size={24} color="#fbbf24" />
+              <Ionicons name="school-outline" size={24} color="#fbbf24" />
             </View>
-            <Text style={{ color: colors.mode === 'light' ? colors.text : '#e2e8f0', fontSize: 12, fontWeight: '700', marginTop: 6 }}>Certificados</Text>
+            <Text style={{ color: colors.mode === 'light' ? colors.text : '#e2e8f0', fontSize: 12, fontWeight: '700', marginTop: 6 }}>Seguimiento</Text>
           </View>
         </View>
 

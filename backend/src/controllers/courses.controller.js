@@ -1153,10 +1153,11 @@ exports.createAnnouncement = asyncHandler(async (req, res) => {
 
   const { title, content, attachments = [] } = req.body;
   const attachmentsJson = Array.isArray(attachments) ? JSON.stringify(attachments) : null;
+  const finalTitle = (title && String(title).trim()) ? String(title).trim() : (String(content || '').trim().slice(0, 50) || 'Aviso');
 
   const [ins] = await db.execute(
     "INSERT INTO announcements (course_id, instructor_id, title, content, attachments, status) VALUES (?, ?, ?, ?, ?, 'published')",
-    [course.id, req.user.id, title.trim(), content.trim(), attachmentsJson]
+    [course.id, req.user.id, finalTitle, content.trim(), attachmentsJson]
   );
 
   // Notificar a todos los estudiantes inscritos en este curso

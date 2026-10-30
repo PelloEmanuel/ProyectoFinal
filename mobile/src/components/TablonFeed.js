@@ -296,15 +296,15 @@ export default function TablonFeed({
   // 3. Creación de publicaciones
   // --------------------------------------------------------------------------
   const handleCreateAnnouncement = async () => {
-    if (!annForm.title.trim() || !annForm.content.trim()) {
-      setErrorBanner('Por favor completá el título y el mensaje del aviso.');
+    if (!annForm.content.trim()) {
+      setErrorBanner('Por favor escribí el mensaje del aviso.');
       return;
     }
     try {
       setSavingItem(true);
       setErrorBanner('');
       await coursesApi.createAnnouncement(course.id, {
-        title: annForm.title.trim(),
+        title: annForm.content.trim().slice(0, 50),
         content: annForm.content.trim(),
         attachments: annForm.attachments,
       });
@@ -456,14 +456,17 @@ export default function TablonFeed({
   };
 
   const handleSaveEditItem = async () => {
-    if (!editingItem || !editingItem.title.trim()) return;
+    if (!editingItem) return;
+    if (editingItem.itemType !== 'announcement' && !editingItem.title?.trim()) return;
+    if (editingItem.itemType === 'announcement' && !editingItem.content?.trim()) return;
     try {
       setSavingItem(true);
       setErrorBanner('');
 
       if (editingItem.itemType === 'announcement') {
+        const finalTitle = (editingItem.title && editingItem.title.trim()) || editingItem.content.trim().slice(0, 50) || 'Aviso';
         await coursesApi.updateAnnouncement(editingItem.id, {
-          title: editingItem.title.trim(),
+          title: finalTitle,
           content: editingItem.content.trim(),
           attachments: editingItem.attachments,
         });
@@ -833,18 +836,12 @@ export default function TablonFeed({
                   {createType === 'announcement' && (
                     <View style={{ padding: 14 }}>
                       <Input
-                        label="Título del aviso"
-                        value={annForm.title}
-                        onChangeText={(t) => setAnnForm((p) => ({ ...p, title: t }))}
-                        placeholder="Ej. Anuncio para la clase de mañana"
-                      />
-                      <Input
-                        label="Mensaje para los alumnos"
+                        label="Mensaje para los alumnos *"
                         value={annForm.content}
                         onChangeText={(t) => setAnnForm((p) => ({ ...p, content: t }))}
-                        placeholder="Escribí tu mensaje..."
+                        placeholder="Escribí tu aviso para el curso..."
                         multiline
-                        style={{ minHeight: 70 }}
+                        style={{ minHeight: 90 }}
                       />
                       <FileUploader
                         attachments={annForm.attachments}
@@ -1257,11 +1254,13 @@ export default function TablonFeed({
 
             <View style={{ flex: 1, marginHorizontal: 8 }}>
               <Text style={[styles.modalHeaderTitle, { color: colors.text }]} numberOfLines={1}>
-                {selectedItem?.title}
+                {selectedItem?.itemType === 'announcement'
+                  ? 'Aviso del Docente'
+                  : selectedItem?.title}
               </Text>
               <Text style={[styles.modalHeaderSubtitle, { color: colors.muted }]}>
                 {selectedItem?.itemType === 'announcement'
-                  ? 'Aviso del Docente'
+                  ? `Publicado por ${selectedItem?.authorName}`
                   : 'Material Teórico'}
               </Text>
             </View>
@@ -1304,9 +1303,11 @@ export default function TablonFeed({
                       { backgroundColor: colors.card, borderColor: colors.border },
                     ]}
                   >
-                    <Text style={[styles.detailTitle, { color: colors.text }]}>
-                      {selectedItem.title}
-                    </Text>
+                    {selectedItem.itemType !== 'announcement' && (
+                      <Text style={[styles.detailTitle, { color: colors.text }]}>
+                        {selectedItem.title}
+                      </Text>
+                    )}
 
                     <Text style={[styles.detailMeta, { color: colors.muted, fontSize: 13, marginTop: 4 }]}>
                       {selectedItem.itemType === 'lesson' ? '📚 Material Teórico' : '📢 Aviso'} • Publicado por {selectedItem.authorName} • 📅 Subido el {formatDateTime(selectedItem.date)}
@@ -1619,11 +1620,13 @@ export default function TablonFeed({
           <ScrollView contentContainerStyle={styles.modalScrollBody}>
             {editingItem && (
               <View>
-                <Input
-                  label="Título de la publicación"
-                  value={editingItem.title}
-                  onChangeText={(t) => setEditingItem((p) => ({ ...p, title: t }))}
-                />
+                {editingItem.itemType !== 'announcement' && (
+                  <Input
+                    label="Título de la publicación"
+                    value={editingItem.title}
+                    onChangeText={(t) => setEditingItem((p) => ({ ...p, title: t }))}
+                  />
+                )}
 
                 <Input
                   label={

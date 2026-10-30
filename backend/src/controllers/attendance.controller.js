@@ -86,21 +86,19 @@ exports.getAttendanceSheet = asyncHandler(async (req, res) => {
     throw new AppError('El mes debe estar entre 1 (Enero) y 12 (Diciembre).', 422);
   }
 
-  // 1. Calcular días hábiles (Lunes a Viernes) para este año y mes
+  // 1. Calcular días del mes (concordancia exacta con el calendario oficial: incluye todos los días 1 a 31)
   const days = [];
   const daysInMonth = new Date(year, month, 0).getDate();
   for (let d = 1; d <= daysInMonth; d++) {
     const dObj = new Date(year, month - 1, d);
-    const dayOfWeek = dObj.getDay(); // 1 = Lunes, 5 = Viernes
-    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-      const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-      days.push({
-        date: dateStr,
-        dayNumber: d,
-        dayName: DAY_NAMES[dayOfWeek],
-        dayOfWeek,
-      });
-    }
+    const dayOfWeek = dObj.getDay();
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    days.push({
+      date: dateStr,
+      dayNumber: d,
+      dayName: DAY_NAMES[dayOfWeek],
+      dayOfWeek,
+    });
   }
 
   // 2. Obtener alumnos del curso ordenados alfabéticamente

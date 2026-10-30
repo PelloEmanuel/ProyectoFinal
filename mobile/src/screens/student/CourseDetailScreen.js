@@ -238,7 +238,6 @@ export default function CourseDetailScreen({ navigation, route }) {
           >
             {[
               { id: 'tablon', label: 'Tablón', icon: 'chatbubbles-outline' },
-              { id: 'trabajo', label: 'Material Teórico', icon: 'book-outline' },
               { id: 'personas', label: 'Personas', icon: 'people-outline' },
             ].map((t) => {
               const active = mainTab === t.id;
@@ -328,111 +327,9 @@ export default function CourseDetailScreen({ navigation, route }) {
           )}
 
           {/* ================================================================ */}
-          {/* PESTAÑA 2: TRABAJO DE CLASE (PROGRAMA Y ACTIVIDADES)              */}
+          {/* PESTAÑA: PERSONAS E INFORMACIÓN ACADÉMICA                         */}
           {/* ================================================================ */}
-          {mainTab === 'trabajo' && (
-            <View>
-              {/* Progreso del estudiante */}
-              {enrollment && (
-                <View
-                  style={{
-                    backgroundColor: colors.card,
-                    borderRadius: 14,
-                    padding: 14,
-                    marginBottom: 16,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  }}
-                >
-                  {firstLesson && (
-                    <Button
-                      title="Ver material y lecciones"
-                      icon="play-circle-outline"
-                      onPress={() =>
-                        navigation.navigate('LessonViewer', {
-                          lessonId: firstLesson.id,
-                          courseId: course.id,
-                        })
-                      }
-                      style={{ marginTop: 0 }}
-                    />
-                  )}
-                </View>
-              )}
 
-              {/* Programa de Módulos y Lecciones */}
-              <SectionHeader
-                title="Programa del curso"
-                subtitle={`${course.modules?.length || 0} módulo(s) estructurados`}
-              />
-              {course.modules?.map((mod) => (
-                <View
-                  key={mod.id}
-                  style={{
-                    backgroundColor: colors.card,
-                    borderRadius: 14,
-                    padding: 14,
-                    marginBottom: 10,
-                    borderWidth: 1,
-                    borderColor: colors.border,
-                  }}
-                >
-                  <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>
-                    {mod.title}
-                  </Text>
-                  {!!mod.description && (
-                    <Text style={{ fontSize: 12, color: colors.muted, marginTop: 2 }}>
-                      {mod.description}
-                    </Text>
-                  )}
-
-                  <View style={{ marginTop: 10 }}>
-                    {mod.lessons?.map((les) => (
-                      <Pressable
-                        key={les.id}
-                        onPress={() => {
-                          if (!enrollment && user?.role === 'student') {
-                            setError('Inscribite en el curso para acceder al visor de lecciones.');
-                            return;
-                          }
-                          navigation.navigate('LessonViewer', {
-                            lessonId: les.id,
-                            courseId: course.id,
-                          });
-                        }}
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          paddingVertical: 10,
-                          borderTopWidth: 1,
-                          borderTopColor: colors.border,
-                        }}
-                      >
-                        <Ionicons
-                          name={les.completed ? 'checkmark-circle' : 'play-circle-outline'}
-                          size={20}
-                          color={les.completed ? colors.success : colors.primary}
-                        />
-                        <View style={{ flex: 1, marginLeft: 10 }}>
-                          <Text style={{ color: colors.text, fontWeight: '600', fontSize: 14 }}>
-                            {les.title}
-                          </Text>
-                          <Text style={{ color: colors.muted, fontSize: 12 }}>
-                            {les.estimatedDuration} min • {les.isRequired ? 'Obligatoria' : 'Opcional'}
-                          </Text>
-                        </View>
-                        <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-                      </Pressable>
-                    ))}
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* ================================================================ */}
-          {/* PESTAÑA 3: PERSONAS E INFORMACIÓN ACADÉMICA                       */}
-          {/* ================================================================ */}
           {mainTab === 'personas' && (
             <View>
               {/* Tarjeta de Instructor */}

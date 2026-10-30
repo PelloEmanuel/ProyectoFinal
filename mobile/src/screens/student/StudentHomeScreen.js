@@ -314,7 +314,6 @@ export default function StudentHomeScreen({ navigation }) {
                               {blk.startTime} a {blk.endTime} hs
                             </Text>
                           </View>
-                          {!!blk.classroom && <Badge text={`Aula: ${blk.classroom}`} color={colors.secondary} />}
                         </View>
 
                         <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text, marginTop: 6 }}>
@@ -417,22 +416,22 @@ export default function StudentHomeScreen({ navigation }) {
               })}
             </View>
 
-            {/* Código de acceso obligatorio del curso */}
+            {/* Contraseña obligatoria del curso */}
             <View style={{ marginBottom: 14 }}>
               <Input
-                label="Código de Acceso del Curso *"
-                placeholder="Ej. 6TO1RA"
+                label="Contraseña del curso *"
+                placeholder="contraseña"
                 value={groupAccessCode}
                 onChangeText={(text) => {
                   setGroupAccessCode(text);
                   setModalError('');
                 }}
-                autoCapitalize="characters"
+                autoCapitalize="none"
                 autoCorrect={false}
                 leftIcon="key-outline"
               />
               <Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 4 }}>
-                🔒 Ingresá el código provisto por la institución para validar tu pertenencia a este curso.
+                🔒 Ingresá la contraseña provista por la institución para validar tu pertenencia a este curso.
               </Text>
             </View>
 
