@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -23,6 +24,7 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import VerifyCodeScreen from '../screens/auth/VerifyCodeScreen';
 
 // Student Screens
+const TECNICA_5_LOGO = require('../../assets/logo.png');
 import StudentHomeScreen from '../screens/student/StudentHomeScreen';
 import ExploreCoursesScreen from '../screens/student/ExploreCoursesScreen';
 import MyLearningScreen from '../screens/student/MyLearningScreen';
@@ -134,7 +136,7 @@ function UnifiedTopNavBar({ state, descriptors, navigation }) {
           gap: 8,
         }}
       >
-        {/* LADO IZQUIERDO: Nombre de la página SkillTrack con flecha en móvil */}
+        {/* LADO IZQUIERDO: Nombre de la página Campus Técnica 5 con flecha en móvil */}
         <Pressable
           onPress={() => {
             if (isMobile) {
@@ -149,7 +151,7 @@ function UnifiedTopNavBar({ state, descriptors, navigation }) {
               ? menuOpen
                 ? 'Cerrar panel de navegación'
                 : 'Abrir panel de navegación'
-              : 'Ir al inicio de SkillTrack'
+              : 'Ir al inicio de Campus Técnica 5'
           }
           style={({ pressed }) => ({
             flexDirection: 'row',
@@ -173,25 +175,32 @@ function UnifiedTopNavBar({ state, descriptors, navigation }) {
         >
           <View
             style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              backgroundColor: colors.primary,
+              width: 36,
+              height: 28,
+              borderRadius: 6,
+              backgroundColor: '#ffffff',
+              borderWidth: 1,
+              borderColor: colors.border,
               alignItems: 'center',
               justifyContent: 'center',
+              padding: 2,
             }}
           >
-            <Ionicons name="school" size={18} color="#ffffff" />
+            <Image
+              source={TECNICA_5_LOGO}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="contain"
+            />
           </View>
           <Text
             style={{
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: '900',
               color: colors.text,
               letterSpacing: 0.3,
             }}
           >
-            SkillTrack
+            Campus <Text style={{ color: colors.primary }}>Técnica 5</Text>
           </Text>
 
           {/* Flecha indicadora en versión celular:
@@ -632,7 +641,7 @@ function AuthStack() {
       <Stack.Screen
         name="Login"
         component={LoginScreen}
-        options={{ title: 'Iniciar sesión en SkillTrack' }}
+        options={{ title: 'Iniciar sesión en Campus Técnica 5' }}
       />
       <Stack.Screen
         name="Register"

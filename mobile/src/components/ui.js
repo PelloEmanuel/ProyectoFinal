@@ -7,6 +7,7 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -22,61 +23,58 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import useResponsive from '../hooks/useResponsive';
 
+// Logotipo oficial de Técnica 5
+const TECNICA_5_LOGO = require('../../assets/logo.png');
+
 /**
- * Logotipo institucional de SkillTrack (representa aprendizaje y evolución de habilidades).
+ * Logotipo institucional de Campus Técnica 5.
  */
 export function SkillTrackLogo({ size = 'md', showSubtitle = true }) {
   const { colors } = useTheme();
   const isLg = size === 'lg';
-  const boxSize = isLg ? 72 : 48;
-  const iconSize = isLg ? 38 : 26;
+  const boxWidth = isLg ? 110 : 70;
+  const boxHeight = isLg ? 75 : 48;
 
   return (
     <View style={{ alignItems: 'center' }}>
       <View
         style={{
-          width: boxSize,
-          height: boxSize,
-          borderRadius: isLg ? 20 : 14,
-          backgroundColor: colors.navy,
-          borderWidth: 2,
-          borderColor: colors.primary,
+          width: boxWidth,
+          height: boxHeight,
+          borderRadius: isLg ? 16 : 10,
+          backgroundColor: '#ffffff',
+          borderWidth: 1.5,
+          borderColor: colors.border,
           alignItems: 'center',
           justifyContent: 'center',
-          position: 'relative',
+          padding: 4,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.08,
+          shadowRadius: 4,
+          elevation: 2,
         }}
       >
-        <Ionicons name="school" size={iconSize} color={colors.mode === 'light' ? colors.primary : '#ffffff'} />
-        <View
-          style={{
-            position: 'absolute',
-            bottom: -4,
-            right: -4,
-            backgroundColor: colors.success,
-            borderRadius: 12,
-            width: isLg ? 24 : 18,
-            height: isLg ? 24 : 18,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Ionicons name="trending-up" size={isLg ? 14 : 11} color="#ffffff" />
-        </View>
+        <Image
+          source={TECNICA_5_LOGO}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="contain"
+        />
       </View>
       <Text
         style={{
-          fontSize: isLg ? 28 : 20,
-          fontWeight: '800',
+          fontSize: isLg ? 26 : 19,
+          fontWeight: '900',
           color: colors.text,
-          marginTop: 8,
-          letterSpacing: 0.3,
+          marginTop: 10,
+          letterSpacing: 0.4,
         }}
       >
-        Skill<Text style={{ color: colors.primary }}>Track</Text>
+        Campus <Text style={{ color: colors.primary }}>Técnica 5</Text>
       </Text>
       {showSubtitle && (
         <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center', marginTop: 2 }}>
-          Aprendizaje, seguimiento y evolución de habilidades
+          Plataforma Institucional y Académica
         </Text>
       )}
     </View>

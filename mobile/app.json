@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "SkillTrack",
-    "slug": "skilltrack",
+    "name": "Campus Técnica 5",
+    "slug": "campus-tecnica-5",
     "owner": "pelloemanuel",
     "scheme": "skilltrack",
     "version": "1.0.0",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
-    "primaryColor": "#0f172a",
+    "primaryColor": "#b91c1c",
     "android": {
       "package": "com.skilltrack.app",
       "versionCode": 1,

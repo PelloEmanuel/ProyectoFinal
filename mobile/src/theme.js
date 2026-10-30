@@ -5,49 +5,51 @@
  */
 export const lightColors = {
   mode: 'light',
-  navy: '#e2e8f0',
-  navySurface: '#cbd5e1',
-  primary: '#4f46e5',
-  primaryLight: '#eef2ff',
-  secondary: '#0891b2',
-  accent: '#7c3aed',
-  info: '#0284c7',
-  bg: '#f8fafc',
-  background: '#f8fafc',
-  card: '#f1f5f9',
-  surface: '#f1f5f9',
-  surfaceAlt: '#e2e8f0',
+  navy: '#f1f5f9',
+  navySurface: '#e2e8f0',
+  primary: '#b91c1c',        // Rojo distintivo Técnica 5
+  primaryLight: '#fef2f2',
+  secondary: '#15803d',      // Verde distintivo Técnica 5
+  secondaryLight: '#f0fdf4',
+  accent: '#15803d',
+  info: '#15803d',
+  bg: '#ffffff',             // Color base blanco para modo claro
+  background: '#ffffff',
+  card: '#f8fafc',
+  surface: '#ffffff',
+  surfaceAlt: '#f1f5f9',
   text: '#0f172a',
   textSecondary: '#334155',
   muted: '#64748b',
   textMuted: '#64748b',
-  border: '#cbd5e1',
-  success: '#16a34a',
+  border: '#e2e8f0',
+  success: '#15803d',        // Verde Técnica 5
   successLight: '#dcfce7',
   warning: '#d97706',
   warningLight: '#fef3c7',
   warningSoft: '#fef3c7',
-  danger: '#dc2626',
-  dangerLight: '#fef2f2',
+  danger: '#b91c1c',         // Rojo Técnica 5
+  dangerLight: '#fee2e2',
   overlay: 'rgba(15, 23, 42, 0.45)',
-  // Acentos vivos para campus escolar
-  amber: '#f59e0b',
-  emerald: '#10b981',
-  violet: '#8b5cf6',
-  cyan: '#06b6d4',
-  rose: '#f43f5e',
+  // Acentos para campus escolar
+  amber: '#d97706',
+  emerald: '#15803d',
+  violet: '#b91c1c',
+  cyan: '#15803d',
+  rose: '#b91c1c',
 };
 
 export const darkColors = {
   mode: 'dark',
   navy: '#060913',
   navySurface: '#0d1322',
-  primary: '#6366f1',
-  primaryLight: '#262b5c',
-  secondary: '#06b6d4',
-  accent: '#8b5cf6',
-  info: '#38bdf8',
-  bg: '#0b0f19',
+  primary: '#ef4444',        // Rojo brillante armónico sobre fondo oscuro
+  primaryLight: '#450a0a',
+  secondary: '#22c55e',      // Verde vibrante armónico sobre fondo oscuro
+  secondaryLight: '#052e16',
+  accent: '#22c55e',
+  info: '#22c55e',
+  bg: '#0b0f19',             // Color base negro/azul actual
   background: '#0b0f19',
   card: '#131b2e',
   surface: '#131b2e',
@@ -57,20 +59,20 @@ export const darkColors = {
   muted: '#94a3b8',
   textMuted: '#94a3b8',
   border: '#24324f',
-  success: '#10b981',
+  success: '#22c55e',        // Verde Técnica 5 en modo oscuro
   successLight: '#064e3b',
   warning: '#f59e0b',
   warningLight: '#451a03',
   warningSoft: '#451a03',
-  danger: '#f43f5e',
+  danger: '#ef4444',         // Rojo Técnica 5 en modo oscuro
   dangerLight: '#4c0519',
   overlay: 'rgba(6, 9, 19, 0.82)',
-  // Acentos vivos para campus escolar
+  // Acentos para campus escolar
   amber: '#fbbf24',
-  emerald: '#34d399',
-  violet: '#a78bfa',
-  cyan: '#22d3ee',
-  rose: '#fb7185',
+  emerald: '#22c55e',
+  violet: '#ef4444',
+  cyan: '#22c55e',
+  rose: '#ef4444',
 };
 
 // Objeto reactivo por defecto para compatibilidad directa
