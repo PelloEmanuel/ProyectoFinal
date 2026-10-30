@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,6 +29,8 @@ import {
 
 export default function InstructorStudentsScreen() {
   const { colors } = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
+  const isDesktop = screenWidth >= 768;
   const [students, setStudents] = useState([]);
   const [courses, setCourses] = useState([]);
 
@@ -291,9 +294,10 @@ export default function InstructorStudentsScreen() {
               <View
                 key={item.studentId}
                 style={{
-                  width: Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : '100%',
-                  minWidth: 280,
-                  flexGrow: 1,
+                  width: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                  maxWidth: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                  flexGrow: isDesktop ? 0 : 1,
+                  flexShrink: 0,
                 }}
               >
                 <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>

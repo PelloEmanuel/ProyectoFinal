@@ -337,29 +337,15 @@ export default function DashboardScreen({ navigation }) {
           icon="people-outline"
           tone="primary"
           subtitle={`${metrics.activeUsers ?? 0} activos`}
+          onPress={() => navigation.navigate('Users')}
         />
         <MetricCard
           label="Cursos"
-          value={metrics.totalCourses ?? 0}
+          value={metrics.totalCourses ?? metrics.totalSchoolGroups ?? openCourses.length ?? 0}
           icon="library-outline"
           tone="info"
-          subtitle={`${metrics.publishedCourses ?? 0} publicados`}
-        />
-      </View>
-      <View style={[styles.metricsRow, { marginTop: 10 }]}>
-        <MetricCard
-          label="Inscripciones"
-          value={metrics.totalEnrollments ?? 0}
-          icon="school-outline"
-          tone="success"
-          subtitle={`${metrics.completedEnrollments ?? 0} finalizadas`}
-        />
-        <MetricCard
-          label="Certificados"
-          value={metrics.totalCertificates ?? 0}
-          icon="ribbon-outline"
-          tone="warning"
-          subtitle={`Tasa: ${metrics.completionRate ?? 0}%`}
+          subtitle={`${metrics.openSchoolGroups ?? openCourses.length ?? 0} abiertos`}
+          onPress={() => navigation.navigate('AdminCourses', { initialSection: 'groups' })}
         />
       </View>
 

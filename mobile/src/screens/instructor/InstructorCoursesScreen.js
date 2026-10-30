@@ -12,6 +12,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -207,6 +208,8 @@ export const COURSE_THEME_PALETTES = [
 
 export default function InstructorCoursesScreen({ route, navigation }) {
   const { colors, isDark } = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
+  const isDesktop = screenWidth >= 768;
   const [courses, setCourses] = useState([]);
   const [categories, setCategories] = useState([]);
   const [skills, setSkills] = useState([]);
@@ -1474,9 +1477,10 @@ export default function InstructorCoursesScreen({ route, navigation }) {
                   <View
                     key={course.id}
                     style={{
-                      width: Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : '100%',
-                      minWidth: 280,
-                      flexGrow: 1,
+                      width: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                      maxWidth: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                      flexGrow: isDesktop ? 0 : 1,
+                      flexShrink: 0,
                     }}
                   >
                     <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>

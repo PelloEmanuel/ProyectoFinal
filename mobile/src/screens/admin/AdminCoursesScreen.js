@@ -20,6 +20,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -97,6 +98,8 @@ function expandGroupsToSlots(timeGroups = []) {
 
 export default function AdminCoursesScreen({ route }) {
   const { colors } = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
+  const isDesktop = screenWidth >= 768;
   const initialMode = route?.params?.initialSection || 'schedule';
   const [section, setSection] = useState(initialMode); // 'catalog' | 'schedule'
   const [courseViewTab, setCourseViewTab] = useState('grid'); // 'grid' | 'courses' | 'byDay'
@@ -762,9 +765,10 @@ export default function AdminCoursesScreen({ route }) {
                   <View
                     key={subj.id}
                     style={{
-                      width: Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : '100%',
-                      minWidth: 280,
-                      flexGrow: 1,
+                      width: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                      maxWidth: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                      flexGrow: isDesktop ? 0 : 1,
+                      flexShrink: 0,
                     }}
                   >
                     <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>
@@ -1034,9 +1038,10 @@ export default function AdminCoursesScreen({ route }) {
                         <View
                           key={course.id}
                           style={{
-                            width: Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : '100%',
-                            minWidth: 280,
-                            flexGrow: 1,
+                            width: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                            maxWidth: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                            flexGrow: isDesktop ? 0 : 1,
+                            flexShrink: 0,
                           }}
                         >
                           <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>
@@ -1293,9 +1298,10 @@ export default function AdminCoursesScreen({ route }) {
                     <View
                       key={grp.id}
                       style={{
-                        width: Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : '100%',
-                        minWidth: 280,
-                        flexGrow: 1,
+                        width: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                        maxWidth: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                        flexGrow: isDesktop ? 0 : 1,
+                        flexShrink: 0,
                       }}
                     >
                       <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>

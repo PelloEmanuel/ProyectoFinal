@@ -11,7 +11,7 @@
  * Visible para Alumnos, Docentes y Administradores al ingresar a cualquier curso (ej. 6to 1ra).
  */
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
@@ -119,6 +119,11 @@ export default function SchoolScheduleGrid({
   onPressEmptyCell,
 }) {
   const { colors } = useTheme();
+  const { width: windowWidth } = useWindowDimensions();
+  // Ancho exacto del calendario: 6 columnas de 125px + bordes divisores (~756px)
+  const CALENDAR_WIDTH = 756;
+  const isScreenLargerThanCalendar = windowWidth > CALENDAR_WIDTH + 32;
+
   const [showExtraMorning, setShowExtraMorning] = useState(true);
   const [showAfternoon, setShowAfternoon] = useState(true);
   const [showExtraAfternoon, setShowExtraAfternoon] = useState(true);
@@ -435,11 +440,14 @@ export default function SchoolScheduleGrid({
         </Pressable>
       </View>
 
-      {/* Tabla desplazable horizontalmente para pantallas chicas y centrada en Web/Tablet */}
+      {/* Tabla desplazable horizontalmente para pantallas chicas y centrada cuando la pantalla es mayor */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: isScreenLargerThanCalendar ? 'center' : 'flex-start',
+        }}
       >
         <View style={styles.tableContainer}>
           {/* Cabecera de columnas: Horario | Lunes | Martes | Miércoles | Jueves | Viernes */}
@@ -541,7 +549,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 14,
     width: '100%',
+    maxWidth: 780,
     alignSelf: 'center',
+    marginHorizontal: 'auto',
   },
   banner: {
     paddingVertical: 12,
@@ -580,7 +590,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   tableContainer: {
-    minWidth: 740,
+    width: 756,
     alignSelf: 'center',
   },
   headerRow: {

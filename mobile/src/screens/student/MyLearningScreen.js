@@ -5,7 +5,7 @@
  * personalizado que el profesor configuró para cada materia.
  */
 import React, { useCallback, useState } from 'react';
-import { Platform, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Platform, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Empty, ErrorBanner, Input, Loading, Screen } from '../../components/ui';
@@ -22,6 +22,8 @@ import {
 export default function MyLearningScreen({ navigation }) {
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { width: screenWidth } = useWindowDimensions();
+  const isDesktop = screenWidth >= 768;
   const [enrollments, setEnrollments] = useState([]);
   const [q, setQ] = useState('');
   const [loading, setLoading] = useState(true);
@@ -136,9 +138,10 @@ export default function MyLearningScreen({ navigation }) {
                 <View
                   key={item.courseId}
                   style={{
-                    width: Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : '100%',
-                    minWidth: 280,
-                    flexGrow: 1,
+                    width: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                    maxWidth: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                    flexGrow: isDesktop ? 0 : 1,
+                    flexShrink: 0,
                   }}
                 >
                   <Pressable
