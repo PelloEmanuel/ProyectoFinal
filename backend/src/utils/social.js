@@ -20,7 +20,22 @@ async function getJson(url, opts) {
 }
 
 const providers = {
-  async google({ code, redirectUri, codeVerifier, accessToken }) {
+  async google({ code, redirectUri, codeVerifier, accessToken, idToken, id_token }) {
+    const rawIdToken = idToken || id_token;
+    if (rawIdToken && !accessToken && !code) {
+      const d = await getJson(`https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(rawIdToken)}`);
+      const fullName = d.name || '';
+      const parts = fullName.trim().split(/\s+/);
+      return {
+        id: String(d.sub),
+        firstName: d.given_name || parts[0] || 'Estudiante',
+        lastName: d.family_name || parts.slice(1).join(' ') || 'SkillTrack',
+        email: d.email_verified === 'true' || d.email_verified === true ? d.email : null,
+        emailVerified: d.email_verified === 'true' || d.email_verified === true,
+        avatar: d.picture || null,
+      };
+    }
+
     let token = accessToken;
     if (!token) {
       if (!code) throw new AppError('accessToken o código de Google requerido', 400, 'OAUTH_MISSING_TOKEN');

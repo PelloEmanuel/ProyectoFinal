@@ -64,34 +64,53 @@ export default function useSocialAuth({ onCredential, onError }) {
     discordDiscovery
   );
 
-  // Listener para web: intercepta redirects, postMessages y storage events entre popup y ventana principal
+  // Escucha multicanal para Web (BroadcastChannel, LocalStorage, Polling, PostMessage)
   useEffect(() => {
     if (Platform.OS !== 'web' || typeof window === 'undefined') return;
 
     const processOAuthUrl = (urlStr) => {
       try {
         const u = new URL(urlStr, window.location.origin);
-        const code = u.searchParams.get('code');
-        const error = u.searchParams.get('error');
+        const searchParams = new URLSearchParams(u.search);
+        const hashStr = u.hash.startsWith('#') ? u.hash.slice(1) : u.hash;
+        const hashParams = new URLSearchParams(hashStr);
+
+        const error = searchParams.get('error') || hashParams.get('error');
         if (error) {
           onError(`Error de autenticación: ${error}`);
           return true;
         }
-        if (code && !handledCodeRef.current.has(code)) {
-          handledCodeRef.current.add(code);
+
+        const code = searchParams.get('code') || hashParams.get('code');
+        const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+        const idToken = hashParams.get('id_token') || searchParams.get('id_token');
+
+        const key = code || accessToken || idToken;
+        if (!key || handledCodeRef.current.has(key)) return false;
+        handledCodeRef.current.add(key);
+
+        if (code) {
           onCredential('google', {
             code,
             redirectUri: googleRedirect,
             codeVerifier: gReq?.codeVerifier,
           });
           return true;
+        } else if (accessToken) {
+          onCredential('google', { accessToken });
+          return true;
+        } else if (idToken) {
+          onCredential('google', { idToken });
+          return true;
         }
-      } catch (e) {}
+      } catch (e) {
+        console.error('SkillTrack OAuth parser error:', e);
+      }
       return false;
     };
 
-    // 1. Redirección en la misma ventana (móvil web / fallback)
-    if (window.location.search && window.location.search.includes('code=')) {
+    // 1. Si la ventana actual tiene parámetros OAuth en URL (mismo tab / redirect)
+    if (window.location.search?.includes('code=') || window.location.hash?.includes('access_token=') || window.location.hash?.includes('id_token=')) {
       const handled = processOAuthUrl(window.location.href);
       if (handled) {
         try {
@@ -100,7 +119,18 @@ export default function useSocialAuth({ onCredential, onError }) {
       }
     }
 
-    // 2. Storage event cuando el popup guarda la URL de respuesta
+    // 2. BroadcastChannel
+    let bc = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        bc = new BroadcastChannel('skilltrack_oauth_channel');
+        bc.onmessage = (e) => {
+          if (e.data?.url) processOAuthUrl(e.data.url);
+        };
+      }
+    } catch (e) {}
+
+    // 3. Storage event
     const handleStorage = (e) => {
       if (e.key === 'SKILLTRACK_OAUTH_RESULT' && e.newValue) {
         try {
@@ -113,7 +143,21 @@ export default function useSocialAuth({ onCredential, onError }) {
       }
     };
 
-    // 3. PostMessage directo desde el popup a la ventana principal
+    // 4. Polling de respaldo cada 300ms
+    const pollInterval = setInterval(() => {
+      try {
+        const raw = window.localStorage.getItem('SKILLTRACK_OAUTH_RESULT');
+        if (raw) {
+          const payload = JSON.parse(raw);
+          if (payload?.url) {
+            processOAuthUrl(payload.url);
+            window.localStorage.removeItem('SKILLTRACK_OAUTH_RESULT');
+          }
+        }
+      } catch (e) {}
+    }, 300);
+
+    // 5. PostMessage directo
     const handleMessage = (e) => {
       if (e.origin !== window.location.origin) return;
       if (e.data?.url && typeof e.data.url === 'string') {
@@ -123,25 +167,36 @@ export default function useSocialAuth({ onCredential, onError }) {
 
     window.addEventListener('storage', handleStorage);
     window.addEventListener('message', handleMessage);
+
     return () => {
+      clearInterval(pollInterval);
+      if (bc) bc.close();
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('message', handleMessage);
     };
   }, [googleRedirect, gReq, onCredential, onError]);
 
+  // Hook nativo de Expo Auth Session como vía primaria
   useEffect(() => {
     if (gRes?.type === 'success') {
       const code = gRes.params?.code;
       const accessToken = gRes.authentication?.accessToken || gRes.params?.access_token;
-      if (code && !handledCodeRef.current.has(code)) {
-        handledCodeRef.current.add(code);
-        onCredential('google', {
-          code,
-          redirectUri: gReq?.redirectUri || googleRedirect,
-          codeVerifier: gReq?.codeVerifier,
-        });
-      } else if (accessToken) {
-        onCredential('google', { accessToken });
+      const idToken = gRes.authentication?.idToken || gRes.params?.id_token;
+      const key = code || accessToken || idToken;
+
+      if (key && !handledCodeRef.current.has(key)) {
+        handledCodeRef.current.add(key);
+        if (code) {
+          onCredential('google', {
+            code,
+            redirectUri: gReq?.redirectUri || googleRedirect,
+            codeVerifier: gReq?.codeVerifier,
+          });
+        } else if (accessToken) {
+          onCredential('google', { accessToken });
+        } else if (idToken) {
+          onCredential('google', { idToken });
+        }
       }
     } else if (gRes?.type === 'error') {
       onError('No se pudo completar el inicio de sesión con Google.');
