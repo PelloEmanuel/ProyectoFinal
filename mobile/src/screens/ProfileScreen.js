@@ -61,6 +61,7 @@ export default function ProfileScreen({ navigation }) {
   const [loading2FA, setLoading2FA] = useState(false);
 
   // Modals & messages
+  const [refreshing, setRefreshing] = useState(false);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
@@ -191,7 +192,9 @@ export default function ProfileScreen({ navigation }) {
     user?.role === 'admin'
       ? 'Administrador Institucional'
       : user?.role === 'instructor'
-      ? 'Instructor / Docente'
+      ? 'Docente'
+      : user?.role === 'preceptor'
+      ? 'Preceptor / Preceptora'
       : 'Estudiante';
 
   return (
@@ -202,8 +205,14 @@ export default function ProfileScreen({ navigation }) {
         <RefreshControl
           refreshing={refreshing}
           onRefresh={async () => {
-            await refreshProfile();
-            await loadSessions(true);
+            try {
+              setRefreshing(true);
+              if (refreshProfile) await refreshProfile();
+            } catch {
+              // ignore
+            } finally {
+              setRefreshing(false);
+            }
           }}
           tintColor={colors.primary}
         />
