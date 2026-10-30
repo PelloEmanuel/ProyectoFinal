@@ -252,6 +252,55 @@ export default function useSocialAuth({ onCredential, onError }) {
         `El proveedor ${names[provider] || provider} requiere configurar su Client ID real en mobile/.env (ver docs/GUIA_INSTALACION.md).`
       );
     }
+
+    // En entorno Web: redirección directa en la misma ventana (sin popups bloqueados ni ventanas hijas)
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem('oauth_provider', provider);
+        const state = Math.random().toString(36).substring(2) + Date.now().toString(36);
+        sessionStorage.setItem('oauth_state', state);
+
+        if (provider === 'google') {
+          const params = new URLSearchParams({
+            client_id: OAUTH.googleWeb,
+            redirect_uri: window.location.origin,
+            response_type: 'code',
+            scope: 'openid email profile',
+            prompt: 'select_account',
+            state: state,
+          });
+          window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+          return;
+        }
+
+        if (provider === 'github') {
+          const params = new URLSearchParams({
+            client_id: OAUTH.github,
+            redirect_uri: window.location.origin,
+            scope: 'read:user user:email',
+            state: state,
+          });
+          window.location.href = `https://github.com/login/oauth/authorize?${params.toString()}`;
+          return;
+        }
+
+        if (provider === 'discord') {
+          const params = new URLSearchParams({
+            client_id: OAUTH.discord,
+            redirect_uri: window.location.origin,
+            response_type: 'code',
+            scope: 'identify email',
+            state: state,
+          });
+          window.location.href = `https://discord.com/api/oauth2/authorize?${params.toString()}`;
+          return;
+        }
+      } catch (e) {
+        console.error('Error al redirigir para autenticación web:', e);
+      }
+    }
+
+    // En app móvil nativa (Android / iOS):
     const [req, prompt] = prompts[provider];
     if (req) prompt();
   };

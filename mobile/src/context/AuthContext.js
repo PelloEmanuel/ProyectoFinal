@@ -5,6 +5,7 @@
  * estado de segundo factor y acciones de sesión persistente en SecureStore.
  */
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from 'react';
+import { Platform } from 'react-native';
 import { authApi, usersApi } from '../api/services';
 import { bindSessionHandlers, setSessionTokens } from '../api/client';
 import { clearSession, loadSession, saveSession } from '../utils/storage';
@@ -74,6 +75,67 @@ export function AuthProvider({ children }) {
       onExpired: () => signOutLocal(),
     });
     (async () => {
+      // 1. Interceptar retorno de OAuth en Web (flujo de redirección estándar)
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        const search = window.location.search || '';
+        const hash = window.location.hash || '';
+        const hasCode = search.includes('code=') || hash.includes('code=');
+        const hasToken = hash.includes('access_token=') || search.includes('access_token=');
+        const hasIdToken = hash.includes('id_token=') || search.includes('id_token=');
+
+        if (hasCode || hasToken || hasIdToken) {
+          try {
+            const searchParams = new URLSearchParams(search);
+            const hashStr = hash.startsWith('#') ? hash.slice(1) : hash;
+            const hashParams = new URLSearchParams(hashStr);
+
+            const code = searchParams.get('code') || hashParams.get('code');
+            const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+            const idToken = hashParams.get('id_token') || searchParams.get('id_token');
+
+            let provider = 'google';
+            try {
+              provider = sessionStorage.getItem('oauth_provider') || 'google';
+              sessionStorage.removeItem('oauth_provider');
+              sessionStorage.removeItem('oauth_state');
+            } catch (e) {}
+
+            let meta = {};
+            try {
+              const rawMeta = sessionStorage.getItem('oauth_meta');
+              if (rawMeta) {
+                meta = JSON.parse(rawMeta);
+                sessionStorage.removeItem('oauth_meta');
+              }
+            } catch (e) {}
+
+            // Limpiar los parámetros de la URL inmediatamente
+            try {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            } catch (e) {}
+
+            const payload = {
+              redirectUri: window.location.origin,
+              ...meta,
+            };
+            if (code) payload.code = code;
+            if (accessToken) payload.accessToken = accessToken;
+            if (idToken) payload.idToken = idToken;
+
+            const res = await authApi.social(provider, payload);
+            await startSession(res);
+            return;
+          } catch (err) {
+            console.error('Error procesando autenticación social en inicio:', err);
+            try {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            } catch (e) {}
+            return dispatch({ type: 'SIGN_OUT' });
+          }
+        }
+      }
+
+      // 2. Cargar sesión local previa
       const saved = await loadSession();
       if (!saved.accessToken || !saved.refreshToken) {
         return dispatch({ type: 'SIGN_OUT' });
@@ -95,7 +157,7 @@ export function AuthProvider({ children }) {
         }
       }
     })();
-  }, [signOutLocal, setThemeMode]);
+  }, [signOutLocal, setThemeMode, startSession]);
 
   const actions = useMemo(
     () => ({

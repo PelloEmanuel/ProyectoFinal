@@ -488,9 +488,45 @@ export default function RegisterScreen({ navigation }) {
       />
 
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
-        <Button title="Google" icon="logo-google" variant="outline" style={{ flex: 1 }} small onPress={() => startSocial('google')} />
-        <Button title="GitHub" icon="logo-github" variant="outline" style={{ flex: 1 }} small onPress={() => startSocial('github')} />
-        <Button title="Discord" icon="logo-discord" variant="outline" style={{ flex: 1 }} small onPress={() => startSocial('discord')} />
+        <Button
+          title="Google"
+          icon="logo-google"
+          variant="outline"
+          style={{ flex: 1 }}
+          small
+          onPress={() => {
+            if (typeof window !== 'undefined' && window.sessionStorage) {
+              sessionStorage.setItem('oauth_meta', JSON.stringify({ role: form.role, instructorKey: form.instructorKey }));
+            }
+            startSocial('google');
+          }}
+        />
+        <Button
+          title="GitHub"
+          icon="logo-github"
+          variant="outline"
+          style={{ flex: 1 }}
+          small
+          onPress={() => {
+            if (typeof window !== 'undefined' && window.sessionStorage) {
+              sessionStorage.setItem('oauth_meta', JSON.stringify({ role: form.role, instructorKey: form.instructorKey }));
+            }
+            startSocial('github');
+          }}
+        />
+        <Button
+          title="Discord"
+          icon="logo-discord"
+          variant="outline"
+          style={{ flex: 1 }}
+          small
+          onPress={() => {
+            if (typeof window !== 'undefined' && window.sessionStorage) {
+              sessionStorage.setItem('oauth_meta', JSON.stringify({ role: form.role, instructorKey: form.instructorKey }));
+            }
+            startSocial('discord');
+          }}
+        />
       </View>
 
       <Pressable onPress={() => navigation.navigate('Login')} style={{ padding: 12 }}>
