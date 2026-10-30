@@ -211,10 +211,10 @@ export default function InstructorDashboardScreen({ navigation }) {
       {/* Hero Banner del Docente */}
       <View style={[styles.hero, { backgroundColor: colors.navy }]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.heroName}>
+          <Text style={[styles.heroName, { color: colors.mode === 'light' ? colors.text : '#ffffff' }]}>
             Prof. {user?.firstName} {user?.lastName}
           </Text>
-          <Text style={styles.heroSub}>
+          <Text style={[styles.heroSub, { color: colors.mode === 'light' ? colors.textSecondary : '#cbd5e1' }]}>
             Panel docente para dictado de clases, gestión de materias y corrección de actividades.
           </Text>
         </View>

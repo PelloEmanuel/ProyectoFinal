@@ -46,7 +46,7 @@ export function SkillTrackLogo({ size = 'md', showSubtitle = true }) {
           position: 'relative',
         }}
       >
-        <Ionicons name="school" size={iconSize} color="#ffffff" />
+        <Ionicons name="school" size={iconSize} color={colors.mode === 'light' ? colors.primary : '#ffffff'} />
         <View
           style={{
             position: 'absolute',

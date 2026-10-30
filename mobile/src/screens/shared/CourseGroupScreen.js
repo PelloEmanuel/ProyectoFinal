@@ -144,9 +144,9 @@ export default function CourseGroupScreen({ route, navigation }) {
       {/* Encabezado del Curso (ej. Curso 6to 1ra) */}
       <View style={[styles.hero, { backgroundColor: colors.navy }]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.heroTag}>CAMPUS ESCOLAR • VISTA DEL CURSO</Text>
-          <Text style={styles.heroTitle}>Curso {shortLabel}</Text>
-          <Text style={styles.heroSub}>
+          <Text style={[styles.heroTag, { color: colors.mode === 'light' ? colors.primary : '#93c5fd' }]}>CAMPUS ESCOLAR • VISTA DEL CURSO</Text>
+          <Text style={[styles.heroTitle, { color: colors.mode === 'light' ? colors.text : '#ffffff' }]}>Curso {shortLabel}</Text>
+          <Text style={[styles.heroSub, { color: colors.mode === 'light' ? colors.textSecondary : '#cbd5e1' }]}>
             {schoolYear}° Año - {courseDivision}° División • {courses.length}{' '}
             {courses.length === 1 ? 'materia' : 'materias'} • {schedule.length}{' '}
             {schedule.length === 1 ? 'bloque horario' : 'bloques horarios'}

@@ -191,9 +191,9 @@ export default function StudentExtrasScreen({ navigation, route }) {
                   <Badge text="CERTIFICADO OFICIAL SKILLTRACK" color="#4ade80" />
                   <Ionicons name="ribbon" size={26} color="#4ade80" />
                 </View>
-                <Text style={{ color: '#ffffff', fontSize: 18, fontWeight: '800', marginTop: 10 }}>{cert.courseTitle}</Text>
-                <Text style={{ color: '#cbd5e1', fontSize: 13, marginTop: 4 }}>Otorgado a: {cert.studentName}</Text>
-                <Text style={{ color: '#cbd5e1', fontSize: 12, marginTop: 2 }}>
+                <Text style={{ color: colors.mode === 'light' ? colors.text : '#ffffff', fontSize: 18, fontWeight: '800', marginTop: 10 }}>{cert.courseTitle}</Text>
+                <Text style={{ color: colors.mode === 'light' ? colors.textSecondary : '#cbd5e1', fontSize: 13, marginTop: 4 }}>Otorgado a: {cert.studentName}</Text>
+                <Text style={{ color: colors.mode === 'light' ? colors.textSecondary : '#cbd5e1', fontSize: 12, marginTop: 2 }}>
                   Instructor: {cert.instructorName} • Duración: {cert.estimatedDuration} h
                 </Text>
                 <Text style={{ color: '#94a3b8', fontSize: 12, marginTop: 6 }}>

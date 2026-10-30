@@ -125,13 +125,13 @@ export default function StudentHomeScreen({ navigation }) {
                 </Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#93c5fd', fontSize: 11, fontWeight: '800', textTransform: 'uppercase' }}>
+                <Text style={{ color: colors.mode === 'light' ? colors.primary : '#93c5fd', fontSize: 11, fontWeight: '800', textTransform: 'uppercase' }}>
                   Campus Escolar • Alumno
                 </Text>
-                <Text style={{ color: '#ffffff', fontSize: 19, fontWeight: '800' }} numberOfLines={1}>
+                <Text style={{ color: colors.mode === 'light' ? colors.text : '#ffffff', fontSize: 19, fontWeight: '800' }} numberOfLines={1}>
                   ¡Hola, {user?.firstName || user?.name}!
                 </Text>
-                <Text style={{ color: '#cbd5e1', fontSize: 13, marginTop: 2 }}>
+                <Text style={{ color: colors.mode === 'light' ? colors.textSecondary : '#cbd5e1', fontSize: 13, marginTop: 2 }}>
                   {schoolGroup.label ? `Cursando: ${schoolGroup.label}` : 'Sin Año/Curso seleccionado'}
                 </Text>
               </View>
@@ -145,12 +145,12 @@ export default function StudentHomeScreen({ navigation }) {
                 width: 42,
                 height: 42,
                 borderRadius: 21,
-                backgroundColor: '#1e293b',
+                backgroundColor: colors.mode === 'light' ? colors.surfaceAlt : '#1e293b',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Ionicons name="notifications-outline" size={22} color="#ffffff" />
+              <Ionicons name="notifications-outline" size={22} color={colors.mode === 'light' ? colors.text : '#ffffff'} />
               {summary.unreadNotifications > 0 && (
                 <View
                   style={{
@@ -283,8 +283,8 @@ export default function StudentHomeScreen({ navigation }) {
                       alignItems: 'center',
                     }}
                   >
-                    <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 14 }}>{day}</Text>
-                    <Text style={{ color: '#93c5fd', fontSize: 12, fontWeight: '700' }}>
+                    <Text style={{ color: colors.mode === 'light' ? colors.text : '#ffffff', fontWeight: '800', fontSize: 14 }}>{day}</Text>
+                    <Text style={{ color: colors.mode === 'light' ? colors.primary : '#93c5fd', fontSize: 12, fontWeight: '700' }}>
                       {dayBlocks.length} {dayBlocks.length === 1 ? 'materia' : 'materias'}
                     </Text>
                   </View>

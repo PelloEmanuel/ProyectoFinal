@@ -336,8 +336,8 @@ export default function SchoolScheduleGrid({
       {/* Encabezado de la Cuadrícula del Curso */}
       <View style={[styles.banner, { backgroundColor: colors.navy }]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.bannerTag}>CUADRÍCULA DE HORARIOS • LUNES A VIERNES</Text>
-          <Text style={styles.bannerTitle}>
+          <Text style={[styles.bannerTag, { color: colors.mode === 'light' ? colors.primary : '#93c5fd' }]}>CUADRÍCULA DE HORARIOS • LUNES A VIERNES</Text>
+          <Text style={[styles.bannerTitle, { color: colors.mode === 'light' ? colors.text : '#ffffff' }]}>
             Curso {shortCourseName} ({schoolYear}° Año - {courseDivision}° División)
           </Text>
         </View>

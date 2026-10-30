@@ -77,7 +77,7 @@ export default function MyLearningScreen({ navigation }) {
         >
           <Text
             style={{
-              color: '#93c5fd',
+              color: colors.mode === 'light' ? colors.primary : '#93c5fd',
               fontSize: 11,
               fontWeight: '800',
               textTransform: 'uppercase',
@@ -87,7 +87,7 @@ export default function MyLearningScreen({ navigation }) {
           </Text>
           <Text
             style={{
-              color: '#ffffff',
+              color: colors.mode === 'light' ? colors.text : '#ffffff',
               fontSize: 17,
               fontWeight: '800',
               marginTop: 4,

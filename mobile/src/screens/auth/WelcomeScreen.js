@@ -58,26 +58,26 @@ export default function WelcomeScreen({ navigation }) {
             <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#4f46e533', alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="book-outline" size={24} color="#818cf8" />
             </View>
-            <Text style={{ color: '#e2e8f0', fontSize: 12, fontWeight: '700', marginTop: 6 }}>Cursos y Módulos</Text>
+            <Text style={{ color: colors.mode === 'light' ? colors.text : '#e2e8f0', fontSize: 12, fontWeight: '700', marginTop: 6 }}>Cursos y Módulos</Text>
           </View>
           <View style={{ alignItems: 'center' }}>
             <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#16a34a33', alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="checkmark-done-circle-outline" size={24} color="#4ade80" />
             </View>
-            <Text style={{ color: '#e2e8f0', fontSize: 12, fontWeight: '700', marginTop: 6 }}>Evaluaciones</Text>
+            <Text style={{ color: colors.mode === 'light' ? colors.text : '#e2e8f0', fontSize: 12, fontWeight: '700', marginTop: 6 }}>Evaluaciones</Text>
           </View>
           <View style={{ alignItems: 'center' }}>
             <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#d9770633', alignItems: 'center', justifyContent: 'center' }}>
               <Ionicons name="ribbon-outline" size={24} color="#fbbf24" />
             </View>
-            <Text style={{ color: '#e2e8f0', fontSize: 12, fontWeight: '700', marginTop: 6 }}>Certificados</Text>
+            <Text style={{ color: colors.mode === 'light' ? colors.text : '#e2e8f0', fontSize: 12, fontWeight: '700', marginTop: 6 }}>Certificados</Text>
           </View>
         </View>
 
-        <Text style={{ color: '#ffffff', fontSize: 17, fontWeight: '800', textAlign: 'center' }}>
+        <Text style={{ color: colors.mode === 'light' ? colors.text : '#ffffff', fontSize: 17, fontWeight: '800', textAlign: 'center' }}>
           Impulsá tu formación académica en un entorno conectado
         </Text>
-        <Text style={{ color: '#cbd5e1', fontSize: 13, textAlign: 'center', marginTop: 8, lineHeight: 19 }}>
+        <Text style={{ color: colors.mode === 'light' ? colors.textSecondary : '#cbd5e1', fontSize: 13, textAlign: 'center', marginTop: 8, lineHeight: 19 }}>
           Estudiá mediante lecciones estructuradas, entregá actividades, recibí devoluciones de tus instructores y seguí tu evolución en tiempo real.
         </Text>
       </View>

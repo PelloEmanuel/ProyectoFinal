@@ -182,11 +182,11 @@ export default function DashboardScreen({ navigation }) {
       {/* Hero Header */}
       <View style={[styles.hero, { backgroundColor: colors.navy }]}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.greeting}>Administración Institucional</Text>
-          <Text style={styles.heroName}>
+          <Text style={[styles.greeting, { color: colors.mode === 'light' ? colors.primary : '#93c5fd' }]}>Administración Institucional</Text>
+          <Text style={[styles.heroName, { color: colors.mode === 'light' ? colors.text : '#ffffff' }]}>
             {user?.firstName} {user?.lastName}
           </Text>
-          <Text style={styles.heroSub}>
+          <Text style={[styles.heroSub, { color: colors.mode === 'light' ? colors.textSecondary : '#cbd5e1' }]}>
             Supervisión integral de usuarios, oferta académica, métricas y cronogramas.
           </Text>
         </View>

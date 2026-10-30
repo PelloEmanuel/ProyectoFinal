@@ -1117,10 +1117,10 @@ export default function AdminCoursesScreen({ route }) {
                             alignItems: 'center',
                           }}
                         >
-                          <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 14 }}>
+                          <Text style={{ color: colors.mode === 'light' ? colors.text : '#ffffff', fontWeight: '800', fontSize: 14 }}>
                             {day} • {schoolYear}° Año {courseDivision}° Curso
                           </Text>
-                          <Text style={{ color: '#93c5fd', fontSize: 12, fontWeight: '700' }}>
+                          <Text style={{ color: colors.mode === 'light' ? colors.primary : '#93c5fd', fontSize: 12, fontWeight: '700' }}>
                             {dayBlocks.length} {dayBlocks.length === 1 ? 'bloque' : 'bloques'}
                           </Text>
                         </View>

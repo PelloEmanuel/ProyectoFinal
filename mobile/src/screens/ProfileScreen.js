@@ -250,10 +250,10 @@ export default function ProfileScreen({ navigation }) {
           </Text>
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.headerName}>
+          <Text style={[styles.headerName, { color: colors.mode === 'light' ? colors.text : '#ffffff' }]}>
             {user?.firstName} {user?.lastName}
           </Text>
-          <Text style={styles.headerEmail}>{user?.email}</Text>
+          <Text style={[styles.headerEmail, { color: colors.mode === 'light' ? colors.textSecondary : '#cbd5e1' }]}>{user?.email}</Text>
           <View style={styles.badgesRow}>
             <Badge label={roleName} tone="primary" />
             <Badge
