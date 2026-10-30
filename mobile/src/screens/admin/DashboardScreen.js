@@ -86,9 +86,6 @@ export default function DashboardScreen({ navigation }) {
 
         const d = dashRes?.data?.data || dashRes?.data || dashRes;
         setData(d);
-        if (d?.instructorRegistrationKey !== undefined) {
-          setInstructorKey(String(d.instructorRegistrationKey));
-        }
 
         const openList = Array.isArray(openCoursesRes)
           ? openCoursesRes

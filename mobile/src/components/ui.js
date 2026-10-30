@@ -87,7 +87,7 @@ export function SkillTrackLogo({ size = 'md', showSubtitle = true }) {
 export function Screen({ children, scroll = true, edges = ['left', 'right', 'bottom'], style, contentContainerStyle }) {
   const { colors } = useTheme();
   const { contentWidth } = useResponsive();
-  const inner = { width: contentWidth, flex: scroll ? (style?.flex || undefined) : 1, padding: 16 };
+  const inner = { width: contentWidth, flex: scroll ? undefined : 1, padding: 16 };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={edges}>
@@ -97,14 +97,13 @@ export function Screen({ children, scroll = true, edges = ['left', 'right', 'bot
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={[
               { alignItems: 'center', flexGrow: 1 },
-              style?.justifyContent && { justifyContent: style.justifyContent },
               contentContainerStyle,
             ]}
           >
             <View style={[inner, style]}>{children}</View>
           </ScrollView>
         ) : (
-          <View style={[{ flex: 1, alignItems: 'center' }, style?.justifyContent && { justifyContent: style.justifyContent }]}>
+          <View style={[{ flex: 1, alignItems: 'center' }, contentContainerStyle]}>
             <View style={[inner, style]}>{children}</View>
           </View>
         )}

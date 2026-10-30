@@ -15,7 +15,7 @@ export default function WelcomeScreen({ navigation }) {
   const [legalModal, setLegalModal] = useState(false);
 
   return (
-    <Screen edges={['top', 'left', 'right', 'bottom']} style={{ flex: 1, justifyContent: 'center' }}>
+    <Screen edges={['top', 'left', 'right', 'bottom']} contentContainerStyle={{ justifyContent: 'center' }}>
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 10 }}>
         <Pressable
           accessibilityRole="button"
