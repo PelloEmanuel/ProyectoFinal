@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Switch,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -19,6 +20,7 @@ import { assignmentsApi, coursesApi, instructorApi } from '../../api/services';
 import { resolveAssetUrl } from '../../config';
 import { extractErrorMessage } from '../../utils/errors';
 import { formatDateAR, formatNumericDateInput, formatNumericTimeInput } from '../../utils/dates';
+import { formatSchoolGroupShort } from '../../components/SchoolScheduleGrid';
 import FileUploader from '../../components/FileUploader';
 import TablonFeed from '../../components/TablonFeed';
 import {
@@ -219,6 +221,54 @@ export default function InstructorCoursesScreen({ route, navigation }) {
   const [loadingWorkspace, setLoadingWorkspace] = useState(false);
   const [courseSubmissions, setCourseSubmissions] = useState([]);
 
+  // Filtro por curso escolar (ej. "6-1", "1-2" o "ALL") y búsqueda por texto
+  const [selectedGroupFilter, setSelectedGroupFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Agrupaciones únicas de cursos escolares (año y división) asignados al docente
+  const courseGroups = useMemo(() => {
+    const map = new Map();
+    (courses || []).forEach((c) => {
+      const sy = Number(c.schoolYear) || 1;
+      const cd = Number(c.courseDivision) || 1;
+      const key = `${sy}-${cd}`;
+      if (!map.has(key)) {
+        map.set(key, {
+          key,
+          schoolYear: sy,
+          courseDivision: cd,
+          label: formatSchoolGroupShort(sy, cd),
+          fullLabel: `${sy}° Año - ${cd}° Curso`,
+          count: 0,
+        });
+      }
+      map.get(key).count += 1;
+    });
+    return Array.from(map.values()).sort(
+      (a, b) => a.schoolYear - b.schoolYear || a.courseDivision - b.courseDivision
+    );
+  }, [courses]);
+
+  // Materias filtradas según el curso escolar seleccionado y búsqueda por texto
+  const filteredCourses = useMemo(() => {
+    return (courses || []).filter((c) => {
+      const sy = Number(c.schoolYear) || 1;
+      const cd = Number(c.courseDivision) || 1;
+      const key = `${sy}-${cd}`;
+
+      if (selectedGroupFilter !== 'ALL' && key !== selectedGroupFilter) {
+        return false;
+      }
+
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      const titleMatch = (c.title || '').toLowerCase().includes(q);
+      const catMatch = (c.categoryName || '').toLowerCase().includes(q);
+      const groupMatch = (c.schoolGroupLabel || '').toLowerCase().includes(q);
+      return titleMatch || catMatch || groupMatch;
+    });
+  }, [courses, selectedGroupFilter, searchQuery]);
+
   // Estado del selector interactivo de color de la materia para el profesor
   const [colorModalOpen, setColorModalOpen] = useState(false);
   const [selectedColorFamily, setSelectedColorFamily] = useState('red');
@@ -372,6 +422,10 @@ export default function InstructorCoursesScreen({ route, navigation }) {
   };
 
   useEffect(() => {
+    if (route.params?.filterGroupKey) {
+      setSelectedGroupFilter(route.params.filterGroupKey);
+      navigation.setParams({ filterGroupKey: undefined });
+    }
     if (route.params?.openCreate && categories.length > 0) {
       openCreateCourseModal();
       navigation.setParams({ openCreate: undefined });
@@ -665,27 +719,25 @@ export default function InstructorCoursesScreen({ route, navigation }) {
 
   const handlePostAnnouncement = async () => {
     if (!activeCourse) return;
-    if (!annForm.title.trim()) {
-      setError('Por favor ingresá el título del aviso.');
+    if (!annForm.content.trim()) {
+      setError('Por favor ingresá el mensaje del aviso.');
       return;
     }
     try {
       setSavingAnn(true);
       setError('');
-      const bodyContent =
-        annForm.content.trim() ||
-        (annForm.attachments && annForm.attachments.length > 0
-          ? `Aviso con ${annForm.attachments.length} archivo(s) adjunto(s).`
-          : `Aviso del profesor: ${annForm.title.trim()}`);
+      const cleanContent = annForm.content.trim();
+      const generatedTitle =
+        cleanContent.length > 50 ? `${cleanContent.slice(0, 47)}...` : cleanContent;
 
       await coursesApi.createAnnouncement(activeCourse.id, {
-        title: annForm.title.trim(),
-        content: bodyContent,
+        title: generatedTitle,
+        content: cleanContent,
         isPinned: annForm.isPinned || false,
         attachments: annForm.attachments || [],
       });
       setAnnForm({ title: '', content: '', isPinned: false, attachments: [] });
-      setSuccess('Anuncio publicado con sus archivos adjuntos y notificado a los alumnos.');
+      setSuccess('Aviso publicado con éxito y notificado a los alumnos.');
       await openCourseWorkspace(activeCourse.id);
     } catch (err) {
       console.error('Error al publicar anuncio:', err);
@@ -1099,18 +1151,12 @@ export default function InstructorCoursesScreen({ route, navigation }) {
                     Publicar aviso a la cursada
                   </Text>
                   <Input
-                    label="Título del anuncio"
-                    value={annForm.title}
-                    onChangeText={(v) => setAnnForm((p) => ({ ...p, title: v }))}
-                    placeholder="Ej. Fecha de entrega del TP Integrador"
-                  />
-                  <Input
-                    label="Mensaje para los estudiantes"
+                    label="Mensaje del comunicado"
                     value={annForm.content}
                     onChangeText={(v) => setAnnForm((p) => ({ ...p, content: v }))}
-                    placeholder="Escribí los detalles del comunicado..."
+                    placeholder="Escribí el comunicado para los alumnos..."
                     multiline
-                    numberOfLines={3}
+                    numberOfLines={4}
                   />
                   <FileUploader
                     attachments={annForm.attachments || []}
@@ -1193,14 +1239,237 @@ export default function InstructorCoursesScreen({ route, navigation }) {
               subtitle="Materias y horarios asignados por el Administrador para subir teoría, actividades y evaluar"
             />
 
-            {courses.length === 0 ? (
+            {/* BARRA DE FILTROS POR CURSO ESCOLAR Y BÚSQUEDA */}
+            {courses.length > 0 && (
+              <View
+                style={{
+                  backgroundColor: colors.card,
+                  borderRadius: 16,
+                  padding: 14,
+                  marginBottom: 16,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: 10,
+                  }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="filter" size={16} color={colors.primary} />
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: '800',
+                        color: colors.text,
+                        textTransform: 'uppercase',
+                        letterSpacing: 0.5,
+                      }}
+                    >
+                      Filtrar por Curso
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary, fontWeight: '700' }}>
+                    {filteredCourses.length} de {courses.length} materias
+                  </Text>
+                </View>
+
+                {/* Chips de cursos escolares con scroll horizontal */}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 8, paddingVertical: 4 }}
+                >
+                  <TouchableOpacity
+                    onPress={() => setSelectedGroupFilter('ALL')}
+                    activeOpacity={0.8}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      backgroundColor:
+                        selectedGroupFilter === 'ALL'
+                          ? colors.primary
+                          : colors.mode === 'light'
+                          ? '#f1f5f9'
+                          : '#1e293b',
+                      borderWidth: 1.5,
+                      borderColor: selectedGroupFilter === 'ALL' ? colors.primary : colors.border,
+                    }}
+                  >
+                    <Ionicons
+                      name="layers-outline"
+                      size={15}
+                      color={selectedGroupFilter === 'ALL' ? '#ffffff' : colors.textSecondary}
+                      style={{ marginRight: 6 }}
+                    />
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: '800',
+                        color: selectedGroupFilter === 'ALL' ? '#ffffff' : colors.text,
+                      }}
+                    >
+                      Todos ({courses.length})
+                    </Text>
+                  </TouchableOpacity>
+
+                  {courseGroups.map((grp) => {
+                    const isSelected = selectedGroupFilter === grp.key;
+                    return (
+                      <TouchableOpacity
+                        key={grp.key}
+                        onPress={() => setSelectedGroupFilter(grp.key)}
+                        activeOpacity={0.8}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          paddingHorizontal: 14,
+                          paddingVertical: 8,
+                          borderRadius: 20,
+                          backgroundColor: isSelected
+                            ? colors.primary
+                            : colors.mode === 'light'
+                            ? '#f1f5f9'
+                            : '#1e293b',
+                          borderWidth: 1.5,
+                          borderColor: isSelected ? colors.primary : colors.border,
+                        }}
+                      >
+                        <Ionicons
+                          name="school-outline"
+                          size={15}
+                          color={isSelected ? '#ffffff' : colors.textSecondary}
+                          style={{ marginRight: 6 }}
+                        />
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: '800',
+                            color: isSelected ? '#ffffff' : colors.text,
+                          }}
+                        >
+                          {grp.label} ({grp.count})
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+
+                {/* Búsqueda por texto dentro de las materias */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: colors.mode === 'light' ? '#ffffff' : '#0f172a',
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    borderRadius: 12,
+                    paddingHorizontal: 12,
+                    paddingVertical: Platform.OS === 'web' ? 8 : 4,
+                    marginTop: 12,
+                  }}
+                >
+                  <Ionicons
+                    name="search-outline"
+                    size={17}
+                    color={colors.textSecondary}
+                    style={{ marginRight: 8 }}
+                  />
+                  <TextInput
+                    placeholder="Buscar materia por nombre o categoría..."
+                    placeholderTextColor={colors.muted}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    style={{
+                      flex: 1,
+                      color: colors.text,
+                      fontSize: 13,
+                    }}
+                  />
+                  {!!searchQuery && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+                      <Ionicons name="close-circle" size={18} color={colors.muted} />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {/* Indicador de filtro activo con botón para restablecer */}
+                {(selectedGroupFilter !== 'ALL' || !!searchQuery) && (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginTop: 10,
+                      paddingTop: 8,
+                      borderTopWidth: 1,
+                      borderTopColor: colors.border,
+                    }}
+                  >
+                    <Text style={{ fontSize: 12, color: colors.textSecondary }}>
+                      Filtro:{' '}
+                      <Text style={{ fontWeight: '800', color: colors.text }}>
+                        {selectedGroupFilter === 'ALL'
+                          ? 'Todos los cursos'
+                          : `Curso ${
+                              courseGroups.find((g) => g.key === selectedGroupFilter)?.label ||
+                              selectedGroupFilter
+                            }`}
+                      </Text>
+                      {!!searchQuery && ` • "${searchQuery}"`}
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedGroupFilter('ALL');
+                        setSearchQuery('');
+                      }}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                    >
+                      <Ionicons name="refresh-outline" size={13} color={colors.primary} />
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: colors.primary }}>
+                        Restablecer filtros
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {filteredCourses.length === 0 ? (
               <EmptyState
                 icon="easel-outline"
-                title="Aún no tenés materias asignadas"
-                message="Cuando el Administrador te asigne una materia y horario en el cronograma escolar, aparecerá abierta aquí automáticamente."
+                title={courses.length === 0 ? 'Aún no tenés materias asignadas' : 'No hay materias para este filtro'}
+                message={
+                  courses.length === 0
+                    ? 'Cuando el Administrador te asigne una materia y horario en el cronograma escolar, aparecerá abierta aquí automáticamente.'
+                    : `No encontramos materias asignadas que coincidan con ${
+                        selectedGroupFilter !== 'ALL'
+                          ? `el curso ${
+                              courseGroups.find((g) => g.key === selectedGroupFilter)?.label ||
+                              selectedGroupFilter
+                            }`
+                          : 'tu búsqueda'
+                      }.`
+                }
+                actionLabel={courses.length > 0 ? 'Mostrar todas las materias' : undefined}
+                onAction={
+                  courses.length > 0
+                    ? () => {
+                        setSelectedGroupFilter('ALL');
+                        setSearchQuery('');
+                      }
+                    : undefined
+                }
               />
             ) : (
-              courses.map((course) => (
+              filteredCourses.map((course) => (
                 <Card key={course.id}>
                   <View style={styles.rowBetween}>
                     <Badge

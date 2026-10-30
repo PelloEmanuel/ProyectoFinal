@@ -143,6 +143,18 @@ export default function InstructorDashboardScreen({ navigation }) {
     );
   }, [recentCourses, mySchedule]);
 
+  // Filtro por curso escolar para la lista de materias en el dashboard
+  const [dashboardGroupFilter, setDashboardGroupFilter] = useState('ALL');
+
+  const filteredRecentCourses = useMemo(() => {
+    if (dashboardGroupFilter === 'ALL') return recentCourses;
+    return (recentCourses || []).filter((c) => {
+      const sy = Number(c.schoolYear) || 1;
+      const cd = Number(c.courseDivision) || 1;
+      return `${sy}-${cd}` === dashboardGroupFilter;
+    });
+  }, [recentCourses, dashboardGroupFilter]);
+
   // Si no hay grupo seleccionado o cambió la lista, preseleccionar el primero
   useEffect(() => {
     if (assignedGroups.length > 0) {
@@ -498,16 +510,106 @@ export default function InstructorDashboardScreen({ navigation }) {
           title="Mis materias a cargo"
           subtitle="Subí material teórico y avisos oficiales para tus alumnos"
           actionLabel="Ver todas"
-          onAction={() => navigation.navigate('InstructorCourses')}
+          onAction={() =>
+            navigation.navigate('InstructorCourses', {
+              filterGroupKey: dashboardGroupFilter !== 'ALL' ? dashboardGroupFilter : undefined,
+            })
+          }
         />
+
+        {/* Chips de cursos si tiene más de 1 curso asignado */}
+        {assignedGroups.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, marginBottom: 12, paddingVertical: 2 }}
+          >
+            <TouchableOpacity
+              onPress={() => setDashboardGroupFilter('ALL')}
+              activeOpacity={0.8}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 16,
+                backgroundColor:
+                  dashboardGroupFilter === 'ALL'
+                    ? colors.primary
+                    : colors.mode === 'light'
+                    ? '#f1f5f9'
+                    : '#1e293b',
+                borderWidth: 1.5,
+                borderColor: dashboardGroupFilter === 'ALL' ? colors.primary : colors.border,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: '800',
+                  color: dashboardGroupFilter === 'ALL' ? '#ffffff' : colors.text,
+                }}
+              >
+                Todos ({recentCourses.length})
+              </Text>
+            </TouchableOpacity>
+
+            {assignedGroups.map((grp) => {
+              const isSelected = dashboardGroupFilter === grp.key;
+              const count = (recentCourses || []).filter(
+                (c) => `${Number(c.schoolYear) || 1}-${Number(c.courseDivision) || 1}` === grp.key
+              ).length;
+              return (
+                <TouchableOpacity
+                  key={grp.key}
+                  onPress={() => setDashboardGroupFilter(grp.key)}
+                  activeOpacity={0.8}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingHorizontal: 12,
+                    paddingVertical: 6,
+                    borderRadius: 16,
+                    backgroundColor: isSelected
+                      ? colors.primary
+                      : colors.mode === 'light'
+                      ? '#f1f5f9'
+                      : '#1e293b',
+                    borderWidth: 1.5,
+                    borderColor: isSelected ? colors.primary : colors.border,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontWeight: '800',
+                      color: isSelected ? '#ffffff' : colors.text,
+                    }}
+                  >
+                    {grp.label} ({count})
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
+
         {recentCourses.length === 0 ? (
           <EmptyState
             icon="school-outline"
             title="Aún no tenés materias asignadas"
             message="Cuando el Administrador te asigne materias y horarios en el cronograma escolar, aparecerán abiertas aquí para que subas material teórico y avisos."
           />
+        ) : filteredRecentCourses.length === 0 ? (
+          <EmptyState
+            icon="school-outline"
+            title="Sin materias para este curso"
+            message="No tenés materias asignadas en el curso seleccionado."
+            actionLabel="Ver todas las materias"
+            onAction={() => setDashboardGroupFilter('ALL')}
+          />
         ) : (
-          recentCourses.map((course) => (
+          filteredRecentCourses.map((course) => (
             <Card
               key={course.id}
               onPress={() => navigation.navigate('InstructorCourses', { editCourseId: course.id })}
