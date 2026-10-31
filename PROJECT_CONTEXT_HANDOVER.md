@@ -2,7 +2,7 @@
 
 > **Documento de Traspaso y Referencia Técnica Integral para Inteligencias Artificiales y Desarrolladores.**  
 > Este documento contiene la arquitectura completa, reglas de negocio, modelos de roles, flujos de seguridad, historial de cambios recientes, estado actual de despliegue y directivas de trabajo para continuar el desarrollo sin fricciones.
-> **Última actualización:** 30 de Octubre de 2026.
+> **Última actualización:** 31 de Octubre de 2026.
 
 ---
 
@@ -13,6 +13,7 @@
 - **Objetivo**: Plataforma integral académica, campus virtual y gestión escolar para nivel secundario técnico, estructurada en **Años Escolares (1° a 6°)** y **Divisiones/Cursos (1° a 3°)**.
 - **Entorno de Producción Oficial**: [https://campus-58oe.onrender.com](https://campus-58oe.onrender.com)
 - **Repositorio Git**: `https://github.com/PelloEmanuel/ProyectoFinal.git` (rama activa de producción: `main`).
+- **Bundle Web Activo en Producción**: `index-8814c461d87d811d30a463d80f315c6e.js` (Commit `1658971`).
 
 ---
 
@@ -121,6 +122,16 @@
 - **Cambios**:
   - Se eliminaron las tarjetas de **Inscripciones** y **Certificados**.
   - La tarjeta de **Cursos** ahora cuenta directamente los cursos escolares creados en la tabla `school_groups` (actualmente 2) y muestra los cursos abiertos, con enlace directo a la gestión de cursos.
+
+### D. Asistencia Restringida a Cursos Asignados y Renombrado a "Docente" (`1658971`)
+- **Archivos modificados**:
+  - Backend: `backend/src/controllers/attendance.controller.js`, `backend/src/controllers/assignments.controller.js`, `backend/src/utils/school.js`.
+  - Frontend: `mobile/src/screens/shared/AttendanceScreen.js`, `mobile/src/theme.js`, `mobile/src/screens/admin/UsersScreen.js`, `mobile/src/screens/admin/DashboardScreen.js`, `mobile/src/screens/admin/AdminReportsScreen.js`, `mobile/src/screens/admin/AdminCoursesScreen.js`, `mobile/src/screens/auth/WelcomeScreen.js`, `mobile/src/screens/student/AssignmentDetailScreen.js`, `mobile/src/screens/student/AssignmentsScreen.js`, `mobile/src/screens/student/StudentHomeScreen.js`, `mobile/src/screens/shared/CourseGroupScreen.js`, `mobile/src/components/CourseCard.js`, `mobile/src/components/SchoolScheduleGrid.js`, `mobile/src/components/TablonFeed.js`.
+- **Comportamiento**:
+  1. **Filtro Estricto de Asistencias**: Al ingresar a la Planilla Oficial de Asistencia, si el usuario es docente (`role === 'instructor'`), `listOpenCourses` solo lista aquellos cursos escolares (`school_groups`) en los que el docente tenga al menos una materia asignada (`c.instructor_id = req.user.id`).
+  2. **Seguridad Backend (403 Forbidden)**: `getAttendanceSheet` y `getCourseStudents` validan que el docente tenga asignada una materia en ese Año y División (`(sy, cd)`). De lo contrario, arroja error 403 `COURSE_NOT_ASSIGNED`.
+  3. **Estados vacíos amigables**: Si el docente no tiene materias escolares asignadas, la interfaz muestra `Sin cursos a tu cargo` en lugar de una tabla vacía o un indicador infinito.
+  4. **Renombrado Integral a "Docente"**: Se reemplazó cualquier referencia visible de "Instructor", "Instructores" o "Profesor" por "Docente" / "Docentes" en badges de usuario, filtros de listado, modales de creación y edición, notificaciones de entrega de tareas, rúbricas, advertencias de superposición horaria y selector de personal a cargo.
 
 ---
 
