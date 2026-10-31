@@ -85,7 +85,10 @@
    - **Borrado Total**: Al eliminar una cuenta (sea el propio usuario desde su perfil o el administrador), se realiza un **HARD DELETE** (`DELETE FROM users WHERE id = ?`), eliminando en cascada todos sus registros dependientes y desvinculando materias (`courses.instructor_id = NULL`). No quedan filas residuales ni registros fantasmas.
    - **Eliminación del campo "Nombre de usuario"**: Se eliminó conceptualmente y de los formularios (`RegisterScreen.js`, `ProfileScreen.js` y `UsersScreen.js`). La identidad visible del usuario es su **Nombre y Apellido**.
    - **Repetición libre de Nombre y Apellido**: Se eliminó el índice único `username` de la base de datos (`ALTER TABLE users DROP INDEX username`). Cualquier cantidad de usuarios pueden tener exactamente el mismo nombre y apellido (ej: dos "Juan Pérez"); el único identificador irrepetible es el correo electrónico (`email`).
-4. **Resolución de Entrega de Correos en Render (Resend API HTTPS + Brevo)**:
+4. **Transición Inmediata al Campus tras Verificación 2FA (`0c94acc`)**:
+   - **Causa del bloqueo previo**: La pantalla de verificación (`VerifyCodeScreen.js`) invocaba `startSession(res)` tras validar el código en el backend, pero `startSession` no estaba expuesta en las acciones de `AuthContext.js`. Esto arrojaba un `TypeError` en el cliente justo después de que la base de datos ya había validado la cuenta, provocando simultáneamente el mensaje de éxito y un falso mensaje de error de conexión.
+   - **Solución implementada**: Se expuso `startSession` en `actions` de `AuthContext.js` y se integró la llamada a través de `verifyEmail`, permitiendo que el estado de sesión se actualice de inmediato y la navegación redirija fluidamente al dashboard del rol correspondiente.
+5. **Resolución de Entrega de Correos en Render (Resend API HTTPS + Brevo)**:
    - Render bloquea las conexiones salientes por los puertos SMTP (587 STARTTLS y 465 SSL sufren timeout de red).
    - `mailer.js` detecta automáticamente direcciones no verificadas y enruta el remitente de forma segura como `Campus Técnica 5 <onboarding@resend.dev>`.
    - Entrega verificada en vivo con éxito a `pelloemanuel@gmail.com` (IDs de entrega: `01a1922e-fe45-7350-9846-a0130cf8b7d4` y `01a1922f-166c-74f3-a6f9-7f4b4201e3f5`).
