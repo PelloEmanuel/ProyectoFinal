@@ -14,7 +14,6 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
   Linking,
   Modal,
   Platform,
@@ -271,7 +270,7 @@ export default function TablonFeed({
       const studentId = isPriv && isInstructor ? selectedStudentForPrivateChat?.id : undefined;
 
       if (isPriv && isInstructor && !studentId) {
-        Alert.alert('Chat privado', 'Seleccioná a qué alumno deseás responderle.');
+        setErrorBanner('Seleccioná a qué alumno deseás responderle en el chat privado.');
         return;
       }
 

@@ -324,8 +324,8 @@ exports.login = asyncHandler(async (req, res) => {
   // Si el usuario se registró originalmente con Google/GitHub/Facebook (ej. 123@gmail.com) y no tenía contraseña manual,
   // al iniciar sesión escribiendo el mismo mail y una contraseña se vincula a esa MISMA cuenta existente.
   if (!user.password_hash) {
-    if (!password || String(password).length < 6) {
-      throw new AppError('Ingresá una contraseña válida para acceder a tu cuenta.', 401, 'INVALID_CREDENTIALS');
+    if (!password) {
+      throw new AppError('Ingresá una contraseña para acceder a tu cuenta.', 401, 'INVALID_CREDENTIALS');
     }
     const newHash = await bcrypt.hash(String(password), 10);
     await db.execute('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, user.id]);

@@ -18,8 +18,7 @@ router.put(
   body('name').optional().trim().isLength({ min: 2, max: 160 }).withMessage('El nombre debe tener entre 2 y 160 caracteres'),
   body('newPassword')
     .optional()
-    .isLength({ min: 8 }).withMessage('La nueva contraseña debe tener al menos 8 caracteres')
-    .matches(/\d/).withMessage('Debe incluir al menos un número'),
+    .notEmpty().withMessage('Ingresá la nueva contraseña'),
   validate,
   c.updateMe
 );
@@ -34,10 +33,7 @@ router.patch(
 router.patch('/me/preferences', c.updatePreferences);
 router.patch(
   '/me/password',
-  body('newPassword')
-    .isLength({ min: 8 }).withMessage('La nueva contraseña debe tener al menos 8 caracteres')
-    .matches(/[A-Za-z]/).withMessage('Debe incluir letras')
-    .matches(/\d/).withMessage('Debe incluir un número'),
+  body('newPassword').notEmpty().withMessage('Ingresá la nueva contraseña'),
   validate,
   c.updatePassword
 );

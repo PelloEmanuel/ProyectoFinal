@@ -429,10 +429,11 @@ export default function ProfileScreen({ navigation }) {
           leftIcon="lock-closed-outline"
         />
         <Input
-          label="Nueva contraseña (mín. 8 caracteres, mayús., minús., número y símbolo)"
+          label="Nueva contraseña"
           value={newPassword}
           onChangeText={setNewPassword}
           secureTextEntry
+          placeholder="Ingresá tu nueva contraseña"
           leftIcon="key-outline"
         />
         <Button

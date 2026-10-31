@@ -79,7 +79,7 @@ router.post(
   authorize('admin'),
   body('firstName').trim().isLength({ min: 2 }).withMessage('Nombre obligatorio'),
   body('email').isEmail().withMessage('Email inválido'),
-  body('password').isLength({ min: 8 }).withMessage('Contraseña mínimo 8 caracteres'),
+  body('password').notEmpty().withMessage('Contraseña obligatoria'),
   body('role').isIn(['admin', 'preceptor', 'instructor', 'student']).withMessage('Rol inválido'),
   validate,
   adm.createUser

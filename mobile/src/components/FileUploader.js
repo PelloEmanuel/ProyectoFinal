@@ -6,7 +6,6 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Linking,
   Platform,
   StyleSheet,
@@ -90,7 +89,7 @@ export default function FileUploader({
       };
       input.click();
     } else {
-      Alert.alert('Subida', 'En navegador web podés seleccionar archivos directamente desde el explorador.');
+      setErrorMsg('Podés arrastrar archivos o ingresar un enlace web.');
     }
   };
 
@@ -178,7 +177,7 @@ export default function FileUploader({
         window.open(fullUrl, '_blank');
       } else {
         Linking.openURL(fullUrl).catch(() => {
-          Alert.alert('Error', 'No se pudo abrir el enlace o archivo.');
+          setErrorMsg('No se pudo abrir el enlace o archivo.');
         });
       }
     }

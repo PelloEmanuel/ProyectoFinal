@@ -449,7 +449,7 @@ export default function RegisterScreen({ navigation }) {
         value={form.password}
         onChangeText={set('password')}
         error={errors.password}
-        placeholder="Mínimo 8 caracteres, letras y números"
+        placeholder="Ingresá tu contraseña"
         secureTextEntry
       />
 

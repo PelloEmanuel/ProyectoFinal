@@ -19,10 +19,7 @@ const limiter = rateLimit({
 router.use(limiter);
 
 const emailRule = body('email').isEmail().withMessage('Ingresá un correo electrónico válido');
-const passwordRule = body('password')
-  .isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres')
-  .matches(/[A-Za-z]/).withMessage('La contraseña debe incluir letras')
-  .matches(/\d/).withMessage('La contraseña debe incluir al menos un número');
+const passwordRule = body('password').notEmpty().withMessage('Ingresá tu contraseña');
 
 router.get('/registration-status', c.registrationStatus);
 
@@ -57,10 +54,7 @@ router.post('/forgot-password', emailRule, validate, c.forgotPassword);
 router.post(
   '/reset-password',
   emailRule,
-  body('newPassword')
-    .isLength({ min: 8 }).withMessage('La nueva contraseña debe tener al menos 8 caracteres')
-    .matches(/[A-Za-z]/).withMessage('Debe incluir letras')
-    .matches(/\d/).withMessage('Debe incluir al menos un número'),
+  body('newPassword').notEmpty().withMessage('Ingresá la nueva contraseña'),
   validate,
   c.resetPassword
 );

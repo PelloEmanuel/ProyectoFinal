@@ -60,8 +60,8 @@ export default function VerifyCodeScreen({ navigation, route }) {
   };
 
   const handleConfirmReset = async () => {
-    if (!code.trim() || newPassword.length < 8) {
-      return setError('Ingresá el código recibido y una contraseña nueva de al menos 8 caracteres');
+    if (!code.trim() || !newPassword) {
+      return setError('Ingresá el código recibido y tu nueva contraseña');
     }
     setError('');
     setLoading(true);
@@ -239,7 +239,7 @@ export default function VerifyCodeScreen({ navigation, route }) {
             label="Nueva contraseña"
             value={newPassword}
             onChangeText={setNewPassword}
-            placeholder="Mínimo 8 caracteres, letras y números"
+            placeholder="Ingresá tu nueva contraseña"
             secureTextEntry
           />
           <Button title="Guardar nueva contraseña" icon="key-outline" onPress={handleConfirmReset} loading={loading} />

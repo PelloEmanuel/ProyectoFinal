@@ -25,10 +25,8 @@ export function validateRegister({ firstName, lastName, email, password, confirm
   if (!isEmail(email)) {
     e.email = 'Ingresá un correo electrónico válido';
   }
-  if (!password || password.length < 8) {
-    e.password = 'La contraseña debe tener al menos 8 caracteres';
-  } else if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-    e.password = 'Debe incluir letras y al menos un número';
+  if (!password) {
+    e.password = 'Ingresá una contraseña';
   }
   if (confirm !== password) {
     e.confirm = 'Las contraseñas no coinciden';

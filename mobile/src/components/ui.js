@@ -197,7 +197,7 @@ export function Input({ label, error, helperText, secureTextEntry, leftIcon, sty
         <TextInput
           placeholderTextColor={colors.muted}
           secureTextEntry={secureTextEntry ? hidden : false}
-          autoComplete={props.autoComplete || (secureTextEntry ? 'off' : undefined)}
+          autoComplete={props.autoComplete || (secureTextEntry ? 'new-password' : undefined)}
           autoCorrect={props.autoCorrect ?? false}
           spellCheck={props.spellCheck ?? false}
           style={[
