@@ -811,7 +811,9 @@ export default function AppNavigator() {
           <Stack.Screen
             name="StudentExtras"
             component={StudentExtrasScreen}
-            options={{ title: 'Certificados, Estadísticas y Agenda' }}
+            options={({ route }) => ({
+              title: route?.params?.section === 'calendar' ? 'Calendario' : 'Notificaciones',
+            })}
           />
           <Stack.Screen
             name="Profile"

@@ -63,6 +63,12 @@ export default function StudentExtrasScreen({ navigation, route }) {
     load();
   }, [load]);
 
+  useEffect(() => {
+    navigation.setOptions({
+      title: section === 'calendar' ? 'Calendario' : 'Notificaciones',
+    });
+  }, [navigation, section]);
+
   if (loading) return <Loading />;
 
   const handleMarkAllRead = async () => {
