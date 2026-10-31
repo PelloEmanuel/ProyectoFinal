@@ -28,7 +28,6 @@ export default function RegisterScreen({ navigation }) {
     courseDivision: 1,
     firstName: '',
     lastName: '',
-    username: '',
     email: '',
     password: '',
     confirm: '',
@@ -129,7 +128,6 @@ export default function RegisterScreen({ navigation }) {
         courseDivision: form.role === 'student' ? form.courseDivision : undefined,
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
-        username: form.username.trim() || undefined,
         email: form.email.trim().toLowerCase(),
         password: form.password,
         acceptTerms: form.acceptTerms,
@@ -435,15 +433,6 @@ export default function RegisterScreen({ navigation }) {
           <Input label="Apellido *" value={form.lastName} onChangeText={set('lastName')} error={errors.lastName} placeholder="Ej. Gómez" />
         </View>
       </View>
-
-      <Input
-        label="Nombre de usuario (opcional)"
-        value={form.username}
-        onChangeText={set('username')}
-        error={errors.username}
-        placeholder="sofiagomez"
-        autoCapitalize="none"
-      />
 
       <Input
         label="Correo electrónico *"

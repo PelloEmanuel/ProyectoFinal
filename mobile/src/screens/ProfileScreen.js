@@ -42,7 +42,6 @@ export default function ProfileScreen({ navigation }) {
   const [firstName, setFirstName] = useState(user?.firstName || '');
   const [lastName, setLastName] = useState(user?.lastName || '');
   const [email, setEmail] = useState(user?.email || '');
-  const [username, setUsername] = useState(user?.username || '');
   const [bio, setBio] = useState(user?.bio || '');
   const [notificationsEnabled, setNotificationsEnabled] = useState(
     user?.notificationsEnabled !== false
@@ -86,7 +85,6 @@ export default function ProfileScreen({ navigation }) {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email: email.trim().toLowerCase(),
-        username: username.trim() || undefined,
         bio: bio.trim(),
         notificationsEnabled,
         themePreference: isDark ? 'dark' : 'light',
@@ -309,13 +307,6 @@ export default function ProfileScreen({ navigation }) {
           onChangeText={setEmail}
           leftIcon="mail-outline"
           keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <Input
-          label="Nombre de usuario (opcional)"
-          value={username}
-          onChangeText={setUsername}
-          leftIcon="at-outline"
           autoCapitalize="none"
         />
         <Input

@@ -248,7 +248,7 @@ export default function UsersScreen() {
         <AlertBanner type="success" message={success} />
 
         <Input
-          placeholder="Buscar por nombre, apellido, usuario o email..."
+          placeholder="Buscar por nombre, apellido o email..."
           value={search}
           onChangeText={setSearch}
           leftIcon="search-outline"

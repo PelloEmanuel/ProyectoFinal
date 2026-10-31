@@ -158,10 +158,6 @@ exports.updateMe = asyncHandler(async (req, res) => {
   }
   if (username !== undefined) {
     const clean = username ? String(username).trim().toLowerCase() : null;
-    if (clean && clean !== user.username) {
-      const [dup] = await db.execute('SELECT id FROM users WHERE username = ? AND id <> ?', [clean, user.id]);
-      if (dup.length) throw new AppError('El nombre de usuario ya está en uso', 409);
-    }
     sets.push('username = ?');
     vals.push(clean);
   }
@@ -229,12 +225,10 @@ exports.updatePassword = asyncHandler(async (req, res) => {
 });
 
 exports.deleteMe = asyncHandler(async (req, res) => {
-  await db.execute(
-    "UPDATE users SET deleted_at = NOW(), status = 'suspended', email = CONCAT('del_', id, '_', UNIX_TIMESTAMP(), '_', email) WHERE id = ?",
-    [req.user.id]
-  );
-  await tokens.revokeAllForUser(req.user.id);
-  await logAudit(req.user.id, 'ACCOUNT_DELETED_SELF', 'user', req.user.id);
+  const userId = req.user.id;
+  await tokens.revokeAllForUser(userId);
+  await db.execute('UPDATE courses SET instructor_id = NULL WHERE instructor_id = ?', [userId]);
+  await db.execute('DELETE FROM users WHERE id = ?', [userId]);
   res.status(204).end();
 });
 

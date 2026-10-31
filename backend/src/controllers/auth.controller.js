@@ -114,12 +114,10 @@ exports.register = asyncHandler(async (req, res) => {
   if (anyUsers.length > 0) {
     const rawUser = anyUsers[0];
 
-    // Caso A: La cuenta previa fue eliminada (soft deleted). Liberamos el correo para permitir el nuevo registro limpio.
+    // Caso A: La cuenta previa fue eliminada. La borramos de forma definitiva y limpia para permitir el nuevo registro.
     if (rawUser.deleted_at !== null) {
-      await db.execute(
-        'UPDATE users SET email = CONCAT("del_", id, "_", UNIX_TIMESTAMP(), "_", email) WHERE id = ?',
-        [rawUser.id]
-      );
+      await db.execute('UPDATE courses SET instructor_id = NULL WHERE instructor_id = ?', [rawUser.id]);
+      await db.execute('DELETE FROM users WHERE id = ?', [rawUser.id]);
     }
     // Caso B: La cuenta existe pero NUNCA completó la verificación en 2 pasos por correo
     else if (!rawUser.email_verified_at && !rawUser.created_by_admin) {
@@ -250,11 +248,8 @@ exports.register = asyncHandler(async (req, res) => {
   }
   if (!resolvedLast) resolvedLast = 'SkillTrack';
 
-  const cleanUsername = username ? String(username).trim().toLowerCase() : null;
-  if (cleanUsername) {
-    const [uExists] = await db.execute('SELECT id FROM users WHERE username = ?', [cleanUsername]);
-    if (uExists.length) throw new AppError('El nombre de usuario ya está en uso', 409, 'USERNAME_EXISTS');
-  }
+  // Identidad basada en Nombre y Apellido (los nombres y apellidos pueden repetirse libremente entre usuarios)
+  const resolvedUsername = `${resolvedFirst} ${resolvedLast}`.trim();
 
   const passwordHash = await bcrypt.hash(password, 10);
   const [roleRows] = await db.execute('SELECT id FROM roles WHERE name = ? LIMIT 1', [targetRoleName]);
@@ -266,7 +261,7 @@ exports.register = asyncHandler(async (req, res) => {
     [
       resolvedFirst,
       resolvedLast,
-      cleanUsername,
+      resolvedUsername,
       normalizedEmail,
       passwordHash,
       roleId,
