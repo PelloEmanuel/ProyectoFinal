@@ -417,7 +417,16 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
   });
 });
 
-exports.mailDiagnostic = asyncHandler(async (_req, res) => {
+exports.mailDiagnostic = asyncHandler(async (req, res) => {
+  const testTo = req.query.to || req.query.test_to;
+  if (testTo) {
+    const diagnostic = await mailer.testDelivery(String(testTo).trim());
+    return res.json({
+      success: true,
+      diagnostic,
+    });
+  }
+
   const isConfigured = mailer.isConfigured();
   const host = process.env.SMTP_HOST || 'none';
   const port = process.env.SMTP_PORT || 'none';
@@ -425,13 +434,13 @@ exports.mailDiagnostic = asyncHandler(async (_req, res) => {
   const user = process.env.SMTP_USER ? `${process.env.SMTP_USER.slice(0, 3)}***` : 'none';
   const passSet = Boolean(process.env.SMTP_PASS);
   const hasResend = Boolean(process.env.RESEND_API_KEY);
+  const hasBrevo = Boolean(process.env.BREVO_API_KEY);
+  const mailFrom = process.env.MAIL_FROM || 'not_set';
 
-  let verifyResult = hasResend ? 'resend_active' : isConfigured ? 'pending' : 'not_configured';
-  let verifyError = null;
+  let smtpVerifyResult = 'not_tested';
+  let smtpVerifyError = null;
 
-  if (hasResend) {
-    verifyResult = 'resend_https_ready';
-  } else if (isConfigured) {
+  if (isConfigured && (process.env.SMTP_USER || process.env.SMTP_HOST)) {
     try {
       const transport = mailer.getTransporter();
       if (transport) {
@@ -443,11 +452,11 @@ exports.mailDiagnostic = asyncHandler(async (_req, res) => {
             else resolve(success);
           });
         });
-        verifyResult = 'verified_ok';
+        smtpVerifyResult = 'verified_ok';
       }
     } catch (err) {
-      verifyResult = 'verify_failed';
-      verifyError = err.message;
+      smtpVerifyResult = 'verify_failed';
+      smtpVerifyError = err.message;
     }
   }
 
@@ -455,13 +464,17 @@ exports.mailDiagnostic = asyncHandler(async (_req, res) => {
     success: true,
     data: {
       isConfigured,
+      hasResend,
+      hasBrevo,
+      mailFrom,
       host,
       port,
       service,
       user,
       passSet,
-      verifyResult,
-      verifyError,
+      smtpVerifyResult,
+      smtpVerifyError,
+      instruction: 'Para probar envío real a una casilla de correo, agrega ?to=tu_correo@gmail.com a esta URL',
     },
   });
 });
