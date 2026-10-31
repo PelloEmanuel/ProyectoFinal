@@ -81,10 +81,35 @@ async function issueEmailVerificationToken(userId, email) {
 exports.registrationStatus = asyncHandler(async (_req, res) => {
   const [[{ totalUsers }]] = await db.execute('SELECT COUNT(*) AS totalUsers FROM users WHERE deleted_at IS NULL');
   const isFirstUser = Number(totalUsers) === 0;
+
+  let availableSchoolGroups = [];
+  try {
+    const [groups] = await db.execute(
+      `SELECT sg.id, sg.school_year AS schoolYear, sg.course_division AS courseDivision, sg.status
+       FROM school_groups sg
+       WHERE sg.status = 'open'
+       ORDER BY sg.school_year ASC, sg.course_division ASC`
+    );
+    availableSchoolGroups = groups.map((g) => ({
+      id: g.id,
+      schoolYear: Number(g.schoolYear),
+      courseDivision: Number(g.courseDivision),
+      label: `${g.schoolYear}° ${g.courseDivision}ª`,
+      fullLabel: `${g.schoolYear}° Año - ${g.courseDivision}° Curso`,
+    }));
+  } catch (err) {
+    console.warn('[RegistrationStatus] Error obteniendo grupos escolares:', err.message);
+  }
+
   res.json({
     success: true,
     isFirstUser,
-    data: { isFirstUser, totalUsers: Number(totalUsers) },
+    data: {
+      isFirstUser,
+      totalUsers: Number(totalUsers),
+      availableSchoolGroups,
+    },
+    availableSchoolGroups,
   });
 });
 

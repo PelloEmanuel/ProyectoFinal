@@ -45,66 +45,81 @@ export default function RegisterScreen({ navigation }) {
     }
   };
 
-  useEffect(() => {
-    let mounted = true;
-    coursesApi
-      .getAvailableSchoolGroups()
-      .then((groups) => {
-        if (mounted && Array.isArray(groups) && groups.length > 0) {
-          setAvailableGroups(groups);
-          setForm((f) => ({
-            ...f,
-            schoolYear: groups[0].schoolYear,
-            courseDivision: groups[0].courseDivision,
-          }));
-        }
-      })
-      .catch(() => {});
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const availableYears = React.useMemo(() => {
-    if (!availableGroups || availableGroups.length === 0) return [1, 6, 7];
-    const years = Array.from(new Set(availableGroups.map((g) => Number(g.schoolYear))));
-    return years.sort((a, b) => a - b);
-  }, [availableGroups]);
-
-  const availableDivisionsForYear = React.useMemo(() => {
-    if (!availableGroups || availableGroups.length === 0) return [1, 2, 3];
-    const divs = availableGroups
-      .filter((g) => Number(g.schoolYear) === Number(form.schoolYear))
-      .map((g) => Number(g.courseDivision));
-    const unique = Array.from(new Set(divs)).sort((a, b) => a - b);
-    return unique.length > 0 ? unique : [1];
-  }, [availableGroups, form.schoolYear]);
-
-  const handleSelectSchoolYear = (yr) => {
-    set('schoolYear')(yr);
-    const divsForYr = availableGroups
-      .filter((g) => Number(g.schoolYear) === Number(yr))
-      .map((g) => Number(g.courseDivision))
-      .sort((a, b) => a - b);
-    if (divsForYr.length > 0 && !divsForYr.includes(Number(form.courseDivision))) {
-      set('courseDivision')(divsForYr[0]);
+  const applyAvailableGroups = React.useCallback((groups) => {
+    if (Array.isArray(groups) && groups.length > 0) {
+      setAvailableGroups(groups);
+      setForm((f) => {
+        const years = Array.from(new Set(groups.map((g) => Number(g.schoolYear)))).sort((a, b) => a - b);
+        const yr = years.includes(Number(f.schoolYear)) ? Number(f.schoolYear) : years[0];
+        const divsForYr = groups
+          .filter((g) => Number(g.schoolYear) === yr)
+          .map((g) => Number(g.courseDivision))
+          .sort((a, b) => a - b);
+        const div = divsForYr.includes(Number(f.courseDivision)) ? Number(f.courseDivision) : divsForYr[0];
+        return {
+          ...f,
+          schoolYear: yr,
+          courseDivision: div,
+        };
+      });
     }
-  };
+  }, []);
 
   useEffect(() => {
     let mounted = true;
     authApi
       .registrationStatus()
       .then((res) => {
-        if (mounted) {
-          setIsFirstUser(Boolean(res?.isFirstUser ?? res?.data?.isFirstUser));
+        if (!mounted) return;
+        setIsFirstUser(Boolean(res?.isFirstUser ?? res?.data?.isFirstUser));
+        const groups = res?.availableSchoolGroups || res?.data?.availableSchoolGroups;
+        if (Array.isArray(groups) && groups.length > 0) {
+          applyAvailableGroups(groups);
         }
       })
       .catch(() => {});
+
+    coursesApi
+      .getAvailableSchoolGroups()
+      .then((groups) => {
+        if (!mounted) return;
+        if (Array.isArray(groups) && groups.length > 0) {
+          applyAvailableGroups(groups);
+        }
+      })
+      .catch(() => {});
+
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [applyAvailableGroups]);
+
+  const availableYears = React.useMemo(() => {
+    if (!availableGroups || availableGroups.length === 0) return [];
+    const years = Array.from(new Set(availableGroups.map((g) => Number(g.schoolYear))));
+    return years.sort((a, b) => a - b);
+  }, [availableGroups]);
+
+  const availableDivisionsForYear = React.useMemo(() => {
+    if (!form.schoolYear || !availableGroups || availableGroups.length === 0) return [];
+    const divs = availableGroups
+      .filter((g) => Number(g.schoolYear) === Number(form.schoolYear))
+      .map((g) => Number(g.courseDivision));
+    return Array.from(new Set(divs)).sort((a, b) => a - b);
+  }, [availableGroups, form.schoolYear]);
+
+  const handleSelectSchoolYear = (yr) => {
+    const divsForYr = availableGroups
+      .filter((g) => Number(g.schoolYear) === Number(yr))
+      .map((g) => Number(g.courseDivision))
+      .sort((a, b) => a - b);
+    const newDiv = divsForYr.includes(Number(form.courseDivision)) ? Number(form.courseDivision) : divsForYr[0];
+    setForm((f) => ({
+      ...f,
+      schoolYear: yr,
+      courseDivision: newDiv || 1,
+    }));
+  };
 
   const startSocial = useSocialAuth({
     onCredential: async (provider, body) => {
@@ -352,71 +367,101 @@ export default function RegisterScreen({ navigation }) {
         <View
           style={{
             backgroundColor: colors.surfaceAlt || colors.card,
-            borderRadius: 12,
-            padding: 12,
-            marginBottom: 12,
+            borderRadius: 14,
+            padding: 16,
+            marginBottom: 14,
             borderWidth: 1,
             borderColor: colors.border,
           }}
         >
-          <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 6 }}>
-            Seleccioná tu Año Escolar *
+          <Text style={{ fontSize: 15, fontWeight: '800', color: colors.text, marginBottom: 4 }}>
+            Elegí tu Año y Curso Escolar
           </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-            {availableYears.map((yr) => {
-              const selected = Number(form.schoolYear) === yr;
-              return (
-                <Pressable
-                  key={yr}
-                  onPress={() => handleSelectSchoolYear(yr)}
-                  style={{
-                    flex: 1,
-                    minWidth: 46,
-                    paddingVertical: 8,
-                    borderRadius: 10,
-                    alignItems: 'center',
-                    borderWidth: 1.5,
-                    borderColor: selected ? colors.primary : colors.border,
-                    backgroundColor: selected ? colors.primary : colors.card,
-                  }}
-                >
-                  <Text style={{ fontWeight: '800', fontSize: 13, color: selected ? '#ffffff' : colors.text }}>
-                    {yr}°
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <Text style={{ fontSize: 12, color: colors.textSecondary, marginBottom: 12 }}>
+            Seleccioná en qué año y en qué división te encontrás para aplicar tus materias y horarios:
+          </Text>
 
-          <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 6 }}>
-            Seleccioná tu Curso / División para {form.schoolYear}° Año *
+          <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 8 }}>
+            Año Escolar disponible:
           </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {availableDivisionsForYear.map((div) => {
-              const selected = Number(form.courseDivision) === div;
-              return (
-                <Pressable
-                  key={div}
-                  onPress={() => set('courseDivision')(div)}
-                  style={{
-                    flex: 1,
-                    minWidth: 50,
-                    paddingVertical: 9,
-                    borderRadius: 10,
-                    alignItems: 'center',
-                    borderWidth: 1.5,
-                    borderColor: selected ? colors.primary : colors.border,
-                    backgroundColor: selected ? colors.primary : colors.card,
-                  }}
-                >
-                  <Text style={{ fontWeight: '800', fontSize: 13, color: selected ? '#ffffff' : colors.text }}>
-                    {div}° Curso
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 8 }}>
+          {availableYears.length === 0 ? (
+            <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 12 }}>
+              Cargando cursos escolares disponibles...
+            </Text>
+          ) : (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+              {availableYears.map((yr) => {
+                const selected = Number(form.schoolYear) === yr;
+                return (
+                  <Pressable
+                    key={yr}
+                    onPress={() => handleSelectSchoolYear(yr)}
+                    style={{
+                      flex: 1,
+                      minWidth: 70,
+                      paddingVertical: 10,
+                      borderRadius: 10,
+                      alignItems: 'center',
+                      borderWidth: 1.5,
+                      borderColor: selected ? colors.primary : colors.border,
+                      backgroundColor: selected ? colors.primary : colors.card,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontWeight: '800',
+                        fontSize: 13,
+                        color: selected ? '#ffffff' : colors.text,
+                      }}
+                    >
+                      {yr}° Año
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+
+          {availableDivisionsForYear.length > 0 && (
+            <>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 8 }}>
+                Divisiones disponibles para {form.schoolYear}° Año:
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+                {availableDivisionsForYear.map((div) => {
+                  const selected = Number(form.courseDivision) === div;
+                  return (
+                    <Pressable
+                      key={div}
+                      onPress={() => set('courseDivision')(div)}
+                      style={{
+                        flex: 1,
+                        minWidth: 70,
+                        paddingVertical: 11,
+                        borderRadius: 10,
+                        alignItems: 'center',
+                        borderWidth: 1.5,
+                        borderColor: selected ? colors.primary : colors.border,
+                        backgroundColor: selected ? colors.primary : colors.card,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontWeight: '800',
+                          fontSize: 13,
+                          color: selected ? '#ffffff' : colors.text,
+                        }}
+                      >
+                        {div}° Curso
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </>
+          )}
+
+          <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }}>
             Se te asignarán automáticamente las materias y horarios de {form.schoolYear}° Año - {form.courseDivision}° Curso.
           </Text>
         </View>
