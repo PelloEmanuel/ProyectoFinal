@@ -1,6 +1,6 @@
-# Documentación Técnica de la API REST — SkillTrack (`/api/v1`)
+# Documentación Técnica de la API REST — Campus (`/api/v1`)
 
-La API de **SkillTrack** está construida con **Node.js**, **Express**, **MySQL2 (`mysql2/promise`)**, **JSON Web Tokens (`jsonwebtoken`)**, **bcryptjs**, **express-validator**, **Helmet** y **express-rate-limit**.
+La API de **Campus** está construida con **Node.js**, **Express**, **MySQL2 (`mysql2/promise`)**, **JSON Web Tokens (`jsonwebtoken`)**, **bcryptjs**, **express-validator**, **Helmet** y **express-rate-limit**.
 
 - **URL Base Local**: `http://localhost:3000/api/v1`
 - **Formato de Intercambio**: `application/json`
@@ -31,7 +31,7 @@ La API de **SkillTrack** está construida con **Node.js**, **Express**, **MySQL2
 }
 ```
 
-| Código HTTP | Significado en SkillTrack |
+| Código HTTP | Significado en Campus |
 | :--- | :--- |
 | `200 OK` | Consulta, actualización o calificación completada con éxito |
 | `201 Created` | Recurso creado (registro, curso, módulo, lección, inscripción, intento) |

@@ -1,7 +1,7 @@
 @echo off
-title SkillTrack - Expo Modo Tunel
+title Campus - Expo Modo Tunel
 echo ====================================================
-echo   SkillTrack - Modo Tunel Expo (Bypass de Router)
+echo   Campus - Modo Tunel Expo (Bypass de Router)
 echo   Usa esto si tu router Wi-Fi bloquea conexiones directas entre dispositivos.
 echo ====================================================
 echo.

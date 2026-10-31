@@ -1,5 +1,5 @@
 -- ============================================================================
--- SkillTrack - Esquema Relacional MySQL / MariaDB (3FN)
+-- Campus - Esquema Relacional MySQL / MariaDB (3FN)
 -- Incluye: Usuarios, Roles, OAuth, 2FA (TOTP + Recovery), Cursos, Módulos,
 -- Lecciones, Recursos, Habilidades (N:M), Prerrequisitos (N:M), Inscripciones,
 -- Progreso, Favoritos, Actividades, Cuestionarios, Rúbricas, Entregas,

@@ -1,7 +1,7 @@
 @echo off
-title SkillTrack - Servidor Expo Mobile
+title Campus - Servidor Expo Mobile
 echo ====================================================
-echo   SkillTrack - Iniciando Expo en tu Red Wi-Fi
+echo   Campus - Iniciando Expo en tu Red Wi-Fi
 echo ====================================================
 
 :: 1. Asegurar que Windows trate la conexion Wi-Fi como Red Privada (para no bloquear el puerto 8081)

@@ -55,7 +55,7 @@ test('1. Healthcheck y estado de la base de datos MySQL', async () => {
   const data = await res.json();
   assert.equal(res.status, 200);
   assert.equal(data.success, true);
-  assert.equal(data.data?.service || data.service, 'SkillTrack API');
+  assert.equal(data.data?.service || data.service, 'Campus API');
 });
 
 test('2. Autenticación: Registro de estudiante válido, rechazo de duplicado y contraseña débil', async () => {

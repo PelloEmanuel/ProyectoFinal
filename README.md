@@ -1,6 +1,6 @@
-# SkillTrack — Plataforma Educativa de Cursos, Habilidades y Seguimiento Académico
+# Campus — Plataforma Educativa de Cursos, Habilidades y Seguimiento Académico
 
-**SkillTrack** es una plataforma integral de aprendizaje móvil (**React Native / Expo SDK 58**) respaldada por una **API RESTful en Node.js + Express** y una base de datos relacional **MySQL / MariaDB** normalizada en Tercera Forma Normal (3FN).
+**Campus** es una plataforma integral de aprendizaje móvil (**React Native / Expo SDK 58**) respaldada por una **API RESTful en Node.js + Express** y una base de datos relacional **MySQL / MariaDB** normalizada en Tercera Forma Normal (3FN).
 
 Permite conectar instituciones educativas, instructores y estudiantes para administrar cursos estructurados en módulos y lecciones, resolver evaluaciones interactivas, emitir certificados verificables y realizar un seguimiento detallado de la evolución académica.
 
@@ -67,7 +67,7 @@ ProyectoFinal/
 │   │   ├── navigation/          # Navegación dinámica por rol (Tabs + Native Stack)
 │   │   ├── screens/             # Pantallas de Auth, Student, Instructor, Admin y Perfil
 │   │   ├── utils/               # Fechas dd/mm/aaaa, validadores, errores, SecureStore
-│   │   └── theme.js             # Tokens visuales de SkillTrack (Claro y Oscuro)
+│   │   └── theme.js             # Tokens visuales de Campus (Claro y Oscuro)
 │   ├── App.js                   # Raíz de la aplicación
 │   ├── app.json                 # Configuración Expo / Android (com.skilltrack.app)
 │   ├── eas.json                 # Perfiles de compilación APK para Android

@@ -1,20 +1,20 @@
-# Manual de Usuario — SkillTrack
+# Manual de Usuario — Campus
 
-Bienvenido al Manual de Usuario de **SkillTrack**, la plataforma móvil de gestión de cursos, desarrollo de habilidades y seguimiento académico.
+Bienvenido al Manual de Usuario de **Campus**, la plataforma móvil de gestión de cursos, desarrollo de habilidades y seguimiento académico.
 
 ---
 
 ## 1. Acceso a la Plataforma
 
 ### 1.1. Pantalla de Bienvenida
-Al abrir la aplicación verás la identidad institucional de **SkillTrack**, los pilares de la plataforma y dos botones principales:
+Al abrir la aplicación verás la identidad institucional de **Campus**, los pilares de la plataforma y dos botones principales:
 - **Iniciar sesión**: Para cuentas existentes de Estudiantes, Instructores o Administradores.
 - **Crear cuenta gratis**: Para nuevos estudiantes que deseen registrarse.
 
 ### 1.2. Registro de Nuevos Estudiantes
 1. Tocá **Crear cuenta gratis**.
 2. Completá tu **Nombre**, **Apellido**, **Nombre de usuario** (opcional), **Correo electrónico** y una **Contraseña segura** (mínimo 8 caracteres, incluyendo mayúscula, minúscula, número y símbolo).
-3. Aceptá los términos académicos y presioná **Crear mi cuenta en SkillTrack**.
+3. Aceptá los términos académicos y presioná **Crear mi cuenta en Campus**.
 4. Tu cuenta se creará automáticamente con el rol **Estudiante** e iniciarás sesión de forma inmediata.
 
 ### 1.3. Inicio de Sesión y Cuentas de Demostración

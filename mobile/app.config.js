@@ -1,6 +1,6 @@
 /**
  * Archivo: mobile/app.config.js
- * Descripción: Configuración dinámica de Expo para SkillTrack.
+ * Descripción: Configuración dinámica de Expo para Campus.
  * Se ejecuta al inicio de `npx expo start` y prioriza automáticamente la interfaz Wi-Fi real
  * (192.168.x.x / 10.x.x.x / 172.16-31.x.x) por encima de adaptadores virtuales como Radmin VPN,
  * VirtualBox, Hamachi o WSL, garantizando que el código QR apunte siempre a la red Wi-Fi activa.

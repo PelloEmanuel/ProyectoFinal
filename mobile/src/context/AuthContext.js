@@ -1,6 +1,6 @@
 /**
  * Archivo: mobile/src/context/AuthContext.js
- * Descripción: Estado global de autenticación de SkillTrack (Context API + useReducer).
+ * Descripción: Estado global de autenticación de Campus (Context API + useReducer).
  * Expone estado de inicialización, usuario actual, rol, permisos, verificación de correo,
  * estado de segundo factor y acciones de sesión persistente en SecureStore.
  */

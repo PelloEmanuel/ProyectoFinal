@@ -1,6 +1,6 @@
 /**
  * Archivo: mobile/src/api/services.js
- * Descripción: Servicios HTTP para todos los módulos de la API REST v1 de SkillTrack.
+ * Descripción: Servicios HTTP para todos los módulos de la API REST v1 de Campus.
  */
 import api from './client';
 

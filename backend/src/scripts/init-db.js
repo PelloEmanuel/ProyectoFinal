@@ -89,7 +89,7 @@ async function initDatabase() {
     );
 
     await conn.query(seedSql);
-    console.log('SkillTrack: Base de datos MySQL inicializada correctamente (schema.sql + seed.sql).');
+    console.log('Campus: Base de datos MySQL inicializada correctamente (schema.sql + seed.sql).');
   } finally {
     await conn.end();
   }

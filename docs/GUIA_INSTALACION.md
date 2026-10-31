@@ -1,6 +1,6 @@
-# Guía de Instalación, Configuración y Despliegue — SkillTrack
+# Guía de Instalación, Configuración y Despliegue — Campus
 
-Esta guía explica paso a paso cómo instalar, configurar y ejecutar **SkillTrack** en **Windows con PowerShell**, incluyendo la base de datos **MySQL / MariaDB (XAMPP)**, el servidor **Backend (Node.js + Express)**, la aplicación móvil **React Native (Expo)** y la generación del archivo instalable **APK para Android**.
+Esta guía explica paso a paso cómo instalar, configurar y ejecutar **Campus** en **Windows con PowerShell**, incluyendo la base de datos **MySQL / MariaDB (XAMPP)**, el servidor **Backend (Node.js + Express)**, la aplicación móvil **React Native (Expo)** y la generación del archivo instalable **APK para Android**.
 
 ---
 
@@ -69,14 +69,14 @@ SMTP_HOST=
 SMTP_PORT=587
 SMTP_USER=
 SMTP_PASS=
-MAIL_FROM="SkillTrack <no-reply@skilltrack.edu>"
+MAIL_FROM="Campus <no-reply@skilltrack.edu>"
 APP_PUBLIC_URL=http://localhost:3000
 ```
 
 ### 3.2. Aplicación Móvil (`mobile/.env`)
 
 ```env
-# Dejalo vacío para que SkillTrack detecte automáticamente la IP Wi-Fi o el túnel de Expo:
+# Dejalo vacío para que Campus detecte automáticamente la IP Wi-Fi o el túnel de Expo:
 EXPO_PUBLIC_API_URL=
 
 # Credenciales públicas OAuth 2.0 (cuando configures proveedores externos reales)
@@ -109,7 +109,7 @@ La arquitectura OAuth 2.0 / OpenID Connect está implementada de punta a punta e
 cd C:\xampp\htdocs\ProyectoFinal\backend
 npm start
 ```
-Verás en consola: `SkillTrack API escuchando en http://0.0.0.0:3000`.
+Verás en consola: `Campus API escuchando en http://0.0.0.0:3000`.
 
 ### Paso 2: Levantar la Aplicación Móvil (Expo)
 En una segunda ventana de PowerShell:
