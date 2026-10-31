@@ -18,7 +18,7 @@ export default function VerifyCodeScreen({ navigation, route }) {
   const initialEmail = route.params?.email || '';
   const userId = route.params?.userId;
 
-  const { verifyTwoFactor, refreshProfile, startSession } = useAuth();
+  const { verifyTwoFactor, refreshProfile, startSession, verifyEmail } = useAuth();
   const { colors } = useTheme();
 
   const [email, setEmail] = useState(initialEmail);
@@ -35,8 +35,10 @@ export default function VerifyCodeScreen({ navigation, route }) {
     setError('');
     setLoading(true);
     try {
+      setSuccess('¡Código verificado! Accediendo al Campus...');
       await verifyTwoFactor(userId, code.trim());
     } catch (e) {
+      setSuccess('');
       setError(getErrorMessage(e));
       setLoading(false);
     }
@@ -79,8 +81,8 @@ export default function VerifyCodeScreen({ navigation, route }) {
     setError('');
     setLoading(true);
     try {
-      const res = await authApi.verifyEmail({ userId, token: code.trim(), code: code.trim() });
       setSuccess('¡Verificación en 2 pasos completada! Accediendo al Campus...');
+      const res = await verifyEmail(userId, code.trim());
       if (res?.accessToken || res?.data?.accessToken) {
         await startSession(res);
       } else {
@@ -88,6 +90,7 @@ export default function VerifyCodeScreen({ navigation, route }) {
         setTimeout(() => navigation.navigate('Login'), 1200);
       }
     } catch (e) {
+      setSuccess('');
       setError(getErrorMessage(e));
       setLoading(false);
     }

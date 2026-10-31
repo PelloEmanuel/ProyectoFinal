@@ -8,6 +8,9 @@ export function getErrorMessage(err) {
   if (err.code === 'ECONNABORTED') {
     return 'El servidor tardó demasiado en responder. Verificá tu conexión e intentá nuevamente.';
   }
+  if (err instanceof Error && !err.isAxiosError && !err.response) {
+    return err.message || 'Ocurrió un error inesperado en la aplicación.';
+  }
   if (!err.response) {
     return 'No se pudo conectar con el servidor de SkillTrack. Verificá tu conexión a internet.';
   }

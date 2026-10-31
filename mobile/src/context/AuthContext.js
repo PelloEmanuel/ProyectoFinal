@@ -183,6 +183,7 @@ export function AuthProvider({ children }) {
 
   const actions = useMemo(
     () => ({
+      startSession,
       async login(email, password) {
         const res = await authApi.login({ email: email.trim(), password });
         const data = res.data || res;
@@ -204,8 +205,9 @@ export function AuthProvider({ children }) {
         return res;
       },
       async verifyEmail(userId, token) {
-        const res = await authApi.verifyEmail({ userId, token });
-        if (res?.accessToken || res?.data?.accessToken) {
+        const res = await authApi.verifyEmail({ userId, token, code: token });
+        const data = res?.data || res;
+        if (data?.accessToken || res?.accessToken) {
           await startSession(res);
         } else {
           const fresh = await usersApi.me().catch(() => null);
