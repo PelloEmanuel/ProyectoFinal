@@ -103,10 +103,10 @@ ProyectoFinal/
 
 | Rol | Correo Electrónico | Contraseña | Permisos Destacados |
 | :--- | :--- | :--- | :--- |
-| **Estudiante** | `estudiante@skilltrack.edu` | `Estudiante123!` | Explorar, inscribirse, cursar lecciones, resolver quizzes/entregas, ver certificados |
-| **Instructor** | `instructor@skilltrack.edu` | `Instructor123!` | Crear y publicar cursos, módulos, lecciones, actividades y calificar entregas |
-| **Instructor 2** | `ana.docente@skilltrack.edu` | `Instructor123!` | Segunda cuenta docente para verificar aislamiento de propiedad entre instructores |
-| **Administrador** | `admin@skilltrack.edu` | `Admin123!` | Gestión global de usuarios, roles, catálogo, reportes SQL, auditoría y ajustes |
+| **Estudiante** | `estudiante@gmail.com` | `estudiante123` | Explorar, inscribirse, cursar lecciones, resolver quizzes/entregas, ver certificados |
+| **Instructor** | `docente@gmail.com` | `docente123` | Crear y publicar cursos, módulos, lecciones, actividades y calificar entregas |
+| **Preceptor** | `preceptor@gmail.com` | `preceptor123` | Seguimiento de cursos y estudiantes a cargo |
+| **Administrador** | `admin@gmail.com` | `admin123` | Gestión global de usuarios, roles, catálogo, reportes SQL, auditoría y ajustes |
 
 ---
 

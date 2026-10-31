@@ -19,9 +19,10 @@ Al abrir la aplicación verás la identidad institucional de **Campus**, los pil
 
 ### 1.3. Inicio de Sesión y Cuentas de Demostración
 En la pantalla **Iniciar sesión** podés ingresar con tu correo y contraseña, mediante **Google / GitHub / Facebook**, o utilizar los **botones de acceso rápido (1 toque)** para probar los 3 roles del sistema:
-- **Estudiante**: `estudiante@skilltrack.edu` / `Estudiante123!`
-- **Instructor**: `instructor@skilltrack.edu` / `Instructor123!`
-- **Admin**: `admin@skilltrack.edu` / `Admin123!`
+- **Estudiante**: `estudiante@gmail.com` / `estudiante123`
+- **Instructor**: `docente@gmail.com` / `docente123`
+- **Preceptor**: `preceptor@gmail.com` / `preceptor123`
+- **Admin**: `admin@gmail.com` / `admin123`
 
 ### 1.4. Verificación en Dos Pasos (2FA TOTP) y Recuperación de Contraseña
 - Si olvidaste tu clave, tocá **¿Olvidaste tu contraseña?**, ingresá tu correo y recibirás un código de 6 dígitos para definir una nueva clave.
