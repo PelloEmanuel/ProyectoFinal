@@ -3,13 +3,13 @@
     "name": "Campus Técnica 5",
     "slug": "campus-tecnica-5",
     "owner": "pelloemanuel",
-    "scheme": "skilltrack",
+    "scheme": "campus",
     "version": "1.0.0",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "primaryColor": "#b91c1c",
     "android": {
-      "package": "com.skilltrack.app",
+      "package": "com.campustecnica5.app",
       "versionCode": 1,
       "softwareKeyboardLayoutMode": "resize",
       "usesCleartextTraffic": true,
@@ -22,7 +22,7 @@
           "action": "VIEW",
           "data": [
             {
-              "scheme": "skilltrack"
+              "scheme": "campus"
             }
           ],
           "category": [
@@ -33,7 +33,7 @@
       ]
     },
     "ios": {
-      "bundleIdentifier": "com.skilltrack.app",
+      "bundleIdentifier": "com.campustecnica5.app",
       "supportsTablet": true
     },
     "plugins": [

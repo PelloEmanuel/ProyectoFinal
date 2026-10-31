@@ -1,6 +1,6 @@
 /**
  * Archivo: mobile/src/theme.js
- * Descripción: Tokens del sistema de diseño e identidad visual de SkillTrack.
+ * Descripción: Tokens del sistema de diseño e identidad visual del Campus.
  * Define paletas completas para Tema Claro y Tema Oscuro, tipografía, espaciado y etiquetas de dominio.
  */
 export const lightColors = {

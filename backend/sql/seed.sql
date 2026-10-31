@@ -1,16 +1,15 @@
 -- ============================================================================
--- SkillTrack Campus Escolar - Datos Base del Sistema (Sin perfiles de prueba)
+-- Campus Técnica 5 - Datos Base del Sistema (Sin perfiles de prueba)
 -- Inicializa roles institucionales, áreas académicas base y parámetros
 -- iniciales de configuración (con INSERT IGNORE para preservar cambios del Admin).
 -- ============================================================================
-USE skilltrack;
 
 -- ----------------------------------------------------------------------------
 -- 1. Roles del sistema (1: admin, 2: instructor, 3: student)
 -- ----------------------------------------------------------------------------
 INSERT INTO roles (id, name, description) VALUES
-  (1, 'admin', 'Administrador general del Campus Escolar SkillTrack'),
-  (2, 'instructor', 'Profesor / Docente a cargo de materias, teoría, actividades y evaluaciones'),
+  (1, 'admin', 'Administrador general del Campus'),
+  (2, 'instructor', 'Docente a cargo de materias, teoría, actividades y evaluaciones'),
   (3, 'student', 'Alumno inscripto por Año (1° a 6°) y Curso (1° a 3°)')
 ON DUPLICATE KEY UPDATE description = VALUES(description);
 
@@ -38,14 +37,14 @@ ON DUPLICATE KEY UPDATE name = VALUES(name), description = VALUES(description);
 -- para registro de docentes) persistan siempre tras reiniciar el servidor.
 -- ----------------------------------------------------------------------------
 INSERT IGNORE INTO platform_settings (setting_key, setting_value) VALUES
-  ('platform_name', 'SkillTrack Campus Escolar'),
-  ('institution_name', 'Instituto Educativo SkillTrack'),
+  ('platform_name', 'Campus'),
+  ('institution_name', 'Campus Técnica 5'),
   ('platform_description', 'Campus escolar de seguimiento académico de 1° a 6° Año (Cursos 1° a 3°)'),
   ('enrollment_policy', 'open'),
   ('allow_public_registration', 'true'),
   ('require_email_verification', 'false'),
   ('certificates_enabled', 'true'),
   ('default_passing_score', '60'),
-  ('certificate_issuer_title', 'Dirección Académica SkillTrack'),
-  ('support_email', 'preceptoria@skilltrack.edu'),
+  ('certificate_issuer_title', 'Dirección Académica del Campus'),
+  ('support_email', 'preceptoria@campus.edu'),
   ('instructor_registration_key', 'DOCENTE2026');

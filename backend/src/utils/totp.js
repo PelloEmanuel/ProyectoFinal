@@ -113,7 +113,7 @@ function hashRecoveryCode(code) {
 }
 
 function buildOtpAuthUri(email, secretBase32) {
-  const issuer = encodeURIComponent('SkillTrack');
+  const issuer = encodeURIComponent('Campus');
   const account = encodeURIComponent(email);
   return `otpauth://totp/${issuer}:${account}?secret=${secretBase32}&issuer=${issuer}&algorithm=SHA1&digits=6&period=30`;
 }

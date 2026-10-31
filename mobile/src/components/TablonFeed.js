@@ -1212,7 +1212,7 @@ export default function TablonFeed({
             </Text>
 
             <Text style={[styles.courseInfoDesc, { color: colors.textSecondary }]}>
-              {course?.description || course?.shortDescription || 'Materia académica de SkillTrack Campus.'}
+              {course?.description || course?.shortDescription || 'Materia académica del Campus Técnica 5.'}
             </Text>
 
             {course?.instructorName && (

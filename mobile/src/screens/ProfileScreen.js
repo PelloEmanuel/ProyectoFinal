@@ -321,7 +321,7 @@ export default function ProfileScreen({ navigation }) {
         <View style={[styles.switchRow, { borderColor: colors.border }]}>
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>
-              Modo Oscuro de SkillTrack
+              Modo Oscuro del Campus
             </Text>
             <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
               Persiste tu preferencia visual en el dispositivo y en tu cuenta.
@@ -483,7 +483,7 @@ export default function ProfileScreen({ navigation }) {
       <ConfirmModal
         visible={confirmDelete}
         title="Eliminar cuenta"
-        message="Esta acción eliminará permanentemente tu cuenta y revocará tus accesos en SkillTrack. ¿Confirmás la baja?"
+        message="Esta acción eliminará permanentemente tu cuenta y revocará tus accesos en el Campus. ¿Confirmás la baja?"
         confirmLabel="Sí, eliminar"
         variant="danger"
         onConfirm={handleDeleteAccount}

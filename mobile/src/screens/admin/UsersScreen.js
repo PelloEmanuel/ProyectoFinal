@@ -438,7 +438,7 @@ export default function UsersScreen() {
                 label="Correo electrónico *"
                 value={createForm.email}
                 onChangeText={(v) => setCreateForm((p) => ({ ...p, email: v }))}
-                placeholder="docente@skilltrack.edu"
+                placeholder="docente@campus.edu"
                 keyboardType="email-address"
                 autoCapitalize="none"
               />

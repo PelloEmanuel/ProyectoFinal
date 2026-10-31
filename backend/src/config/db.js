@@ -1,6 +1,6 @@
 /**
  * Archivo: backend/src/config/db.js
- * Descripción: Pool de conexiones MySQL / MariaDB para SkillTrack con soporte de transacciones.
+ * Descripción: Pool de conexiones MySQL / MariaDB para el Campus con soporte de transacciones.
  * Se conecta con: Todos los controladores, servicios, middlewares y scripts de migración/seed.
  */
 const path = require('path');

@@ -52,10 +52,10 @@ function resolveRedirectUri() {
     return makeRedirectUri({ preferLocalhost: false });
   }
 
-  // En builds nativas independientes (APK / EAS Build): usar el scheme institucional 'skilltrack://'
+  // En builds nativas independientes (APK / EAS Build): usar el scheme institucional 'campus://'
   return makeRedirectUri({
-    native: 'skilltrack://',
-    scheme: 'skilltrack',
+    native: 'campus://',
+    scheme: 'campus',
     preferLocalhost: false,
   });
 }
@@ -96,7 +96,7 @@ export default function useSocialAuth({ onCredential, onError }) {
           return true;
         }
       } catch (e) {
-        console.error('SkillTrack OAuth parser error:', e);
+        console.error('Campus OAuth parser error:', e);
       }
       return false;
     };

@@ -1,6 +1,6 @@
 /**
  * Archivo: backend/src/server.js
- * Descripción: Punto de entrada del servidor HTTP de SkillTrack (Node.js + Express + MySQL).
+ * Descripción: Punto de entrada del servidor HTTP del Campus (Node.js + Express + MySQL).
  * Incluye manejo automático de puerto ocupado (EADDRINUSE) para evitar colisiones en Windows.
  */
 require('dotenv').config();
@@ -44,7 +44,7 @@ function startListening(retried = false) {
   });
 
   server.listen(port, '0.0.0.0', () => {
-    console.log(`SkillTrack API escuchando en http://0.0.0.0:${port}`);
+    console.log(`Campus API escuchando en http://0.0.0.0:${port}`);
   });
 }
 
@@ -56,7 +56,7 @@ function startListening(retried = false) {
     await db.query('SELECT 1');
     startListening(false);
   } catch (e) {
-    console.error('No se pudo conectar o inicializar MySQL para SkillTrack:', e.message);
+    console.error('No se pudo conectar o inicializar MySQL para Campus:', e.message);
     process.exit(1);
   }
 })();

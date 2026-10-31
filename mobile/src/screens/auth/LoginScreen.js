@@ -1,12 +1,12 @@
 /**
  * Archivo: mobile/src/screens/auth/LoginScreen.js
- * Descripción: Pantalla de inicio de sesión de SkillTrack (Sección 7.2).
+ * Descripción: Pantalla de inicio de sesión del Campus (Sección 7.2).
  * Soporta correo/contraseña con control de visibilidad, recuperación de contraseña,
  * proveedores OAuth 2.0 (Google, GitHub, Facebook) y redirección a segundo factor TOTP.
  */
 import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Button, ErrorBanner, Input, Screen, SkillTrackLogo } from '../../components/ui';
+import { Button, ErrorBanner, Input, Screen, CampusLogo } from '../../components/ui';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import useSocialAuth from '../../hooks/useSocialAuth';
@@ -86,12 +86,12 @@ export default function LoginScreen({ navigation }) {
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
       <View style={{ marginVertical: 14 }}>
-        <SkillTrackLogo size="md" />
+        <CampusLogo size="md" />
         <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text, textAlign: 'center', marginTop: 12 }}>
           Iniciar sesión
         </Text>
         <Text style={{ color: colors.muted, textAlign: 'center', fontSize: 13 }}>
-          Ingresá a tu cuenta académica de SkillTrack
+          Ingresá a tu cuenta académica del Campus
         </Text>
       </View>
 
@@ -102,7 +102,7 @@ export default function LoginScreen({ navigation }) {
         value={form.email}
         onChangeText={set('email')}
         error={errors.email}
-        placeholder="nombre@skilltrack.edu"
+        placeholder="nombre@campus.edu"
         autoCapitalize="none"
         keyboardType="email-address"
         autoComplete="email"
@@ -127,7 +127,7 @@ export default function LoginScreen({ navigation }) {
         <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>¿Olvidaste tu contraseña?</Text>
       </Pressable>
 
-      <Button title="Ingresar a SkillTrack" icon="log-in-outline" onPress={() => submit()} loading={loading} />
+      <Button title="Ingresar al Campus" icon="log-in-outline" onPress={() => submit()} loading={loading} />
 
       <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 12 }}>
         <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />

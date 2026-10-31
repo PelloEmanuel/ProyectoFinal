@@ -1,13 +1,13 @@
 /**
  * Archivo: mobile/src/screens/auth/WelcomeScreen.js
- * Descripción: Pantalla de bienvenida de SkillTrack (Sección 7.1).
+ * Descripción: Pantalla de bienvenida del Campus (Sección 7.1).
  * Incluye logotipo, propósito, composición visual de aprendizaje, accesos a Login/Registro
  * y consulta de Términos y Política de Privacidad.
  */
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Screen, SkillTrackLogo } from '../../components/ui';
+import { Button, Screen, CampusLogo } from '../../components/ui';
 import { useTheme } from '../../context/ThemeContext';
 
 export default function WelcomeScreen({ navigation }) {
@@ -40,7 +40,7 @@ export default function WelcomeScreen({ navigation }) {
       </View>
 
       <View style={{ alignItems: 'center', marginVertical: 18 }}>
-        <SkillTrackLogo size="lg" />
+        <CampusLogo size="lg" />
       </View>
 
       <View
@@ -95,11 +95,11 @@ export default function WelcomeScreen({ navigation }) {
         <View style={{ flex: 1, backgroundColor: 'rgba(15,23,42,0.7)', justifyContent: 'center', padding: 20 }}>
           <View style={{ backgroundColor: colors.card, borderRadius: 16, padding: 20, maxHeight: '80%' }}>
             <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text, marginBottom: 10 }}>
-              Términos y Política de Privacidad de SkillTrack
+              Términos y Política de Privacidad del Campus
             </Text>
             <ScrollView style={{ marginBottom: 14 }}>
               <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20 }}>
-                1. Propósito Académico: SkillTrack protege tus datos personales, progreso de aprendizaje, entregas y calificaciones bajo controles de acceso estrictos por rol.{'\n\n'}
+                1. Propósito Académico: El Campus protege tus datos personales, progreso de aprendizaje, entregas y calificaciones bajo controles de acceso estrictos por rol.{'\n\n'}
                 2. Seguridad de Credenciales: Las contraseñas se almacenan con hash criptográfico (bcrypt) y las sesiones utilizan tokens JWT con rotación segura en Android Keystore.{'\n\n'}
                 3. Privacidad por Rol: Tus entregas y calificaciones solo pueden ser consultadas por vos y por el docente responsable del curso.{'\n\n'}
                 4. Eliminación de Cuenta: Podés solicitar la baja de tu cuenta y revocar tus sesiones activas desde la pantalla de Perfil en cualquier momento.

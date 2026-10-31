@@ -1,6 +1,6 @@
 /**
  * Archivo: mobile/src/components/ui.js
- * Descripción: Biblioteca de componentes UI reutilizables de SkillTrack.
+ * Descripción: Biblioteca de componentes UI reutilizables del Campus.
  * Soporta Tema Claro y Oscuro, áreas táctiles accesibles, logotipo institucional,
  * barras de progreso, tarjetas, chips, banners de éxito/error y modal de confirmación propio.
  */
@@ -29,7 +29,7 @@ const TECNICA_5_LOGO = require('../../assets/logo.png');
 /**
  * Logotipo institucional de Campus Técnica 5.
  */
-export function SkillTrackLogo({ size = 'md', showSubtitle = true }) {
+export function CampusLogo({ size = 'md', showSubtitle = true }) {
   const { colors } = useTheme();
   const isLg = size === 'lg';
   const boxWidth = isLg ? 110 : 70;
@@ -80,6 +80,8 @@ export function SkillTrackLogo({ size = 'md', showSubtitle = true }) {
     </View>
   );
 }
+
+export const SkillTrackLogo = CampusLogo;
 
 /**
  * Contenedor responsivo de pantalla con soporte de SafeArea, teclado y Tema Claro/Oscuro.

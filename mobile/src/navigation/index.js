@@ -59,11 +59,11 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 /**
- * Barra de Navegación Única Superior de SkillTrack:
+ * Barra de Navegación Única Superior del Campus:
  * - Versión Móvil:
- *   - Izquierda: "SkillTrack" con flecha indicadora (hacia arriba si está cerrado, hacia abajo si está desplegado).
+ *   - Izquierda: "Campus Técnica 5" con flecha indicadora (hacia arriba si está cerrado, hacia abajo si está desplegado).
  *   - Derecha: Botón Modo Oscuro / Claro y Botón para la Cuenta.
- *   - Panel Desplegable: Al tocar SkillTrack se despliega un panel inferior con todos los apartados (Panel, Materias, Estudiantes, Entregas).
+ *   - Panel Desplegable: Al tocar Campus Técnica 5 se despliega un panel inferior con todos los apartados (Panel, Materias, Estudiantes, Entregas).
  * - Versión Escritorio / Tablet:
  *   - Los 4 apartados principales visibles en línea horizontal en el centro.
  */

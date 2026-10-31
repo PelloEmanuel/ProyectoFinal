@@ -208,13 +208,13 @@ export default function VerifyCodeScreen({ navigation, route }) {
             Recuperar contraseña
           </Text>
           <Text style={{ color: colors.muted, marginBottom: 16, lineHeight: 20 }}>
-            Ingresá el correo electrónico asociado a tu cuenta de SkillTrack y te enviaremos un código temporal de recuperación.
+            Ingresá el correo electrónico asociado a tu cuenta del Campus y te enviaremos un código temporal de recuperación.
           </Text>
           <Input
             label="Correo electrónico"
             value={email}
             onChangeText={setEmail}
-            placeholder="tu@correo.edu"
+            placeholder="tu@correo.com"
             autoCapitalize="none"
             keyboardType="email-address"
           />

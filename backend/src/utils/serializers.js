@@ -1,6 +1,6 @@
 /**
  * Archivo: backend/src/utils/serializers.js
- * Descripción: Serializadores seguros de usuarios y permisos según el rol en SkillTrack.
+ * Descripción: Serializadores seguros de usuarios y permisos según el rol en el Campus.
  */
 const ROLE_PERMISSIONS = {
   admin: [

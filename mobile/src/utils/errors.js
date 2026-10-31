@@ -12,7 +12,7 @@ export function getErrorMessage(err) {
     return err.message || 'Ocurrió un error inesperado en la aplicación.';
   }
   if (!err.response) {
-    return 'No se pudo conectar con el servidor de SkillTrack. Verificá tu conexión a internet.';
+    return 'No se pudo conectar con el servidor del Campus. Verificá tu conexión a internet.';
   }
   const { status, data } = err.response;
   if (data?.message) return data.message;

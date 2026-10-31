@@ -1,7 +1,7 @@
 {
-  "name": "skilltrack",
+  "name": "campus-tecnica-5",
   "version": "1.0.0",
-  "description": "SkillTrack - Plataforma y Campus Escolar Integral",
+  "description": "Campus Técnica 5 - Plataforma y Campus Escolar Integral",
   "main": "backend/src/server.js",
   "scripts": {
     "start": "node backend/src/server.js",

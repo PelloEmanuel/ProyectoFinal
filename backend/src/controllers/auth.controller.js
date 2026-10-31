@@ -1,6 +1,6 @@
 /**
  * Archivo: backend/src/controllers/auth.controller.js
- * Descripción: Controlador de autenticación completa para SkillTrack.
+ * Descripción: Controlador de autenticación completa para el Campus.
  * Soporta registro (rol inicial obligatorio: student), login, verificación de email,
  * recuperación de contraseña, OAuth 2.0 (Google, GitHub, Facebook), segundo factor TOTP
  * con códigos de recuperación y gestión de sesiones activas (JWT + Refresh Tokens).
@@ -34,7 +34,7 @@ async function findByEmail(email) {
 }
 
 async function buildSessionResponse(user, req) {
-  const deviceInfo = req?.headers?.['user-agent'] || 'SkillTrack Android App';
+  const deviceInfo = req?.headers?.['user-agent'] || 'Campus App';
   const sessionTokens = await tokens.issueSession(user, deviceInfo);
   const serialized = publicUser(user);
   return {
@@ -126,9 +126,9 @@ exports.register = asyncHandler(async (req, res) => {
       if (!resolvedFirst && name) {
         const parts = String(name).trim().split(/\s+/);
         resolvedFirst = parts[0] || 'Usuario';
-        resolvedLast = parts.slice(1).join(' ') || 'SkillTrack';
+        resolvedLast = parts.slice(1).join(' ') || 'Campus';
       }
-      if (!resolvedLast) resolvedLast = 'SkillTrack';
+      if (!resolvedLast) resolvedLast = 'Campus';
 
       const newHash = await bcrypt.hash(password, 10);
       await db.execute(
@@ -244,9 +244,9 @@ exports.register = asyncHandler(async (req, res) => {
   if (!resolvedFirst && name) {
     const parts = String(name).trim().split(/\s+/);
     resolvedFirst = parts[0] || 'Usuario';
-    resolvedLast = parts.slice(1).join(' ') || 'SkillTrack';
+    resolvedLast = parts.slice(1).join(' ') || 'Campus';
   }
-  if (!resolvedLast) resolvedLast = 'SkillTrack';
+  if (!resolvedLast) resolvedLast = 'Campus';
 
   // Identidad basada en Nombre y Apellido (los nombres y apellidos pueden repetirse libremente entre usuarios)
   const resolvedUsername = `${resolvedFirst} ${resolvedLast}`.trim();
@@ -283,8 +283,8 @@ exports.register = asyncHandler(async (req, res) => {
     targetRoleName === 'admin'
       ? '¡Bienvenido/a, Administrador/a General!'
       : targetRoleName === 'instructor'
-      ? '¡Bienvenido/a al equipo docente de SkillTrack!'
-      : '¡Bienvenido/a a SkillTrack!';
+      ? '¡Bienvenido/a al equipo docente del Campus!'
+      : '¡Bienvenido/a al Campus!';
   const welcomeBody =
     targetRoleName === 'admin'
       ? 'Por ser el primer usuario registrado, tu cuenta recibió automáticamente el rol de Administrador. Podés configurar la clave para docentes desde tu panel.'

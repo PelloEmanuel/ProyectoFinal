@@ -1,6 +1,6 @@
 /**
  * Archivo: backend/src/app.js
- * Descripción: Configuración principal de la aplicación Express para SkillTrack API REST v1.
+ * Descripción: Configuración principal de la aplicación Express para Campus API REST v1.
  * Registra middlewares de seguridad (helmet, cors), parseo JSON y todas las rutas del dominio.
  */
 const express = require('express');
@@ -55,7 +55,7 @@ if (process.env.NODE_ENV !== 'test') app.use(morgan('dev'));
 // Servir archivos estáticos subidos (imágenes, PDFs, material)
 app.use('/uploads', express.static(path.join(__dirname, '../public/uploads')));
 
-// Servir la aplicación Web de SkillTrack si está disponible
+// Servir la aplicación Web del Campus si está disponible
 const fs = require('fs');
 const publicWebPath = path.join(__dirname, '../public/web');
 const mobileDistPath = path.join(__dirname, '../../mobile/dist');
@@ -73,8 +73,8 @@ app.get('/health', (req, res) =>
   res.json({
     success: true,
     status: 'ok',
-    service: 'SkillTrack API',
-    platform: 'SkillTrack API',
+    service: 'Campus API',
+    platform: 'Campus API',
     version: '1.0.0',
   })
 );
@@ -82,8 +82,8 @@ app.get('/api/v1/health', (req, res) =>
   res.json({
     success: true,
     status: 'ok',
-    service: 'SkillTrack API',
-    platform: 'SkillTrack API',
+    service: 'Campus API',
+    platform: 'Campus API',
     version: '1.0.0',
   })
 );

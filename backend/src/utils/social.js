@@ -9,7 +9,7 @@ async function getJson(url, opts) {
   const res = await fetch(url, opts);
   const data = await res.json().catch(() => ({}));
   if (!res.ok || data.error) {
-    console.error('SkillTrack OAuth error:', url, 'HTTP', res.status, JSON.stringify(data));
+    console.error('Campus OAuth error:', url, 'HTTP', res.status, JSON.stringify(data));
     throw new AppError(
       data.error_description || data.message || 'Credencial del proveedor social inválida o vencida',
       401,
@@ -29,7 +29,7 @@ const providers = {
       return {
         id: String(d.sub),
         firstName: d.given_name || parts[0] || 'Estudiante',
-        lastName: d.family_name || parts.slice(1).join(' ') || 'SkillTrack',
+        lastName: d.family_name || parts.slice(1).join(' ') || 'Campus',
         email: d.email_verified === 'true' || d.email_verified === true ? d.email : null,
         emailVerified: d.email_verified === 'true' || d.email_verified === true,
         avatar: d.picture || null,
@@ -76,7 +76,7 @@ const providers = {
     return {
       id: String(d.sub),
       firstName: d.given_name || parts[0] || 'Estudiante',
-      lastName: d.family_name || parts.slice(1).join(' ') || 'SkillTrack',
+      lastName: d.family_name || parts.slice(1).join(' ') || 'Campus',
       email: d.email_verified ? d.email : null,
       emailVerified: !!d.email_verified,
       avatar: d.picture || null,
@@ -91,7 +91,7 @@ const providers = {
     return {
       id: String(d.id),
       firstName: d.first_name || (d.name || 'Estudiante').split(' ')[0],
-      lastName: d.last_name || (d.name || '').split(' ').slice(1).join(' ') || 'SkillTrack',
+      lastName: d.last_name || (d.name || '').split(' ').slice(1).join(' ') || 'Campus',
       email: d.email || null,
       emailVerified: !!d.email,
       avatar: d.picture?.data?.url || null,
@@ -142,7 +142,7 @@ const providers = {
     return {
       id: String(d.id),
       firstName: parts[0] || 'Estudiante',
-      lastName: parts.slice(1).join(' ') || 'SkillTrack',
+      lastName: parts.slice(1).join(' ') || 'Campus',
       email: d.verified && d.email ? d.email.toLowerCase() : null,
       emailVerified: !!(d.verified && d.email),
       avatar: avatarUrl,
@@ -179,7 +179,7 @@ const providers = {
       token = t.access_token;
     }
 
-    const headers = { Authorization: `Bearer ${token}`, 'User-Agent': 'SkillTrack-Server' };
+    const headers = { Authorization: `Bearer ${token}`, 'User-Agent': 'Campus-Server' };
     const u = await getJson('https://api.github.com/user', { headers });
     const emails = await getJson('https://api.github.com/user/emails', { headers }).catch(() => []);
     const verifiedPrimary = Array.isArray(emails)
@@ -194,7 +194,7 @@ const providers = {
     return {
       id: String(u.id),
       firstName: parts[0] || 'Estudiante',
-      lastName: parts.slice(1).join(' ') || 'SkillTrack',
+      lastName: parts.slice(1).join(' ') || 'Campus',
       email: isVerified && emailCandidate ? emailCandidate.toLowerCase() : null,
       emailVerified: isVerified,
       avatar: u.avatar_url || null,

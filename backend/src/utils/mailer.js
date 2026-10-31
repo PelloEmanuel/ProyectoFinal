@@ -63,7 +63,7 @@ exports.isConfigured = () => {
 
 /**
  * Envío vía Resend API (HTTPS por puerto 443 estándar).
- * Si process.env.MAIL_FROM contiene un dominio no verificado (ej: skilltrack.edu),
+ * Si process.env.MAIL_FROM contiene un dominio no verificado (ej: campus.edu o no verificado en Resend),
  * o si Resend rechaza la llamada con 403/422 de validación de dominio,
  * reintenta inmediatamente con 'Campus Técnica 5 <onboarding@resend.dev>'.
  */
@@ -76,7 +76,7 @@ async function sendViaResend({ to, subject, text, html, forceOnboarding = false 
     let fromAddress = 'Campus Técnica 5 <onboarding@resend.dev>';
 
     // Solo usar MAIL_FROM si no se fuerza onboarding y no contiene dominios de prueba/placeholder no verificados en Resend
-    if (!forceOnboarding && rawFrom && !rawFrom.includes('skilltrack.edu') && !rawFrom.includes('example.com')) {
+    if (!forceOnboarding && rawFrom && !rawFrom.includes('campus.edu') && !rawFrom.includes('example.com')) {
       fromAddress = rawFrom;
     }
 

@@ -1,6 +1,6 @@
 /**
  * Archivo: mobile/src/utils/validators.js
- * Descripción: Validaciones compartidas de formularios en el cliente para SkillTrack.
+ * Descripción: Validaciones compartidas de formularios en el cliente para el Campus.
  */
 import { parseDisplayDateToIso } from './dates';
 

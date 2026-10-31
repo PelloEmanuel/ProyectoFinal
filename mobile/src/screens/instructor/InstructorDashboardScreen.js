@@ -1,6 +1,6 @@
 /**
  * Archivo: mobile/src/screens/instructor/InstructorDashboardScreen.js
- * Descripción: Panel de control intuitivo del docente en SkillTrack:
+ * Descripción: Panel de control intuitivo del docente en el Campus:
  * - Horario oficial sincronizado con Buenos Aires, Argentina (UTC-3).
  * - Próximo módulo a dictar (o clase en curso) con cuenta regresiva / horario.
  * - Métricas clave: Cursos asignados, Alumnos a cargo, Tareas pendientes de corregir.

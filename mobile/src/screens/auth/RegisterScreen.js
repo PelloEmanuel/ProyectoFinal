@@ -1,6 +1,6 @@
 /**
  * Archivo: mobile/src/screens/auth/RegisterScreen.js
- * Descripción: Pantalla de registro de SkillTrack.
+ * Descripción: Pantalla de registro del Campus.
  * - El primer usuario registrado en el sistema se convierte automáticamente en Administrador.
  * - A partir del segundo usuario, permite elegir entre ingresar como Alumno (registro común)
  *   o como Docente (requiere introducir la clave de docente definida por el Administrador).
@@ -8,7 +8,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, ErrorBanner, Input, Screen, SkillTrackLogo } from '../../components/ui';
+import { Button, ErrorBanner, Input, Screen, CampusLogo } from '../../components/ui';
 import { authApi } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
@@ -155,9 +155,9 @@ export default function RegisterScreen({ navigation }) {
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']}>
       <View style={{ marginVertical: 10 }}>
-        <SkillTrackLogo size="md" showSubtitle={false} />
+        <CampusLogo size="md" showSubtitle={false} />
         <Text style={{ fontSize: 22, fontWeight: '800', color: colors.text, textAlign: 'center', marginTop: 8 }}>
-          {isFirstUser ? 'Registro del Administrador Inicial' : 'Crear cuenta en SkillTrack'}
+          {isFirstUser ? 'Registro del Administrador Inicial' : 'Crear cuenta en el Campus'}
         </Text>
       </View>
 
@@ -470,7 +470,7 @@ export default function RegisterScreen({ navigation }) {
         />
         <View style={{ flex: 1, marginLeft: 10 }}>
           <Text style={{ color: colors.text, fontSize: 13 }}>
-            Acepto los Términos y Condiciones y la Política de Privacidad de SkillTrack.
+            Acepto los Términos y Condiciones y la Política de Privacidad del Campus.
           </Text>
           {!!errors.acceptTerms && <Text style={{ color: colors.danger, fontSize: 12 }}>{errors.acceptTerms}</Text>}
         </View>

@@ -1,6 +1,6 @@
 /**
  * Archivo: mobile/src/screens/student/StudentHomeScreen.js
- * Descripción: Pantalla principal del Alumno en el Campus Escolar SkillTrack.
+ * Descripción: Pantalla principal del Alumno en el Campus Escolar Técnica 5.
  * - Permite elegir/cambiar en qué Año (1° a 6°) y en qué Curso (1° a 3°) se encuentra.
  * - Una vez elegido, aplica y muestra todas las materias a las que está inscripto en ese curso.
  * - Incluye la vista del Cronograma de Materias con sus horarios (ej. 07:30 a 09:30) y qué profesor dicta cada materia.

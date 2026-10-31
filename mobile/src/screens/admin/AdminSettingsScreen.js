@@ -27,12 +27,12 @@ export default function AdminSettingsScreen({ navigation }) {
   const [settings, setSettings] = useState({
     instructor_registration_key: 'DOCENTE2026',
     preceptor_registration_key: 'PRECEPTOR2026',
-    institution_name: 'SkillTrack Academy',
-    support_email: 'soporte@skilltrack.edu',
+    institution_name: 'Campus Técnica 5',
+    support_email: 'soporte@campus.edu',
     allow_public_registration: 'true',
     require_email_verification: 'false',
     default_passing_score: '70',
-    certificate_issuer_title: 'Dirección Académica SkillTrack',
+    certificate_issuer_title: 'Dirección Académica del Campus',
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -106,7 +106,7 @@ export default function AdminSettingsScreen({ navigation }) {
     >
       <SectionHeader
         title="Panel de Administrador"
-        subtitle="Gestión de clave docente, institución y configuración de SkillTrack"
+        subtitle="Gestión de clave docente, institución y configuración del Campus"
       />
 
       <AlertBanner type="error" message={error} />

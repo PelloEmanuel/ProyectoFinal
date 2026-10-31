@@ -345,7 +345,7 @@ exports.createUser = asyncHandler(async (req, res) => {
   const [ins] = await db.execute(
     `INSERT INTO users (first_name, last_name, email, password_hash, role_id, status, created_by_admin, email_verified_at)
      VALUES (?, ?, ?, ?, ?, 'active', 1, NOW())`,
-    [firstName.trim(), (lastName || 'SkillTrack').trim(), normalizedEmail, hash, roleRows[0].id]
+    [firstName.trim(), (lastName || 'Campus').trim(), normalizedEmail, hash, roleRows[0].id]
   );
 
   await logAudit(req.user.id, 'ADMIN_USER_CREATED', 'user', ins.insertId, { role, email: normalizedEmail });

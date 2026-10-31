@@ -61,7 +61,7 @@ export default function CourseCard({ course, onPress, showProgress = false, show
         <View style={s.metaRow}>
           <Ionicons name="person-outline" size={14} color={colors.muted} />
           <Text style={[s.metaText, { color: colors.muted }]} numberOfLines={1}>
-            {course.instructorName || 'Docente SkillTrack'}
+            {course.instructorName || 'Docente del Campus'}
           </Text>
           {!!course.estimatedDuration && (
             <>
