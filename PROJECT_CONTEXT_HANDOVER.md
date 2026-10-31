@@ -81,12 +81,10 @@
 2. **Despacho desacoplado en segundo plano**:
    - `auth.controller.js` registra el token criptográfico en la BD y despacha el correo en segundo plano (`catch` silencioso con log).
    - La respuesta HTTP al usuario es instantánea (< 1.5s), eliminando de raíz cualquier error de timeout (`ECONNABORTED`).
-3. **Resolución de Cuentas Eliminadas ("Zombie") y Registros Pendientes (`366a1e1`)**:
-   - **Problema previo**: Si un usuario eliminaba su cuenta (`deleteMe`), se hacía un soft-delete (`deleted_at`), pero el índice `UNIQUE` de MySQL retenía el correo. Al intentar registrarse de nuevo, la BD lanzaba `ER_DUP_ENTRY` ("registro ya existe"), pero el usuario no figuraba en el panel admin porque la consulta filtraba `deleted_at IS NULL`.
-   - **Solución implementada**:
-     - Al eliminar una cuenta, se libera inmediatamente su correo renombrándolo como `del_<id>_<timestamp>_<email>`, permitiendo que ese correo pueda volver a registrarse libremente.
-     - Si un usuario se registra con un correo que ya existía pero **nunca completó la verificación en 2 pasos** (`!email_verified_at`), el sistema no lo bloquea: actualiza sus datos, le envía un nuevo código de 6 dígitos por correo y lo lleva directamente a la pantalla de verificación (`VerifyCodeScreen`).
-     - En el panel de Administrador (`UsersScreen.js`), se agregó el filtro y badge para **"Pendientes de 2FA"** (`pending_verification`), permitiendo visualizar a los usuarios que iniciaron el registro pero aún no validaron el código.
+3. **Borrado Total Definitivo de Cuentas y Eliminación de "Username" (`cca345a`)**:
+   - **Borrado Total**: Al eliminar una cuenta (sea el propio usuario desde su perfil o el administrador), se realiza un **HARD DELETE** (`DELETE FROM users WHERE id = ?`), eliminando en cascada todos sus registros dependientes y desvinculando materias (`courses.instructor_id = NULL`). No quedan filas residuales ni registros fantasmas.
+   - **Eliminación del campo "Nombre de usuario"**: Se eliminó conceptualmente y de los formularios (`RegisterScreen.js`, `ProfileScreen.js` y `UsersScreen.js`). La identidad visible del usuario es su **Nombre y Apellido**.
+   - **Repetición libre de Nombre y Apellido**: Se eliminó el índice único `username` de la base de datos (`ALTER TABLE users DROP INDEX username`). Cualquier cantidad de usuarios pueden tener exactamente el mismo nombre y apellido (ej: dos "Juan Pérez"); el único identificador irrepetible es el correo electrónico (`email`).
 4. **Resolución de Entrega de Correos en Render (Resend API HTTPS + Brevo)**:
    - Render bloquea las conexiones salientes por los puertos SMTP (587 STARTTLS y 465 SSL sufren timeout de red).
    - `mailer.js` detecta automáticamente direcciones no verificadas y enruta el remitente de forma segura como `Campus Técnica 5 <onboarding@resend.dev>`.
