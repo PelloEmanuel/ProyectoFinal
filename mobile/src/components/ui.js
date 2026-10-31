@@ -182,6 +182,18 @@ export function Input({ label, error, helperText, secureTextEntry, leftIcon, sty
   const { colors } = useTheme();
   const [hidden, setHidden] = useState(!!secureTextEntry);
 
+  const isWeb = Platform.OS === 'web';
+  const supportsWebkitSecurity =
+    isWeb &&
+    typeof CSS !== 'undefined' &&
+    typeof CSS.supports === 'function' &&
+    CSS.supports('-webkit-text-security', 'disc');
+
+  // En la web (Chrome/Edge/Safari), usar -webkit-text-security sobre input tipo texto enmascara
+  // visualmente la contraseña (●●●●●) sin exponer un <input type="password">, lo cual evita que
+  // el Gestor de Contraseñas de Google intercepte el campo y dispare advertencias de brecha de seguridad.
+  const useWebMask = isWeb && secureTextEntry && supportsWebkitSecurity;
+
   return (
     <View style={{ marginBottom: 14 }}>
       {label && <Text style={[s.label, { color: colors.text }]}>{label}</Text>}
@@ -196,10 +208,11 @@ export function Input({ label, error, helperText, secureTextEntry, leftIcon, sty
         )}
         <TextInput
           placeholderTextColor={colors.muted}
-          secureTextEntry={secureTextEntry ? hidden : false}
-          autoComplete={props.autoComplete || (secureTextEntry ? 'new-password' : undefined)}
+          secureTextEntry={useWebMask ? false : (secureTextEntry ? hidden : false)}
+          autoComplete={props.autoComplete || (secureTextEntry ? 'off' : undefined)}
           autoCorrect={props.autoCorrect ?? false}
           spellCheck={props.spellCheck ?? false}
+          autoCapitalize={props.autoCapitalize || (secureTextEntry ? 'none' : undefined)}
           style={[
             s.input,
             {
@@ -209,6 +222,7 @@ export function Input({ label, error, helperText, secureTextEntry, leftIcon, sty
               paddingLeft: leftIcon ? 38 : 14,
               paddingRight: secureTextEntry ? 44 : 14,
             },
+            useWebMask ? { WebkitTextSecurity: hidden ? 'disc' : 'none' } : null,
             style,
           ]}
           accessibilityLabel={label}
