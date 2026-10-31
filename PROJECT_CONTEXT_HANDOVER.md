@@ -13,7 +13,7 @@
 - **Objetivo**: Plataforma integral académica, campus virtual y gestión escolar para nivel secundario técnico, estructurada en **Años Escolares (1° a 6°)** y **Divisiones/Cursos (1° a 3°)**.
 - **Entorno de Producción Oficial**: [https://campus-58oe.onrender.com](https://campus-58oe.onrender.com)
 - **Repositorio Git**: `https://github.com/PelloEmanuel/ProyectoFinal.git` (rama activa de producción: `main`).
-- **Bundle Web Activo en Producción**: `index-8814c461d87d811d30a463d80f315c6e.js` (Commit `1658971`).
+- **Bundle Web Activo en Producción**: `index-28cce88b42f9994726a45be492bf2664.js` (Commit `16e7f34`).
 
 ---
 
@@ -132,6 +132,15 @@
   2. **Seguridad Backend (403 Forbidden)**: `getAttendanceSheet` y `getCourseStudents` validan que el docente tenga asignada una materia en ese Año y División (`(sy, cd)`). De lo contrario, arroja error 403 `COURSE_NOT_ASSIGNED`.
   3. **Estados vacíos amigables**: Si el docente no tiene materias escolares asignadas, la interfaz muestra `Sin cursos a tu cargo` en lugar de una tabla vacía o un indicador infinito.
   4. **Renombrado Integral a "Docente"**: Se reemplazó cualquier referencia visible de "Instructor", "Instructores" o "Profesor" por "Docente" / "Docentes" en badges de usuario, filtros de listado, modales de creación y edición, notificaciones de entrega de tareas, rúbricas, advertencias de superposición horaria y selector de personal a cargo.
+
+### E. Eliminación Integral de "SkillTrack" y Renombrado a "Campus" (`16e7f34`)
+- **Archivos modificados**:
+  - Frontend: `mobile/src/utils/errors.js`, `mobile/src/screens/auth/LoginScreen.js`, `mobile/src/screens/auth/RegisterScreen.js`, `mobile/src/screens/auth/WelcomeScreen.js`, `mobile/src/screens/auth/VerifyCodeScreen.js`, `mobile/src/screens/ProfileScreen.js`, `mobile/src/screens/admin/AdminSettingsScreen.js`, `mobile/src/screens/admin/UsersScreen.js`, `mobile/src/components/CourseCard.js`, `mobile/src/components/TablonFeed.js`, `mobile/src/components/ui.js` (`CampusLogo`), `mobile/src/hooks/useSocialAuth.js`, `mobile/src/navigation/index.js`, `mobile/app.json`, `mobile/package.json`.
+  - Backend: `backend/src/app.js`, `backend/src/server.js`, `backend/src/controllers/auth.controller.js`, `backend/src/controllers/admin.controller.js`, `backend/src/utils/mailer.js`, `backend/src/utils/social.js`, `backend/src/utils/totp.js`, `backend/src/utils/serializers.js`, `backend/src/config/db.js`, `backend/package.json`, `package.json`, `backend/sql/seed.sql`.
+  - Base de Datos en la nube (TiDB Cloud): Actualizados registros de `platform_settings` (`platform_name` = `'Campus'`, `institution_name` = `'Campus Técnica 5'`, `certificate_issuer_title` = `'Dirección Académica del Campus'`, `support_email` = `'soporte@campus.edu'`) y tabla `roles` (`description` = `'Administrador general del Campus'`).
+- **Comportamiento**:
+  - Errores de conexión indican claramente: *"No se pudo conectar con el servidor del Campus. Verificá tu conexión a internet."*
+  - Toda la interfaz de usuario, títulos, botones de acción, correos salientes y respuestas de salud de la API (`/health` y `/api/v1/health`) se identifican exclusivamente como **Campus** / **Campus Técnica 5**.
 
 ---
 
