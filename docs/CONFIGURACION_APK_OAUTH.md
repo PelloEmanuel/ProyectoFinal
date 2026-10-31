@@ -6,9 +6,9 @@ Esta guía contiene la configuración oficial y los pasos para compilar el **APK
 
 ## 1. Identificadores Oficiales de la Aplicación
 - **Nombre**: `Campus`
-- **Paquete de Android (Package Name)**: `com.skilltrack.app`
-- **Esquema de deep linking**: `skilltrack://`
-- **Huella digital SHA-1 (Keystore Debug/Local)**:
+- **Paquete de Android (Package Name)**: `com.campustecnica5.app`
+- **Esquema de deep linking**: `campus://`
+- **Huella digital SHA-1 (keystore del build EAS)**: obtenerla con `cd mobile; eas credentials -p android` (Keystore > ver huella SHA1). La huella de abajo corresponde solo al keystore de debug local:
   `97:BF:F6:C1:11:91:8A:2F:4B:56:CE:A4:FD:03:85:7D:42:86:B3:DE`
 - **Ubicación del Keystore**: `C:\Users\Pello\.android\debug.keystore`
   - Alias: `androiddebugkey`
@@ -24,19 +24,19 @@ Esta guía contiene la configuración oficial y los pasos para compilar el **APK
 3. Tipo: **Android**.
 4. Completar:
    - Nombre: `Campus Android APK`
-   - Nombre del paquete: `com.skilltrack.app`
+   - Nombre del paquete: `com.campustecnica5.app`
    - Huella digital SHA-1: `97:BF:F6:C1:11:91:8A:2F:4B:56:CE:A4:FD:03:85:7D:42:86:B3:DE`
-5. Guardar el nuevo Client ID de Android en `mobile/.env` como:
+5. Guardar el nuevo Client ID de Android en `mobile/.env` y en `mobile/eas.json` (perfil `preview`, bloque `env`) como:
    `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=tu-id-android.apps.googleusercontent.com`
 
 ### B. Discord Developer Portal
 En [Discord Developer Portal](https://discord.com/developers/applications) > Campus > **OAuth2 > Redirects**, tener registradas:
 - `http://localhost:8081` (Para desarrollo Web)
-- `skilltrack://oauth/discord` (Para la app móvil / APK)
+- `campus://oauth/discord` (Para la app móvil / APK)
 
 ### C. GitHub Developer Settings
 En [GitHub Developer Settings](https://github.com/settings/developers) > Campus:
-- Authorization callback URL: `http://localhost:8081` (Para web) o `skilltrack://oauth/github` (Para APK)
+- Authorization callback URL: `http://localhost:8081` (Para web) o `campus://oauth/github` (Para APK)
 
 ---
 
@@ -55,4 +55,4 @@ El archivo `.apk` instalable se genera en:
 cd mobile
 npx eas build -p android --profile preview
 ```
-Genera un archivo `.apk` directamente descargable e instalable en cualquier teléfono Android.
+Genera un archivo `.apk` directamente descargable (`eas build:view <id> --json` muestra `artifacts.buildUrl`) e instalable en cualquier teléfono Android.
