@@ -718,8 +718,16 @@ exports.listInstructorCourses = asyncHandler(async (req, res) => {
             c.school_year AS schoolYear, c.course_division AS courseDivision,
             c.estimated_duration AS estimatedDuration, c.estimated_duration AS estimatedHours,
             cat.name AS categoryName,
-            (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS studentsCount,
-            (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS enrolledCount,
+            (SELECT COUNT(DISTINCT stu.id) 
+             FROM users stu 
+             LEFT JOIN enrollments e ON e.student_id = stu.id AND e.course_id = c.id
+             WHERE (e.id IS NOT NULL OR (stu.school_year = c.school_year AND stu.course_division = c.course_division))
+               AND stu.role_id = 3 AND stu.deleted_at IS NULL) AS studentsCount,
+            (SELECT COUNT(DISTINCT stu.id) 
+             FROM users stu 
+             LEFT JOIN enrollments e ON e.student_id = stu.id AND e.course_id = c.id
+             WHERE (e.id IS NOT NULL OR (stu.school_year = c.school_year AND stu.course_division = c.course_division))
+               AND stu.role_id = 3 AND stu.deleted_at IS NULL) AS enrolledCount,
             (SELECT COUNT(*) FROM modules m WHERE m.course_id = c.id) AS modulesCount,
             (SELECT COUNT(*) FROM lessons l JOIN modules m ON m.id = l.module_id WHERE m.course_id = c.id) AS lessonsCount,
             (SELECT COUNT(*) FROM assignments a WHERE a.course_id = c.id) AS assignmentsCount,
@@ -771,7 +779,11 @@ exports.instructorDashboard = asyncHandler(async (req, res) => {
             c.school_year AS schoolYear, c.course_division AS courseDivision,
             c.estimated_duration AS estimatedDuration,
             cat.name AS categoryName,
-            (SELECT COUNT(*) FROM enrollments e WHERE e.course_id = c.id) AS studentsCount,
+            (SELECT COUNT(DISTINCT stu.id) 
+             FROM users stu 
+             LEFT JOIN enrollments e ON e.student_id = stu.id AND e.course_id = c.id
+             WHERE (e.id IS NOT NULL OR (stu.school_year = c.school_year AND stu.course_division = c.course_division))
+               AND stu.role_id = 3 AND stu.deleted_at IS NULL) AS studentsCount,
             (SELECT COUNT(*) FROM modules m WHERE m.course_id = c.id) AS modulesCount,
             (SELECT COUNT(*) FROM lessons l JOIN modules m ON m.id = l.module_id WHERE m.course_id = c.id) AS lessonsCount,
             (SELECT COUNT(*) FROM assignments a WHERE a.course_id = c.id) AS assignmentsCount
@@ -829,7 +841,31 @@ exports.instructorDashboard = asyncHandler(async (req, res) => {
 
   const publishedCourses = courses.filter((c) => c.status === 'published').length;
   const draftCourses = courses.filter((c) => c.status === 'draft').length;
-  const totalStudents = courses.reduce((acc, c) => acc + (Number(c.studentsCount) || 0), 0);
+
+  // Cálculo de alumnos únicos a cargo del docente (sin duplicar si cursan varias materias del mismo docente)
+  const studentCountParams = isAdminOrPreceptor ? [] : [instructorId, instructorId];
+  const studentCountSql = isAdminOrPreceptor
+    ? `SELECT COUNT(DISTINCT stu_id) AS totalStudents
+       FROM (
+         SELECT e.student_id AS stu_id FROM enrollments e
+         UNION
+         SELECT u.id AS stu_id FROM users u WHERE u.role_id = 3 AND u.deleted_at IS NULL
+       ) AS assigned_students`
+    : `SELECT COUNT(DISTINCT stu_id) AS totalStudents
+       FROM (
+         SELECT e.student_id AS stu_id
+         FROM enrollments e
+         JOIN courses c ON c.id = e.course_id
+         WHERE c.instructor_id = ?
+         UNION
+         SELECT u.id AS stu_id
+         FROM users u
+         JOIN courses c ON c.school_year = u.school_year AND c.course_division = u.course_division
+         WHERE c.instructor_id = ? AND u.role_id = 3 AND u.deleted_at IS NULL
+       ) AS assigned_students`;
+
+  const [studentCountRows] = await db.execute(studentCountSql, studentCountParams);
+  const totalStudents = Number(studentCountRows[0]?.totalStudents || 0);
 
   const summaryObj = {
     totalCourses: courses.length,
