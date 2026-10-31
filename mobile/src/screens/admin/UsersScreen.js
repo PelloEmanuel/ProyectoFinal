@@ -279,6 +279,7 @@ export default function UsersScreen() {
           {[
             { key: '', label: 'Cualquier estado' },
             { key: 'active', label: 'Activos' },
+            { key: 'pending_verification', label: 'Pendientes 2FA' },
             { key: 'suspended', label: 'Suspendidos' },
           ].map((item) => (
             <Chip
@@ -326,8 +327,20 @@ export default function UsersScreen() {
                           />
                         </View>
                         <Badge
-                          label={u.status === 'active' ? 'Activo' : 'Suspendido'}
-                          tone={u.status === 'active' ? 'success' : 'danger'}
+                          label={
+                            u.status === 'active'
+                              ? 'Activo'
+                              : u.status === 'pending_verification'
+                              ? 'Pendiente 2FA'
+                              : 'Suspendido'
+                          }
+                          tone={
+                            u.status === 'active'
+                              ? 'success'
+                              : u.status === 'pending_verification'
+                              ? 'warning'
+                              : 'danger'
+                          }
                         />
                       </View>
 

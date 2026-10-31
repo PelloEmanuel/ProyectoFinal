@@ -229,7 +229,10 @@ exports.updatePassword = asyncHandler(async (req, res) => {
 });
 
 exports.deleteMe = asyncHandler(async (req, res) => {
-  await db.execute("UPDATE users SET deleted_at = NOW(), status = 'suspended' WHERE id = ?", [req.user.id]);
+  await db.execute(
+    "UPDATE users SET deleted_at = NOW(), status = 'suspended', email = CONCAT('del_', id, '_', UNIX_TIMESTAMP(), '_', email) WHERE id = ?",
+    [req.user.id]
+  );
   await tokens.revokeAllForUser(req.user.id);
   await logAudit(req.user.id, 'ACCOUNT_DELETED_SELF', 'user', req.user.id);
   res.status(204).end();

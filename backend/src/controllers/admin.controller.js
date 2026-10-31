@@ -498,7 +498,10 @@ exports.deleteUser = asyncHandler(async (req, res) => {
       'NOT_CREATED_BY_ADMIN'
     );
   }
-  await db.execute("UPDATE users SET deleted_at = NOW(), status = 'suspended' WHERE id = ?", [target.id]);
+  await db.execute(
+    "UPDATE users SET deleted_at = NOW(), status = 'suspended', email = CONCAT('del_', id, '_', UNIX_TIMESTAMP(), '_', email) WHERE id = ?",
+    [target.id]
+  );
   await tokens.revokeAllForUser(target.id);
   await logAudit(req.user.id, 'USER_DELETED', 'user', target.id, { email: target.email });
   res.status(204).end();

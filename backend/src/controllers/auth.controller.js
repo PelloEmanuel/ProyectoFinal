@@ -108,30 +108,77 @@ exports.register = asyncHandler(async (req, res) => {
   }
 
   const normalizedEmail = String(email).trim().toLowerCase();
-  const existing = await findByEmail(normalizedEmail);
-  if (existing) {
-    // Unificación de cuentas: si el usuario ya se había registrado con Google/GitHub/Facebook (sin contraseña manual aún),
-    // vinculamos esta contraseña a la MISMA cuenta existente para que no sean cuentas distintas.
-    if (!existing.password_hash) {
-      const linkedHash = await bcrypt.hash(password, 10);
-      await db.execute('UPDATE users SET password_hash = ? WHERE id = ?', [linkedHash, existing.id]);
-      if (existing.role_name === 'student' && req.body.schoolYear && req.body.courseDivision) {
-        const sy = Number(req.body.schoolYear);
-        const cd = Number(req.body.courseDivision);
-        if (sy >= 1 && sy <= 6 && cd >= 1 && cd <= 3) {
-          await syncStudentCourseEnrollments(existing.id, sy, cd);
-        }
+
+  // 1. Verificar si existe algún usuario previo con este correo (incluso si fue eliminado o está pendiente)
+  const [anyUsers] = await db.execute('SELECT * FROM users WHERE email = ?', [normalizedEmail]);
+  if (anyUsers.length > 0) {
+    const rawUser = anyUsers[0];
+
+    // Caso A: La cuenta previa fue eliminada (soft deleted). Liberamos el correo para permitir el nuevo registro limpio.
+    if (rawUser.deleted_at !== null) {
+      await db.execute(
+        'UPDATE users SET email = CONCAT("del_", id, "_", UNIX_TIMESTAMP(), "_", email) WHERE id = ?',
+        [rawUser.id]
+      );
+    }
+    // Caso B: La cuenta existe pero NUNCA completó la verificación en 2 pasos por correo
+    else if (!rawUser.email_verified_at && !rawUser.created_by_admin) {
+      let resolvedFirst = (firstName || '').trim();
+      let resolvedLast = (lastName || '').trim();
+      if (!resolvedFirst && name) {
+        const parts = String(name).trim().split(/\s+/);
+        resolvedFirst = parts[0] || 'Usuario';
+        resolvedLast = parts.slice(1).join(' ') || 'SkillTrack';
       }
-      await logAudit(existing.id, 'OAUTH_ACCOUNT_LINKED_PASSWORD', 'user', existing.id, { email: normalizedEmail });
-      const unifiedUser = await findById(existing.id);
-      return res.status(200).json(await buildSessionResponse(unifiedUser, req));
+      if (!resolvedLast) resolvedLast = 'SkillTrack';
+
+      const newHash = await bcrypt.hash(password, 10);
+      await db.execute(
+        `UPDATE users 
+         SET first_name = ?, last_name = ?, password_hash = ?, status = 'pending_verification'
+         WHERE id = ?`,
+        [resolvedFirst, resolvedLast, newHash, rawUser.id]
+      );
+
+      await issueEmailVerificationToken(rawUser.id, rawUser.email);
+      return res.status(202).json({
+        success: true,
+        requiresVerification: true,
+        twoFactorRequired: true,
+        userId: rawUser.id,
+        email: rawUser.email,
+        message: 'Habías iniciado un registro previo. Te enviamos un nuevo código de verificación de 6 dígitos a tu casilla de correo.',
+      });
     }
-    // Si ya tenía contraseña y coincide, iniciar sesión en la misma cuenta
-    if (await bcrypt.compare(password, existing.password_hash)) {
-      const unifiedUser = await findById(existing.id);
-      return res.status(200).json(await buildSessionResponse(unifiedUser, req));
+    // Caso C: Cuenta existente activa
+    else {
+      // Unificación de cuentas: si el usuario ya se había registrado con Google/GitHub/Facebook (sin contraseña manual aún),
+      // vinculamos esta contraseña a la MISMA cuenta existente para que no sean cuentas distintas.
+      if (!rawUser.password_hash) {
+        const linkedHash = await bcrypt.hash(password, 10);
+        await db.execute('UPDATE users SET password_hash = ? WHERE id = ?', [linkedHash, rawUser.id]);
+        if (rawUser.role_name === 'student' && req.body.schoolYear && req.body.courseDivision) {
+          const sy = Number(req.body.schoolYear);
+          const cd = Number(req.body.courseDivision);
+          if (sy >= 1 && sy <= 6 && cd >= 1 && cd <= 3) {
+            await syncStudentCourseEnrollments(rawUser.id, sy, cd);
+          }
+        }
+        await logAudit(rawUser.id, 'OAUTH_ACCOUNT_LINKED_PASSWORD', 'user', rawUser.id, { email: normalizedEmail });
+        const unifiedUser = await findById(rawUser.id);
+        return res.status(200).json(await buildSessionResponse(unifiedUser, req));
+      }
+      // Si ya tenía contraseña y coincide, iniciar sesión en la misma cuenta
+      if (await bcrypt.compare(password, rawUser.password_hash)) {
+        const unifiedUser = await findById(rawUser.id);
+        return res.status(200).json(await buildSessionResponse(unifiedUser, req));
+      }
+      throw new AppError(
+        'Este correo electrónico ya pertenece a una cuenta activa. Iniciá sesión con tu contraseña o con tu cuenta vinculada.',
+        409,
+        'EMAIL_EXISTS'
+      );
     }
-    throw new AppError('El correo electrónico ya se encuentra registrado. Iniciá sesión con tu contraseña o con tu cuenta social vinculada.', 409, 'EMAIL_EXISTS');
   }
 
   // Verificar si es el primer usuario registrado en toda la base de datos
