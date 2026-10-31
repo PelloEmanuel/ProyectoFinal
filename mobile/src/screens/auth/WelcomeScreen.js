@@ -4,8 +4,9 @@
  * Incluye logotipo, propósito, composición visual de aprendizaje, accesos a Login/Registro
  * y consulta de Términos y Política de Privacidad.
  */
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Screen, CampusLogo } from '../../components/ui';
 import { useTheme } from '../../context/ThemeContext';
@@ -13,6 +14,14 @@ import { useTheme } from '../../context/ThemeContext';
 export default function WelcomeScreen({ navigation }) {
   const { colors, isDark, toggleTheme } = useTheme();
   const [legalModal, setLegalModal] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (typeof document !== 'undefined') {
+        document.title = 'Bienvenidos';
+      }
+    }, [])
+  );
 
   return (
     <Screen edges={['top', 'left', 'right', 'bottom']} contentContainerStyle={{ justifyContent: 'center' }}>

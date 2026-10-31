@@ -638,7 +638,7 @@ function AuthStack() {
       <Stack.Screen
         name="Welcome"
         component={WelcomeScreen}
-        options={{ headerShown: false }}
+        options={{ headerShown: false, title: 'Bienvenidos' }}
       />
       <Stack.Screen
         name="Login"
