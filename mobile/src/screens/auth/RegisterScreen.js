@@ -9,7 +9,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, ErrorBanner, Input, Screen, CampusLogo } from '../../components/ui';
-import { authApi } from '../../api/services';
+import { authApi, coursesApi } from '../../api/services';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import useSocialAuth from '../../hooks/useSocialAuth';
@@ -20,6 +20,7 @@ export default function RegisterScreen({ navigation }) {
   const { register, socialLogin } = useAuth();
   const { colors } = useTheme();
   const [isFirstUser, setIsFirstUser] = useState(false);
+  const [availableGroups, setAvailableGroups] = useState([]);
   const [form, setForm] = useState({
     role: 'student', // 'student' (Alumno) | 'preceptor' (Preceptor) | 'instructor' (Docente)
     instructorKey: '',
@@ -41,6 +42,52 @@ export default function RegisterScreen({ navigation }) {
     setForm((f) => ({ ...f, [k]: v }));
     if (errors[k]) {
       setErrors((prev) => ({ ...prev, [k]: undefined }));
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    coursesApi
+      .getAvailableSchoolGroups()
+      .then((groups) => {
+        if (mounted && Array.isArray(groups) && groups.length > 0) {
+          setAvailableGroups(groups);
+          setForm((f) => ({
+            ...f,
+            schoolYear: groups[0].schoolYear,
+            courseDivision: groups[0].courseDivision,
+          }));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const availableYears = React.useMemo(() => {
+    if (!availableGroups || availableGroups.length === 0) return [1, 6, 7];
+    const years = Array.from(new Set(availableGroups.map((g) => Number(g.schoolYear))));
+    return years.sort((a, b) => a - b);
+  }, [availableGroups]);
+
+  const availableDivisionsForYear = React.useMemo(() => {
+    if (!availableGroups || availableGroups.length === 0) return [1, 2, 3];
+    const divs = availableGroups
+      .filter((g) => Number(g.schoolYear) === Number(form.schoolYear))
+      .map((g) => Number(g.courseDivision));
+    const unique = Array.from(new Set(divs)).sort((a, b) => a - b);
+    return unique.length > 0 ? unique : [1];
+  }, [availableGroups, form.schoolYear]);
+
+  const handleSelectSchoolYear = (yr) => {
+    set('schoolYear')(yr);
+    const divsForYr = availableGroups
+      .filter((g) => Number(g.schoolYear) === Number(yr))
+      .map((g) => Number(g.courseDivision))
+      .sort((a, b) => a - b);
+    if (divsForYr.length > 0 && !divsForYr.includes(Number(form.courseDivision))) {
+      set('courseDivision')(divsForYr[0]);
     }
   };
 
@@ -313,15 +360,15 @@ export default function RegisterScreen({ navigation }) {
           }}
         >
           <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 6 }}>
-            Seleccioná tu Año Escolar (1° a 6°) *
+            Seleccioná tu Año Escolar *
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-            {[1, 2, 3, 4, 5, 6].map((yr) => {
-              const selected = form.schoolYear === yr;
+            {availableYears.map((yr) => {
+              const selected = Number(form.schoolYear) === yr;
               return (
                 <Pressable
                   key={yr}
-                  onPress={() => set('schoolYear')(yr)}
+                  onPress={() => handleSelectSchoolYear(yr)}
                   style={{
                     flex: 1,
                     minWidth: 46,
@@ -342,17 +389,18 @@ export default function RegisterScreen({ navigation }) {
           </View>
 
           <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 6 }}>
-            Seleccioná tu Curso / División (1° a 3°) *
+            Seleccioná tu Curso / División para {form.schoolYear}° Año *
           </Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            {[1, 2, 3].map((div) => {
-              const selected = form.courseDivision === div;
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+            {availableDivisionsForYear.map((div) => {
+              const selected = Number(form.courseDivision) === div;
               return (
                 <Pressable
                   key={div}
                   onPress={() => set('courseDivision')(div)}
                   style={{
                     flex: 1,
+                    minWidth: 50,
                     paddingVertical: 9,
                     borderRadius: 10,
                     alignItems: 'center',

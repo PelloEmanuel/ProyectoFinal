@@ -13,6 +13,7 @@ const { authenticate, optionalAuth, authorize } = require('../middlewares/auth')
 const idParam = param('id').isInt().withMessage('ID inválido');
 
 router.get('/', optionalAuth, c.listCourses);
+router.get('/available-school-groups', optionalAuth, c.getAvailableSchoolGroups);
 router.get('/school-group/:schoolYear/:courseDivision', optionalAuth, c.getSchoolGroupSchedule);
 router.get('/:id', idParam, validate, optionalAuth, c.getCourse);
 

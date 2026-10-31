@@ -1234,6 +1234,25 @@ exports.deleteAnnouncement = asyncHandler(async (req, res) => {
 const YEAR_SHORT = { 1: '1ro', 2: '2do', 3: '3ro', 4: '4to', 5: '5to', 6: '6to' };
 const DIV_SHORT = { 1: '1ra', 2: '2da', 3: '3ra' };
 
+exports.getAvailableSchoolGroups = asyncHandler(async (req, res) => {
+  const [groups] = await db.execute(
+    `SELECT sg.id, sg.school_year AS schoolYear, sg.course_division AS courseDivision, sg.status
+     FROM school_groups sg
+     WHERE sg.status = 'open'
+     ORDER BY sg.school_year ASC, sg.course_division ASC`
+  );
+  res.json({
+    success: true,
+    data: groups.map((g) => ({
+      id: g.id,
+      schoolYear: Number(g.schoolYear),
+      courseDivision: Number(g.courseDivision),
+      label: `${g.schoolYear}° ${g.courseDivision}ª`,
+      fullLabel: `${g.schoolYear}° Año - ${g.courseDivision}° Curso`,
+    })),
+  });
+});
+
 exports.getSchoolGroupSchedule = asyncHandler(async (req, res) => {
   const sy = Number(req.params.schoolYear || req.query.schoolYear || 1);
   const cd = Number(req.params.courseDivision || req.query.courseDivision || 1);

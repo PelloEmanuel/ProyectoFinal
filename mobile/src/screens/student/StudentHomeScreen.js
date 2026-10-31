@@ -6,7 +6,7 @@
  * - Incluye la vista del Cronograma de Materias con sus horarios (ej. 07:30 a 09:30) y qué profesor dicta cada materia.
  * - Muestra las actividades, evaluaciones y calificaciones devueltas por los profesores.
  */
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Modal, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,7 +28,8 @@ export default function StudentHomeScreen({ navigation }) {
   const [success, setSuccess] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
-  // Selector de Año (1° a 6°) y Curso (1° a 3°) + Código de acceso
+  // Selector de Año y Curso disponibles + Código de acceso
+  const [availableGroups, setAvailableGroups] = useState([]);
   const [groupModalVisible, setGroupModalVisible] = useState(false);
   const [selectedYear, setSelectedYear] = useState(user?.schoolYear || 1);
   const [selectedDivision, setSelectedDivision] = useState(user?.courseDivision || 1);
@@ -36,15 +37,49 @@ export default function StudentHomeScreen({ navigation }) {
   const [modalError, setModalError] = useState('');
   const [savingGroup, setSavingGroup] = useState(false);
 
+  // Años únicos que realmente existen y están abiertos en la institución
+  const availableYears = useMemo(() => {
+    if (!availableGroups || availableGroups.length === 0) return [];
+    const years = Array.from(new Set(availableGroups.map((g) => Number(g.schoolYear))));
+    return years.sort((a, b) => a - b);
+  }, [availableGroups]);
+
+  // Divisiones que existen específicamente para el año seleccionado
+  const availableDivisionsForYear = useMemo(() => {
+    if (!selectedYear || !availableGroups) return [];
+    const divs = availableGroups
+      .filter((g) => Number(g.schoolYear) === Number(selectedYear))
+      .map((g) => Number(g.courseDivision));
+    return Array.from(new Set(divs)).sort((a, b) => a - b);
+  }, [availableGroups, selectedYear]);
+
+  const handleSelectYear = (yr) => {
+    setSelectedYear(yr);
+    const divsForYr = availableGroups
+      .filter((g) => Number(g.schoolYear) === Number(yr))
+      .map((g) => Number(g.courseDivision))
+      .sort((a, b) => a - b);
+    if (divsForYr.length > 0 && !divsForYr.includes(Number(selectedDivision))) {
+      setSelectedDivision(divsForYr[0]);
+    }
+  };
+
   const load = useCallback(async () => {
     try {
       setError('');
       const res = await usersApi.studentDashboard();
       setData(res);
+      const openGroups = res?.availableSchoolGroups || [];
+      setAvailableGroups(openGroups);
+
       if (res?.schoolGroup?.schoolYear && res?.schoolGroup?.courseDivision) {
         setSelectedYear(res.schoolGroup.schoolYear);
         setSelectedDivision(res.schoolGroup.courseDivision);
       } else {
+        if (openGroups.length > 0) {
+          setSelectedYear(openGroups[0].schoolYear);
+          setSelectedDivision(openGroups[0].courseDivision);
+        }
         setGroupModalVisible(true);
       }
     } catch (e) {
@@ -394,61 +429,72 @@ export default function StudentHomeScreen({ navigation }) {
               Elegí tu Año y Curso Escolar
             </Text>
             <Text style={{ fontSize: 13, color: colors.textSecondary, textAlign: 'center', marginTop: 6, marginBottom: 16 }}>
-              Seleccioná en qué año (1° a 6°) y en qué curso (1° a 3°) te encontrás para aplicar tus materias y horarios:
+              Seleccioná en qué año y en qué división te encontrás para aplicar tus materias y horarios:
             </Text>
 
             <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 8 }}>
-              Año Escolar (1° a 6°):
+              Año Escolar disponible:
             </Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-              {[1, 2, 3, 4, 5, 6].map((yr) => {
-                const active = selectedYear === yr;
-                return (
-                  <Pressable
-                    key={yr}
-                    onPress={() => setSelectedYear(yr)}
-                    style={{
-                      flex: 1,
-                      minWidth: 44,
-                      paddingVertical: 10,
-                      borderRadius: 10,
-                      alignItems: 'center',
-                      backgroundColor: active ? colors.primary : colors.surfaceAlt || colors.background,
-                      borderWidth: 1.5,
-                      borderColor: active ? colors.primary : colors.border,
-                    }}
-                  >
-                    <Text style={{ fontWeight: '800', color: active ? '#ffffff' : colors.text }}>{yr}° Año</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            {availableYears.length === 0 ? (
+              <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 16 }}>
+                No hay cursos escolares abiertos actualmente en la institución.
+              </Text>
+            ) : (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+                {availableYears.map((yr) => {
+                  const active = Number(selectedYear) === yr;
+                  return (
+                    <Pressable
+                      key={yr}
+                      onPress={() => handleSelectYear(yr)}
+                      style={{
+                        flex: 1,
+                        minWidth: 70,
+                        paddingVertical: 10,
+                        borderRadius: 10,
+                        alignItems: 'center',
+                        backgroundColor: active ? colors.primary : colors.surfaceAlt || colors.background,
+                        borderWidth: 1.5,
+                        borderColor: active ? colors.primary : colors.border,
+                      }}
+                    >
+                      <Text style={{ fontWeight: '800', color: active ? '#ffffff' : colors.text }}>{yr}° Año</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            )}
 
-            <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 8 }}>
-              Curso / División (1° a 3°):
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
-              {[1, 2, 3].map((div) => {
-                const active = selectedDivision === div;
-                return (
-                  <Pressable
-                    key={div}
-                    onPress={() => setSelectedDivision(div)}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 12,
-                      borderRadius: 10,
-                      alignItems: 'center',
-                      backgroundColor: active ? colors.primary : colors.surfaceAlt || colors.background,
-                      borderWidth: 1.5,
-                      borderColor: active ? colors.primary : colors.border,
-                    }}
-                  >
-                    <Text style={{ fontWeight: '800', color: active ? '#ffffff' : colors.text }}>{div}° Curso</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            {availableDivisionsForYear.length > 0 && (
+              <>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 8 }}>
+                  Divisiones disponibles para {selectedYear}° Año:
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 }}>
+                  {availableDivisionsForYear.map((div) => {
+                    const active = Number(selectedDivision) === div;
+                    return (
+                      <Pressable
+                        key={div}
+                        onPress={() => setSelectedDivision(div)}
+                        style={{
+                          flex: 1,
+                          minWidth: 70,
+                          paddingVertical: 12,
+                          borderRadius: 10,
+                          alignItems: 'center',
+                          backgroundColor: active ? colors.primary : colors.surfaceAlt || colors.background,
+                          borderWidth: 1.5,
+                          borderColor: active ? colors.primary : colors.border,
+                        }}
+                      >
+                        <Text style={{ fontWeight: '800', color: active ? '#ffffff' : colors.text }}>{div}° Curso</Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </>
+            )}
 
             {/* Contraseña obligatoria del curso */}
             <View style={{ marginBottom: 14 }}>

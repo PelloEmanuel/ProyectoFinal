@@ -363,6 +363,13 @@ exports.studentDashboard = asyncHandler(async (req, res) => {
   const pendingAssignments = upcomingAssignments.filter((a) => !a.attemptStatus || a.attemptStatus === 'in_progress');
   const gradedAssignments = upcomingAssignments.filter((a) => a.attemptStatus === 'graded');
 
+  const [openSchoolGroups] = await db.execute(
+    `SELECT sg.id, sg.school_year AS schoolYear, sg.course_division AS courseDivision, sg.status
+     FROM school_groups sg
+     WHERE sg.status = 'open'
+     ORDER BY sg.school_year ASC, sg.course_division ASC`
+  );
+
   res.json({
     success: true,
     data: {
@@ -374,6 +381,13 @@ exports.studentDashboard = asyncHandler(async (req, res) => {
             ? `${user.school_year}° Año - ${user.course_division}° Curso`
             : null,
       },
+      availableSchoolGroups: openSchoolGroups.map((g) => ({
+        id: g.id,
+        schoolYear: Number(g.schoolYear),
+        courseDivision: Number(g.courseDivision),
+        label: `${g.schoolYear}° ${g.courseDivision}ª`,
+        fullLabel: `${g.schoolYear}° Año - ${g.courseDivision}° Curso`,
+      })),
       summary: {
         inProgressCount: mappedEnrollments.length,
         completedCount: gradedAssignments.length,

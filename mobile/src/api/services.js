@@ -62,6 +62,7 @@ export const coursesApi = {
   getById: (id) => api.get(`/courses/${id}`),
   getSchoolGroupSchedule: (schoolYear, courseDivision) =>
     api.get(`/courses/school-group/${schoolYear}/${courseDivision}`).then(unwrap),
+  getAvailableSchoolGroups: () => api.get('/courses/available-school-groups').then(unwrap),
   create: (body) =>
     api.post('/courses', body).then((r) => ({
       ...unwrap(r),
