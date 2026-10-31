@@ -1,23 +1,37 @@
 {
-  "cli": {
-    "version": ">= 10.0.0",
-    "appVersionSource": "remote"
-  },
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal",
-      "android": {
-        "buildType": "apk"
-      }
-    },
-    "production": {
-      "android": {
-        "buildType": "apk"
-      }
-    }
-  }
+    "cli":  {
+                "version":  "\u003e= 10.0.0",
+                "appVersionSource":  "remote"
+            },
+    "build":  {
+                  "development":  {
+                                      "developmentClient":  true,
+                                      "distribution":  "internal"
+                                  },
+                  "preview":  {
+                                  "distribution":  "internal",
+                                  "android":  {
+                                                  "buildType":  "apk"
+                                              },
+                                  "env":  {
+                                              "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID":  "915967768938-96oivvmgdgv6id86i44ma4mi724njnr5.apps.googleusercontent.com",
+                                              "EXPO_PUBLIC_API_URL":  "https://campus-58oe.onrender.com/api/v1",
+                                              "EXPO_PUBLIC_DISCORD_CLIENT_ID":  "1565140680416952535",
+                                              "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID":  "915967768938-96oivvmgdgv6id86i44ma4mi724njnr5.apps.googleusercontent.com",
+                                              "EXPO_PUBLIC_GITHUB_CLIENT_ID":  "Ov23liadUCpECQvcaMnu"
+                                          }
+                              },
+                  "production":  {
+                                     "android":  {
+                                                     "buildType":  "apk"
+                                                 },
+                                     "env":  {
+                                                 "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID":  "915967768938-96oivvmgdgv6id86i44ma4mi724njnr5.apps.googleusercontent.com",
+                                                 "EXPO_PUBLIC_API_URL":  "https://campus-58oe.onrender.com/api/v1",
+                                                 "EXPO_PUBLIC_DISCORD_CLIENT_ID":  "1565140680416952535",
+                                                 "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID":  "915967768938-96oivvmgdgv6id86i44ma4mi724njnr5.apps.googleusercontent.com",
+                                                 "EXPO_PUBLIC_GITHUB_CLIENT_ID":  "Ov23liadUCpECQvcaMnu"
+                                             }
+                                 }
+              }
 }
