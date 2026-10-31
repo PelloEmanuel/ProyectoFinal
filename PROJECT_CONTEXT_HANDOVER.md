@@ -77,14 +77,18 @@
    - Se eliminaron por completo las propiedades `devVerificationCode` y `devResetCode` del backend y del frontend.
    - Los campos de ingreso de código siempre inician en blanco con `maxLength={6}`.
    - El código de 6 dígitos **nunca** aparece en la pantalla bajo ninguna circunstancia.
-   - El usuario debe obligatoriamente abrir su bandeja de entrada de correo electrónico y tipear el código de forma manual.
+   - El usuario debe obligatoriamente abrir su casilla de correo y tipear el código de forma manual.
 2. **Despacho desacoplado en segundo plano**:
    - `auth.controller.js` registra el token criptográfico en la BD y despacha el correo en segundo plano (`catch` silencioso con log).
    - La respuesta HTTP al usuario es instantánea (< 1.5s), eliminando de raíz cualquier error de timeout (`ECONNABORTED`).
-3. **Compatibilidad con Render (Resend API HTTPS vs SMTP)**:
-   - Render Free Tier bloquea las conexiones salientes por los puertos SMTP 25, 465 y 587.
-   - Por esta razón, el backend cuenta con soporte nativo para **Resend** vía HTTPS (puerto 443 estándar). Con solo configurar `RESEND_API_KEY` en Render, los correos se envían de forma instantánea a cualquier destinatario.
-   - También mantiene soporte para SMTP estándar en caso de migrar a un plan con puertos abiertos.
+3. **Resolución de Entrega de Correos en Render (Resend API HTTPS + Brevo)**:
+   - Render bloquea las conexiones salientes por los puertos SMTP (587 STARTTLS y 465 SSL sufren timeout de red).
+   - **Causa raíz del fallo previo**: Render tenía `MAIL_FROM="Campus Técnica 5" <pelloemanuel@gmail.com>`. Resend rechazaba el envío con error 403 porque las cuentas gratuitas no pueden enviar desde `@gmail.com` como remitente personalizado sin validar DNS.
+   - **Solución implementada (`8b2783e`)**:
+     - `mailer.js` detecta automáticamente direcciones no verificadas y enruta el remitente de forma segura como `Campus Técnica 5 <onboarding@resend.dev>`.
+     - Entrega verificada en vivo con éxito a `pelloemanuel@gmail.com` (IDs de entrega: `01a1922e-fe45-7350-9846-a0130cf8b7d4` y `01a1922f-166c-74f3-a6f9-7f4b4201e3f5`).
+     - Soporte multinivel encadenado: Resend API HTTPS -> Brevo API HTTPS (`BREVO_API_KEY`) -> Nodemailer SMTP.
+     - Endpoint de diagnóstico en tiempo real: `GET /api/v1/auth/mail-diagnostic?to=correo@ejemplo.com`.
 
 ---
 
