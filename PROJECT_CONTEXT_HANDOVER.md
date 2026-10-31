@@ -81,14 +81,18 @@
 2. **Despacho desacoplado en segundo plano**:
    - `auth.controller.js` registra el token criptográfico en la BD y despacha el correo en segundo plano (`catch` silencioso con log).
    - La respuesta HTTP al usuario es instantánea (< 1.5s), eliminando de raíz cualquier error de timeout (`ECONNABORTED`).
-3. **Resolución de Entrega de Correos en Render (Resend API HTTPS + Brevo)**:
+3. **Resolución de Cuentas Eliminadas ("Zombie") y Registros Pendientes (`366a1e1`)**:
+   - **Problema previo**: Si un usuario eliminaba su cuenta (`deleteMe`), se hacía un soft-delete (`deleted_at`), pero el índice `UNIQUE` de MySQL retenía el correo. Al intentar registrarse de nuevo, la BD lanzaba `ER_DUP_ENTRY` ("registro ya existe"), pero el usuario no figuraba en el panel admin porque la consulta filtraba `deleted_at IS NULL`.
+   - **Solución implementada**:
+     - Al eliminar una cuenta, se libera inmediatamente su correo renombrándolo como `del_<id>_<timestamp>_<email>`, permitiendo que ese correo pueda volver a registrarse libremente.
+     - Si un usuario se registra con un correo que ya existía pero **nunca completó la verificación en 2 pasos** (`!email_verified_at`), el sistema no lo bloquea: actualiza sus datos, le envía un nuevo código de 6 dígitos por correo y lo lleva directamente a la pantalla de verificación (`VerifyCodeScreen`).
+     - En el panel de Administrador (`UsersScreen.js`), se agregó el filtro y badge para **"Pendientes de 2FA"** (`pending_verification`), permitiendo visualizar a los usuarios que iniciaron el registro pero aún no validaron el código.
+4. **Resolución de Entrega de Correos en Render (Resend API HTTPS + Brevo)**:
    - Render bloquea las conexiones salientes por los puertos SMTP (587 STARTTLS y 465 SSL sufren timeout de red).
-   - **Causa raíz del fallo previo**: Render tenía `MAIL_FROM="Campus Técnica 5" <pelloemanuel@gmail.com>`. Resend rechazaba el envío con error 403 porque las cuentas gratuitas no pueden enviar desde `@gmail.com` como remitente personalizado sin validar DNS.
-   - **Solución implementada (`8b2783e`)**:
-     - `mailer.js` detecta automáticamente direcciones no verificadas y enruta el remitente de forma segura como `Campus Técnica 5 <onboarding@resend.dev>`.
-     - Entrega verificada en vivo con éxito a `pelloemanuel@gmail.com` (IDs de entrega: `01a1922e-fe45-7350-9846-a0130cf8b7d4` y `01a1922f-166c-74f3-a6f9-7f4b4201e3f5`).
-     - Soporte multinivel encadenado: Resend API HTTPS -> Brevo API HTTPS (`BREVO_API_KEY`) -> Nodemailer SMTP.
-     - Endpoint de diagnóstico en tiempo real: `GET /api/v1/auth/mail-diagnostic?to=correo@ejemplo.com`.
+   - `mailer.js` detecta automáticamente direcciones no verificadas y enruta el remitente de forma segura como `Campus Técnica 5 <onboarding@resend.dev>`.
+   - Entrega verificada en vivo con éxito a `pelloemanuel@gmail.com` (IDs de entrega: `01a1922e-fe45-7350-9846-a0130cf8b7d4` y `01a1922f-166c-74f3-a6f9-7f4b4201e3f5`).
+   - Soporte multinivel encadenado: Resend API HTTPS -> Brevo API HTTPS (`BREVO_API_KEY`) -> Nodemailer SMTP.
+   - Endpoint de diagnóstico en tiempo real: `GET /api/v1/auth/mail-diagnostic?to=correo@ejemplo.com`.
 
 ---
 
