@@ -279,7 +279,6 @@ export default function UsersScreen() {
           {[
             { key: '', label: 'Cualquier estado' },
             { key: 'active', label: 'Activos' },
-            { key: 'pending_verification', label: 'Pendientes 2FA' },
             { key: 'suspended', label: 'Suspendidos' },
           ].map((item) => (
             <Chip
