@@ -13,7 +13,7 @@
 - **Objetivo**: Plataforma integral académica, campus virtual y gestión escolar para nivel secundario técnico, estructurada en **Años Escolares (1° a 6°)** y **Divisiones/Cursos (1° a 3°)**.
 - **Entorno de Producción Oficial**: [https://campus-58oe.onrender.com](https://campus-58oe.onrender.com)
 - **Repositorio Git**: `https://github.com/PelloEmanuel/ProyectoFinal.git` (rama activa de producción: `main`).
-- **Bundle Web Activo en Producción**: `index-28cce88b42f9994726a45be492bf2664.js` (Commit `16e7f34`).
+- **Bundle Web Activo en Producción**: `index-28cce88b42f9994726a45be492bf2664.js` (Commits `16e7f34` y `b9cb585`).
 
 ---
 
@@ -141,6 +141,11 @@
 - **Comportamiento**:
   - Errores de conexión indican claramente: *"No se pudo conectar con el servidor del Campus. Verificá tu conexión a internet."*
   - Toda la interfaz de usuario, títulos, botones de acción, correos salientes y respuestas de salud de la API (`/health` y `/api/v1/health`) se identifican exclusivamente como **Campus** / **Campus Técnica 5**.
+
+### F. Panel de Docente: Conteo Real de Estudiantes a Cargo (`b9cb585`)
+- **Archivos modificados**: `backend/src/controllers/assignments.controller.js`.
+- **Problema previo**: En el panel principal del docente, la tarjeta de métricas "Estudiantes" sumaba las inscripciones de cada materia individualmente mediante `courses.reduce(...)`, inflando el valor con duplicados si los mismos alumnos tenían varias materias con el mismo docente (ej: mostraba 7 cuando el docente solo tenía 3 alumnos).
+- **Solución implementada**: Se reemplazó el conteo por una consulta SQL unificada con `COUNT(DISTINCT stu_id)` que cuenta exclusivamente a los alumnos únicos matriculados en las materias o en los cursos escolares a cargo del docente (`c.instructor_id = req.user.id`). Si el docente no tiene materias asignadas, muestra con precisión `0`.
 
 ---
 
