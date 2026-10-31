@@ -1069,7 +1069,7 @@ export default function AdminCoursesScreen({ route }) {
                                     fontWeight: '700',
                                   }}
                                 >
-                                  Profesor: {hasTeacher ? course.instructorName : 'Vacante'}
+                                  Docente: {hasTeacher ? course.instructorName : 'Vacante'}
                                 </Text>
                               </View>
 
@@ -1186,7 +1186,7 @@ export default function AdminCoursesScreen({ route }) {
                                   color: hasTeacher ? colors.textSecondary : colors.warning,
                                 }}
                               >
-                                Profesor/a: {hasTeacher ? blk.instructorName : 'Sin profesor a cargo (Vacante)'}
+                                Docente: {hasTeacher ? blk.instructorName : 'Sin docente a cargo (Vacante)'}
                               </Text>
                             </Card>
                           );
@@ -1569,9 +1569,9 @@ export default function AdminCoursesScreen({ route }) {
                 style={{ marginBottom: 14 }}
               />
 
-              {/* PASO 3: Profesor a cargo */}
+              {/* PASO 3: Docente a cargo */}
               <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 6 }}>
-                3. Profesor a cargo de la materia:
+                3. Docente a cargo de la materia:
               </Text>
               <View style={{ gap: 6, marginBottom: 16 }}>
                 <Pressable
@@ -1589,7 +1589,7 @@ export default function AdminCoursesScreen({ route }) {
                   }}
                 >
                   <Text style={{ fontWeight: '800', color: colors.text, fontSize: 13 }}>
-                    Sin profesor a cargo (Dejar vacante por ahora)
+                    Sin docente a cargo (Dejar vacante por ahora)
                   </Text>
                   {selectedInstructorId === null && (
                     <Ionicons name="checkmark-circle" size={18} color={colors.primary} />
@@ -1615,7 +1615,7 @@ export default function AdminCoursesScreen({ route }) {
                     >
                       <View>
                         <Text style={{ fontWeight: '800', color: colors.text, fontSize: 13 }}>
-                          Prof. {inst.name}
+                          Docente: {inst.name}
                         </Text>
                         <Text style={{ color: colors.textSecondary, fontSize: 11 }}>{inst.email}</Text>
                       </View>

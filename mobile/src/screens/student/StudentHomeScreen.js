@@ -368,7 +368,7 @@ export default function StudentHomeScreen({ navigation }) {
                               color: hasTeacher ? colors.textSecondary : colors.warning,
                             }}
                           >
-                            Profesor/a: {hasTeacher ? blk.instructorName : 'Sin profesor asignado (Vacante)'}
+                            Docente: {hasTeacher ? blk.instructorName : 'Sin docente asignado (Vacante)'}
                           </Text>
                         </View>
                       </Pressable>

@@ -154,6 +154,10 @@ export default function AttendanceScreen({ route, navigation }) {
           const match = groups.find((g) => g.schoolYear === sy && g.courseDivision === cd) || groups[0];
           return match;
         });
+      } else {
+        setSelectedGroup(null);
+        setSheetData(null);
+        setLoading(false);
       }
     } catch (err) {
       setError(extractErrorMessage(err));
@@ -391,7 +395,9 @@ export default function AttendanceScreen({ route, navigation }) {
         </Text>
         {openCourses.length === 0 ? (
           <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-            No hay cursos abiertos actualmente en el sistema.
+            {user?.role === 'instructor'
+              ? 'No tenés cursos escolares asignados a tu cargo actualmente.'
+              : 'No hay cursos abiertos actualmente en el sistema.'}
           </Text>
         ) : (
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -481,6 +487,14 @@ export default function AttendanceScreen({ route, navigation }) {
       {/* 3. Cuadrícula de Asistencia */}
       {loading ? (
         <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
+      ) : openCourses.length === 0 ? (
+        <EmptyState
+          icon="school-outline"
+          title={user?.role === 'instructor' ? "Sin cursos a tu cargo" : "No hay cursos abiertos"}
+          message={user?.role === 'instructor'
+            ? "Actualmente no tenés materias escolares a tu cargo para visualizar asistencias."
+            : "No hay cursos escolares abiertos actualmente en el sistema."}
+        />
       ) : !sheetData || sheetData.students.length === 0 ? (
         <EmptyState
           icon="people-outline"

@@ -1439,7 +1439,7 @@ export default function TablonFeed({
                                     {comm.userName}
                                   </Text>
                                   <Badge
-                                    text={comm.role === 'instructor' || comm.role === 'admin' ? 'Profesor' : 'Alumno'}
+                                    text={comm.role === 'instructor' || comm.role === 'admin' ? 'Docente' : 'Alumno'}
                                     color={comm.role === 'instructor' || comm.role === 'admin' ? colors.primary : colors.secondary}
                                     small
                                   />
@@ -1530,7 +1530,7 @@ export default function TablonFeed({
                                     {comm.userName}
                                   </Text>
                                   <Badge
-                                    text={comm.role === 'instructor' || comm.role === 'admin' ? 'Profesor' : 'Alumno'}
+                                    text={comm.role === 'instructor' || comm.role === 'admin' ? 'Docente' : 'Alumno'}
                                     color={comm.role === 'instructor' || comm.role === 'admin' ? colors.primary : colors.secondary}
                                     small
                                   />

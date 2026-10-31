@@ -188,7 +188,7 @@ async function validateScheduleBlock({
     if (profConflicts.length > 0) {
       const p = profConflicts[0];
       throw new AppError(
-        `Superposición de profesor: ${p.instructorName} ya dicta "${p.courseTitle}" en ${p.school_year}° Año - ${p.course_division}° Curso el ${dayOfWeek} de ${p.start_time} a ${p.end_time}. Un mismo profesor no puede estar en dos cursos en el mismo horario.`,
+        `Superposición de docente: ${p.instructorName} ya dicta "${p.courseTitle}" en ${p.school_year}° Año - ${p.course_division}° Curso el ${dayOfWeek} de ${p.start_time} a ${p.end_time}. Un mismo docente no puede estar en dos cursos en el mismo horario.`,
         409,
         'PROFESSOR_SCHEDULE_CONFLICT'
       );

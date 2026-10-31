@@ -123,7 +123,7 @@ export default function AssignmentsScreen({ navigation }) {
                   </View>
                   {!!item.latestFeedback && (
                     <Text style={{ color: colors.text, fontSize: 12, marginTop: 4 }}>
-                      Devolución del instructor: "{item.latestFeedback}"
+                      Devolución del docente: "{item.latestFeedback}"
                     </Text>
                   )}
                 </View>
@@ -131,7 +131,7 @@ export default function AssignmentsScreen({ navigation }) {
 
               {item.deliveryState === 'submitted' && (
                 <Text style={{ fontSize: 12, color: colors.secondary, fontWeight: '600', marginTop: 8 }}>
-                  Entregada • Pendiente de revisión y calificación del instructor
+                  Entregada • Pendiente de revisión y calificación del docente
                 </Text>
               )}
             </Pressable>

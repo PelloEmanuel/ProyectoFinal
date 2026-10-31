@@ -78,7 +78,7 @@ export default function WelcomeScreen({ navigation }) {
           Impulsá tu formación académica en un entorno conectado
         </Text>
         <Text style={{ color: colors.mode === 'light' ? colors.textSecondary : '#cbd5e1', fontSize: 13, textAlign: 'center', marginTop: 8, lineHeight: 19 }}>
-          Estudiá mediante lecciones estructuradas, entregá actividades, recibí devoluciones de tus instructores y seguí tu evolución en tiempo real.
+          Estudiá mediante lecciones estructuradas, entregá actividades, recibí devoluciones de tus docentes y seguí tu evolución en tiempo real.
         </Text>
       </View>
 
@@ -101,7 +101,7 @@ export default function WelcomeScreen({ navigation }) {
               <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 20 }}>
                 1. Propósito Académico: SkillTrack protege tus datos personales, progreso de aprendizaje, entregas y calificaciones bajo controles de acceso estrictos por rol.{'\n\n'}
                 2. Seguridad de Credenciales: Las contraseñas se almacenan con hash criptográfico (bcrypt) y las sesiones utilizan tokens JWT con rotación segura en Android Keystore.{'\n\n'}
-                3. Privacidad por Rol: Tus entregas y calificaciones solo pueden ser consultadas por vos y por el instructor responsable del curso.{'\n\n'}
+                3. Privacidad por Rol: Tus entregas y calificaciones solo pueden ser consultadas por vos y por el docente responsable del curso.{'\n\n'}
                 4. Eliminación de Cuenta: Podés solicitar la baja de tu cuenta y revocar tus sesiones activas desde la pantalla de Perfil en cualquier momento.
               </Text>
             </ScrollView>

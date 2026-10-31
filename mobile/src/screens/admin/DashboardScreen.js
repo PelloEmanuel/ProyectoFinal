@@ -364,7 +364,7 @@ export default function DashboardScreen({ navigation }) {
               r.role === 'admin'
                 ? 'Administradores'
                 : r.role === 'instructor'
-                ? 'Instructores / Docentes'
+                ? 'Docentes'
                 : r.role === 'preceptor'
                 ? 'Preceptores'
                 : 'Estudiantes';

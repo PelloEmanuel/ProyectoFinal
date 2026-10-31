@@ -697,7 +697,7 @@ exports.submitAttempt = asyncHandler(async (req, res) => {
     message:
       result.status === 'graded'
         ? `Evaluación completada. Puntaje: ${result.score}/${result.maxScore}`
-        : 'Entrega enviada correctamente. El instructor recibirá una notificación para evaluarla.',
+        : 'Entrega enviada correctamente. El docente recibirá una notificación para evaluarla.',
     data: { id: att.id, attemptId: att.id, ...result },
   });
 });

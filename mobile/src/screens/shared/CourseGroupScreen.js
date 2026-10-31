@@ -306,7 +306,7 @@ export default function CourseGroupScreen({ route, navigation }) {
                       marginTop: 4,
                     }}
                   >
-                    Profesor/a: {hasTeacher ? course.instructorName : 'Sin profesor asignado (Vacante)'}
+                    Docente: {hasTeacher ? course.instructorName : 'Sin docente asignado (Vacante)'}
                   </Text>
                   {(course.schedules || []).length > 0 && (
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>

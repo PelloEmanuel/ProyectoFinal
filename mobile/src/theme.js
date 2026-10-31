@@ -95,8 +95,9 @@ export const radius = {
 
 export const ROLE_LABEL = {
   admin: 'Administrador',
-  instructor: 'Instructor',
+  instructor: 'Docente',
   student: 'Estudiante',
+  preceptor: 'Preceptor/a',
 };
 
 export const LEVEL_LABELS = {

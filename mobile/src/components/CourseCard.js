@@ -1,7 +1,7 @@
 /**
  * Archivo: mobile/src/components/CourseCard.js
  * Descripción: Tarjeta reutilizable de curso para el catálogo, recomendaciones,
- * "Mi aprendizaje" y paneles de Instructor y Administrador.
+ * "Mi aprendizaje" y paneles de Docente y Administrador.
  */
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -61,7 +61,7 @@ export default function CourseCard({ course, onPress, showProgress = false, show
         <View style={s.metaRow}>
           <Ionicons name="person-outline" size={14} color={colors.muted} />
           <Text style={[s.metaText, { color: colors.muted }]} numberOfLines={1}>
-            {course.instructorName || 'Instructor SkillTrack'}
+            {course.instructorName || 'Docente SkillTrack'}
           </Text>
           {!!course.estimatedDuration && (
             <>

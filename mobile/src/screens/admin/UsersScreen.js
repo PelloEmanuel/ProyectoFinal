@@ -221,7 +221,7 @@ export default function UsersScreen() {
   const getRoleBadge = (role) => {
     if (role === 'admin') return { label: 'Administrador', tone: 'danger' };
     if (role === 'preceptor') return { label: 'Preceptor/a', tone: 'warning' };
-    if (role === 'instructor') return { label: 'Instructor / Docente', tone: 'primary' };
+    if (role === 'instructor') return { label: 'Docente', tone: 'primary' };
     return { label: 'Estudiante', tone: 'info' };
   };
 
@@ -261,7 +261,7 @@ export default function UsersScreen() {
               { key: '', label: 'Todos los roles' },
               { key: 'student', label: 'Estudiantes' },
               { key: 'preceptor', label: 'Preceptores' },
-              { key: 'instructor', label: 'Instructores' },
+              { key: 'instructor', label: 'Docentes' },
               { key: 'admin', label: 'Administradores' },
             ].map((item) => (
               <Chip
@@ -452,7 +452,7 @@ export default function UsersScreen() {
                 {[
                   { key: 'student', label: 'Estudiante' },
                   { key: 'preceptor', label: 'Preceptor/a' },
-                  { key: 'instructor', label: 'Instructor' },
+                  { key: 'instructor', label: 'Docente' },
                   { key: 'admin', label: 'Administrador' },
                 ].map((r) => (
                   <Chip
@@ -557,7 +557,7 @@ export default function UsersScreen() {
                 {[
                   { key: 'student', label: 'Estudiante' },
                   { key: 'preceptor', label: 'Preceptor/a' },
-                  { key: 'instructor', label: 'Docente / Instructor' },
+                  { key: 'instructor', label: 'Docente' },
                   { key: 'admin', label: 'Administrador' },
                 ].map((r) => (
                   <Chip

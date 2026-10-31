@@ -259,7 +259,7 @@ export default function SchoolScheduleGrid({
                   }}
                   numberOfLines={2}
                 >
-                  {hasTeacher ? `Prof. ${entry.instructorName}` : 'Sin profesor (Vacante)'}
+                  {hasTeacher ? `Docente: ${entry.instructorName}` : 'Sin docente (Vacante)'}
                 </Text>
                 {editable && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>

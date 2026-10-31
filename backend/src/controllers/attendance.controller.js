@@ -20,16 +20,28 @@ const MONTH_NAMES = [
 
 /**
  * Retorna todos los cursos escolares abiertos con la cantidad de alumnos matriculados.
+ * Si el usuario autenticado es un docente (role === 'instructor' o roleId === 2),
+ * solo retorna los cursos escolares donde tiene materias asignadas a su cargo.
  */
-exports.listOpenCourses = asyncHandler(async (_req, res) => {
-  const [groups] = await db.execute(`
+exports.listOpenCourses = asyncHandler(async (req, res) => {
+  const isInstructor = req.user && (req.user.role === 'instructor' || req.user.roleId === 2);
+  let sql = `
     SELECT sg.id, sg.school_year AS schoolYear, sg.course_division AS courseDivision, sg.status,
            (SELECT COUNT(*) FROM users u WHERE u.school_year = sg.school_year AND u.course_division = sg.course_division AND u.role_id = 3 AND u.deleted_at IS NULL) AS studentsCount,
            (SELECT COUNT(*) FROM courses c WHERE c.school_year = sg.school_year AND c.course_division = sg.course_division) AS subjectsCount
     FROM school_groups sg
     WHERE sg.status = 'open'
-    ORDER BY sg.school_year ASC, sg.course_division ASC
-  `);
+  `;
+  const params = [];
+
+  if (isInstructor) {
+    sql += ` AND EXISTS (SELECT 1 FROM courses c WHERE c.school_year = sg.school_year AND c.course_division = sg.course_division AND c.instructor_id = ?)`;
+    params.push(req.user.id);
+  }
+
+  sql += ` ORDER BY sg.school_year ASC, sg.course_division ASC`;
+
+  const [groups] = await db.execute(sql, params);
 
   res.json({
     success: true,
@@ -43,6 +55,7 @@ exports.listOpenCourses = asyncHandler(async (_req, res) => {
 
 /**
  * Retorna la nómina alfabética de alumnos de un curso escolar.
+ * Si el usuario autenticado es docente, solo puede consultar alumnos de cursos a su cargo.
  */
 exports.getCourseStudents = asyncHandler(async (req, res) => {
   const sy = parseInt(req.query.schoolYear || req.params.schoolYear, 10);
@@ -50,6 +63,17 @@ exports.getCourseStudents = asyncHandler(async (req, res) => {
 
   if (!sy || !cd) {
     throw new AppError('Año y división escolar requeridos', 422);
+  }
+
+  const isInstructor = req.user && (req.user.role === 'instructor' || req.user.roleId === 2);
+  if (isInstructor) {
+    const [assigned] = await db.execute(
+      'SELECT id FROM courses WHERE instructor_id = ? AND school_year = ? AND course_division = ? LIMIT 1',
+      [req.user.id, sy, cd]
+    );
+    if (assigned.length === 0) {
+      throw new AppError('Solo podés consultar la nómina de los cursos escolares a tu cargo.', 403, 'COURSE_NOT_ASSIGNED');
+    }
   }
 
   const [students] = await db.execute(`
@@ -74,6 +98,7 @@ exports.getCourseStudents = asyncHandler(async (req, res) => {
 
 /**
  * Retorna la planilla mensual de asistencia con calendario Lun-Vie y nómina alfabética.
+ * Si el usuario autenticado es docente, solo puede consultar la asistencia de cursos a su cargo.
  */
 exports.getAttendanceSheet = asyncHandler(async (req, res) => {
   const sy = parseInt(req.query.schoolYear, 10) || 1;
@@ -84,6 +109,17 @@ exports.getAttendanceSheet = asyncHandler(async (req, res) => {
 
   if (month < 1 || month > 12) {
     throw new AppError('El mes debe estar entre 1 (Enero) y 12 (Diciembre).', 422);
+  }
+
+  const isInstructor = req.user && (req.user.role === 'instructor' || req.user.roleId === 2);
+  if (isInstructor) {
+    const [assigned] = await db.execute(
+      'SELECT id FROM courses WHERE instructor_id = ? AND school_year = ? AND course_division = ? LIMIT 1',
+      [req.user.id, sy, cd]
+    );
+    if (assigned.length === 0) {
+      throw new AppError('Solo podés consultar la asistencia de los cursos escolares a tu cargo.', 403, 'COURSE_NOT_ASSIGNED');
+    }
   }
 
   // 1. Calcular días del mes (concordancia exacta con el calendario escolar: Lunes a Viernes únicamente)

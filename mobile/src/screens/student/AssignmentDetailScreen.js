@@ -184,7 +184,7 @@ export default function AssignmentDetailScreen({ route }) {
           {/* Rúbrica o criterios de evaluación si existen */}
           {assignment.rubric && (
             <>
-              <SectionHeader title={assignment.rubric.title} subtitle="Criterios de evaluación del instructor" />
+              <SectionHeader title={assignment.rubric.title} subtitle="Criterios de evaluación del docente" />
               <View style={{ backgroundColor: colors.card, borderRadius: 14, padding: 14, borderWidth: 1, borderColor: colors.border }}>
                 {assignment.rubric.criteria?.map((c) => (
                   <View key={c.id} style={{ marginBottom: 10 }}>
@@ -352,7 +352,7 @@ export default function AssignmentDetailScreen({ route }) {
                   )}
                   {!!att.feedback && (
                     <View style={{ marginTop: 8, padding: 10, borderRadius: 10, backgroundColor: colors.surfaceAlt }}>
-                      <Text style={{ fontWeight: '700', color: colors.text, fontSize: 12 }}>Devolución del instructor:</Text>
+                      <Text style={{ fontWeight: '700', color: colors.text, fontSize: 12 }}>Devolución del docente:</Text>
                       <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>{att.feedback}</Text>
                     </View>
                   )}

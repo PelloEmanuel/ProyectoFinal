@@ -133,7 +133,7 @@ export default function AdminReportsScreen() {
             </View>
             <Text style={[styles.title, { color: colors.text }]}>{row.courseTitle}</Text>
             <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-              Instructor: {row.instructorName}
+              Docente: {row.instructorName}
             </Text>
           </Card>
         ))
