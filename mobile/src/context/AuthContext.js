@@ -52,6 +52,22 @@ export function AuthProvider({ children }) {
   const signOutLocal = useCallback(async () => {
     setSessionTokens({});
     await clearSession();
+    if (typeof window !== 'undefined') {
+      try {
+        const removeKeys = [];
+        for (let i = 0; i < (window.sessionStorage?.length || 0); i++) {
+          const k = window.sessionStorage.key(i);
+          if (k && k.startsWith('CAMPUS_NAV_STATE')) removeKeys.push(k);
+        }
+        removeKeys.forEach((k) => window.sessionStorage?.removeItem(k));
+        const removeLocalKeys = [];
+        for (let i = 0; i < (window.localStorage?.length || 0); i++) {
+          const k = window.localStorage.key(i);
+          if (k && k.startsWith('CAMPUS_NAV_STATE')) removeLocalKeys.push(k);
+        }
+        removeLocalKeys.forEach((k) => window.localStorage?.removeItem(k));
+      } catch (e) {}
+    }
     dispatch({ type: 'SIGN_OUT' });
   }, []);
 

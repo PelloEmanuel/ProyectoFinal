@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
@@ -54,6 +54,67 @@ import AttendanceScreen from '../screens/shared/AttendanceScreen';
 // Shared Profile & Security Screen + Course Group Grid Screen
 import ProfileScreen from '../screens/ProfileScreen';
 import CourseGroupScreen from '../screens/shared/CourseGroupScreen';
+
+const NAV_STATE_KEY_PREFIX = 'CAMPUS_NAV_STATE_';
+
+const VALID_STACK_ROUTES = [
+  'MainTabs',
+  'Attendance',
+  'CourseGroup',
+  'CourseDetail',
+  'LessonViewer',
+  'AssignmentDetail',
+  'StudentExtras',
+  'Profile',
+];
+
+const ROLE_TAB_NAMES = {
+  student: ['StudentHome', 'MyLearning', 'Profile'],
+  instructor: ['InstructorDashboard', 'InstructorCourses', 'InstructorStudents', 'InstructorAttendance', 'Profile'],
+  preceptor: ['PreceptorHome', 'PreceptorAttendance', 'PreceptorStudents', 'Profile'],
+  admin: ['AdminDashboard', 'AdminCourses', 'Users', 'AdminReports', 'AdminSettings', 'AdminAttendance', 'Profile'],
+};
+
+function getSavedNavigationState(user) {
+  if (!user || typeof window === 'undefined') return undefined;
+  const key = `${NAV_STATE_KEY_PREFIX}${user.id}_${user.role}`;
+  try {
+    const raw = window.sessionStorage?.getItem(key) || window.localStorage?.getItem(key);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.routes) && parsed.routes.length > 0) {
+      // Validar que todas las rutas del stack correspondan a pantallas válidas de la sesión
+      const allValid = parsed.routes.every((r) => r && VALID_STACK_ROUTES.includes(r.name));
+      if (!allValid) return undefined;
+
+      // Si la primera ruta es MainTabs y tiene estado anidado, validar que las tabs correspondan al rol del usuario
+      const mainTabRoute = parsed.routes.find((r) => r.name === 'MainTabs');
+      if (mainTabRoute?.state?.routes) {
+        const allowedTabs = ROLE_TAB_NAMES[user.role] || [];
+        const activeTabIdx = mainTabRoute.state.index ?? 0;
+        const activeTab = mainTabRoute.state.routes[activeTabIdx];
+        if (activeTab && !allowedTabs.includes(activeTab.name)) {
+          return undefined;
+        }
+      }
+
+      return parsed;
+    }
+  } catch (e) {
+    console.warn('[Campus Nav] Error leyendo estado guardado:', e);
+  }
+  return undefined;
+}
+
+function saveNavigationState(user, state) {
+  if (!user || !state || typeof window === 'undefined') return;
+  const key = `${NAV_STATE_KEY_PREFIX}${user.id}_${user.role}`;
+  try {
+    const serialized = JSON.stringify(state);
+    window.sessionStorage?.setItem(key, serialized);
+    window.localStorage?.setItem(key, serialized);
+  } catch (e) {}
+}
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -699,8 +760,16 @@ export default function AppNavigator() {
       ? InstructorTabs
       : StudentTabs;
 
+  const containerKey = user ? `nav_auth_${user.id}_${user.role}` : 'nav_guest';
+  const initialNavState = useMemo(() => getSavedNavigationState(user), [containerKey]);
+
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer
+      key={containerKey}
+      theme={navTheme}
+      initialState={initialNavState}
+      onStateChange={(state) => saveNavigationState(user, state)}
+    >
       {user ? (
         <Stack.Navigator
           screenOptions={{
