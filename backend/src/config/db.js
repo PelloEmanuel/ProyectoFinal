@@ -37,8 +37,10 @@ const pool = mysql.createPool(dbConfig);
 
 // Asegurar que toda conexión al pool use la zona horaria oficial de Buenos Aires (UTC-3)
 pool.on('connection', (connection) => {
-  connection.query("SET time_zone = '-03:00'").catch((err) => {
-    console.error('Error al configurar zona horaria -03:00 en la conexión:', err.message);
+  connection.query("SET time_zone = '-03:00'", (err) => {
+    if (err) {
+      console.error('Error al configurar zona horaria -03:00 en la conexión:', err.message);
+    }
   });
 });
 
