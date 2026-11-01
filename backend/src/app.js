@@ -3,6 +3,7 @@
  * Descripción: Configuración principal de la aplicación Express para Campus API REST v1.
  * Registra middlewares de seguridad (helmet, cors), parseo JSON y todas las rutas del dominio.
  */
+process.env.TZ = 'America/Argentina/Buenos_Aires';
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');

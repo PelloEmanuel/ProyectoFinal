@@ -7,6 +7,9 @@ const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 const mysql = require('mysql2/promise');
 
+// Forzar zona horaria oficial del Campus a Buenos Aires, Argentina (UTC-3)
+process.env.TZ = 'America/Argentina/Buenos_Aires';
+
 const dbConfig = {
   host: process.env.DB_HOST || 'localhost',
   port: Number(process.env.DB_PORT) || 3306,
@@ -31,6 +34,13 @@ if (
 }
 
 const pool = mysql.createPool(dbConfig);
+
+// Asegurar que toda conexión al pool use la zona horaria oficial de Buenos Aires (UTC-3)
+pool.on('connection', (connection) => {
+  connection.query("SET time_zone = '-03:00'").catch((err) => {
+    console.error('Error al configurar zona horaria -03:00 en la conexión:', err.message);
+  });
+});
 
 /**
  * Ejecuta una serie de consultas dentro de una transacción ACID (BEGIN / COMMIT / ROLLBACK).
