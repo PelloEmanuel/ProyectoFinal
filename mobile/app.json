@@ -8,9 +8,14 @@
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "primaryColor": "#b91c1c",
+    "icon": "./assets/icon.png",
     "android": {
       "package": "com.campustecnica5.app",
       "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1e2430"
+      },
       "softwareKeyboardLayoutMode": "resize",
       "usesCleartextTraffic": true,
       "permissions": [
