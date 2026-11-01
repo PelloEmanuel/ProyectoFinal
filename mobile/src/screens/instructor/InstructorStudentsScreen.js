@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -287,20 +288,21 @@ export default function InstructorStudentsScreen() {
           }
         />
       ) : (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+        <View style={{ flexDirection: isDesktop ? 'row' : 'column', flexWrap: isDesktop ? 'wrap' : 'nowrap', gap: 14 }}>
           {filteredStudents.map((item) => {
             const subjects = item.subjects || [];
             return (
               <View
                 key={item.studentId}
                 style={{
-                  width: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
-                  maxWidth: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                  width: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
+                  maxWidth: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
                   flexGrow: isDesktop ? 0 : 1,
                   flexShrink: 0,
+                  marginBottom: isDesktop ? 0 : 4,
                 }}
               >
-                <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>
+                <Card style={{ height: isDesktop ? '100%' : undefined, marginBottom: 0, justifyContent: 'space-between' }}>
                   <View>
                     {/* Encabezado de la tarjeta: Curso y total de materias */}
                     <View style={styles.rowBetween}>

@@ -119,7 +119,7 @@ export default function MyLearningScreen({ navigation }) {
             text="Las materias asignadas a tu curso aparecerán automáticamente aquí."
           />
         ) : (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+          <View style={{ flexDirection: isDesktop ? 'row' : 'column', flexWrap: isDesktop ? 'wrap' : 'nowrap', gap: 14 }}>
             {filteredSubjects.map((item) => {
               const hasTeacher =
                 item.instructorId &&
@@ -138,10 +138,11 @@ export default function MyLearningScreen({ navigation }) {
                 <View
                   key={item.courseId}
                   style={{
-                    width: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
-                    maxWidth: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                    width: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
+                    maxWidth: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
                     flexGrow: isDesktop ? 0 : 1,
                     flexShrink: 0,
+                    marginBottom: isDesktop ? 0 : 4,
                   }}
                 >
                   <Pressable
@@ -160,7 +161,7 @@ export default function MyLearningScreen({ navigation }) {
                       shadowOpacity: 0.28,
                       shadowRadius: 8,
                       elevation: 4,
-                      height: '100%',
+                      height: isDesktop ? '100%' : undefined,
                       justifyContent: 'space-between',
                     }}
                   >

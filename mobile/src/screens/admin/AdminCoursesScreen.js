@@ -13,6 +13,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -760,18 +761,19 @@ export default function AdminCoursesScreen({ route }) {
                 message="Usá el formulario de arriba para crear tus materias (ej. Matemática, Lengua, Historia) y luego asignarlas en el cronograma."
               />
             ) : (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+              <View style={{ flexDirection: isDesktop ? 'row' : 'column', flexWrap: isDesktop ? 'wrap' : 'nowrap', gap: 14 }}>
                 {subjectsCatalog.map((subj) => (
                   <View
                     key={subj.id}
                     style={{
-                      width: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
-                      maxWidth: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                      width: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
+                      maxWidth: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
                       flexGrow: isDesktop ? 0 : 1,
                       flexShrink: 0,
+                      marginBottom: isDesktop ? 0 : 4,
                     }}
                   >
-                    <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>
+                    <Card style={{ height: isDesktop ? '100%' : undefined, marginBottom: 0, justifyContent: 'space-between' }}>
                       <View>
                         <View style={styles.rowBetween}>
                           <Badge
@@ -1028,7 +1030,7 @@ export default function AdminCoursesScreen({ route }) {
                     }
                   />
                 ) : (
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+                  <View style={{ flexDirection: isDesktop ? 'row' : 'column', flexWrap: isDesktop ? 'wrap' : 'nowrap', gap: 14 }}>
                     {courses.map((course) => {
                       const hasTeacher =
                         course.instructorId &&
@@ -1038,13 +1040,14 @@ export default function AdminCoursesScreen({ route }) {
                         <View
                           key={course.id}
                           style={{
-                            width: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
-                            maxWidth: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                            width: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
+                            maxWidth: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
                             flexGrow: isDesktop ? 0 : 1,
                             flexShrink: 0,
+                            marginBottom: isDesktop ? 0 : 4,
                           }}
                         >
-                          <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>
+                          <Card style={{ height: isDesktop ? '100%' : undefined, marginBottom: 0, justifyContent: 'space-between' }}>
                             <View>
                               <View style={styles.rowBetween}>
                                 <Badge label={`${schoolYear}° Año - ${courseDivision}° Curso`} tone="info" />
@@ -1291,20 +1294,21 @@ export default function AdminCoursesScreen({ route }) {
                 description="Abrí el primer curso con el formulario superior."
               />
             ) : (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+              <View style={{ flexDirection: isDesktop ? 'row' : 'column', flexWrap: isDesktop ? 'wrap' : 'nowrap', gap: 14 }}>
                 {schoolGroups.map((grp) => {
                   const isOpen = grp.status === 'open';
                   return (
                     <View
                       key={grp.id}
                       style={{
-                        width: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
-                        maxWidth: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                        width: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
+                        maxWidth: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
                         flexGrow: isDesktop ? 0 : 1,
                         flexShrink: 0,
+                        marginBottom: isDesktop ? 0 : 4,
                       }}
                     >
-                      <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>
+                      <Card style={{ height: isDesktop ? '100%' : undefined, marginBottom: 0, justifyContent: 'space-between' }}>
                         <View>
                           <View style={styles.rowBetween}>
                             <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>

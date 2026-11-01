@@ -281,8 +281,8 @@ export default function CourseDetailScreen({ navigation, route }) {
           {/* ================================================================ */}
           {mainTab === 'tablon' && (
             <View>
-              {/* Banner suave de inscripción si todavía no se inscribió */}
-              {!enrollment && (
+              {/* Banner suave de inscripción si todavía no se inscribió (solo alumnos) */}
+              {!enrollment && (user?.role === 'student' || !user) && (
                 <View
                   style={{
                     flexDirection: 'row',

@@ -17,25 +17,50 @@ const isWeb = Platform.OS === 'web' && typeof window !== 'undefined' && window.l
 
 async function setItem(key, value) {
   if (isWeb) {
-    window.localStorage.setItem(key, value);
+    try {
+      window.localStorage.setItem(key, value);
+    } catch {
+      // Ignorar fallback web
+    }
     return;
   }
-  await SecureStore.setItemAsync(key, value);
+  try {
+    await SecureStore.setItemAsync(key, value);
+  } catch (err) {
+    console.warn(`SecureStore setItem error for key "${key}":`, err);
+  }
 }
 
 async function getItem(key) {
   if (isWeb) {
-    return window.localStorage.getItem(key);
+    try {
+      return window.localStorage.getItem(key);
+    } catch {
+      return null;
+    }
   }
-  return SecureStore.getItemAsync(key);
+  try {
+    return await SecureStore.getItemAsync(key);
+  } catch (err) {
+    console.warn(`SecureStore getItem error for key "${key}":`, err);
+    return null;
+  }
 }
 
 async function deleteItem(key) {
   if (isWeb) {
-    window.localStorage.removeItem(key);
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // Ignorar fallback web
+    }
     return;
   }
-  await SecureStore.deleteItemAsync(key);
+  try {
+    await SecureStore.deleteItemAsync(key);
+  } catch (err) {
+    console.warn(`SecureStore deleteItem error for key "${key}":`, err);
+  }
 }
 
 export async function saveSession({ accessToken, refreshToken, user }) {
@@ -79,17 +104,29 @@ export async function clearSession() {
 
 export async function saveThemePreference(mode) {
   try {
-    await setItem(KEYS.theme, mode);
-  } catch {
-    // Ignorar
+    const clean = mode === 'light' ? 'light' : 'dark';
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        window.localStorage.setItem(KEYS.theme, clean);
+      } catch {}
+    }
+    await setItem(KEYS.theme, clean);
+  } catch (err) {
+    console.warn('saveThemePreference error:', err);
   }
 }
 
 export async function loadThemePreference() {
   try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const webSaved = window.localStorage.getItem(KEYS.theme);
+      if (webSaved === 'dark' || webSaved === 'light') return webSaved;
+    }
     const val = await getItem(KEYS.theme);
-    return val || 'dark';
-  } catch {
-    return 'dark';
+    if (val === 'dark' || val === 'light') return val;
+    return null;
+  } catch (err) {
+    console.warn('loadThemePreference error:', err);
+    return null;
   }
 }

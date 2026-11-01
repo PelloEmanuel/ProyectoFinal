@@ -12,7 +12,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { authApi } from '../api/services';
+import { authApi, usersApi } from '../api/services';
 import { extractErrorMessage } from '../utils/errors';
 import { formatDateAR } from '../utils/dates';
 import {
@@ -101,6 +101,7 @@ export default function ProfileScreen({ navigation }) {
     const nextPref = val ? 'dark' : 'light';
     await setThemePreference(nextPref);
     try {
+      await usersApi.updatePreferences({ theme: nextPref });
       await updateProfile({ themePreference: nextPref });
     } catch {
       // local preference already saved

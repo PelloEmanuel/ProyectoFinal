@@ -12,6 +12,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -646,20 +647,21 @@ export default function InstructorDashboardScreen({ navigation }) {
             onAction={() => setDashboardGroupFilter('ALL')}
           />
         ) : (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+          <View style={{ flexDirection: isDesktop ? 'row' : 'column', flexWrap: isDesktop ? 'wrap' : 'nowrap', gap: 14 }}>
             {filteredRecentCourses.map((course) => (
               <View
                 key={course.id}
                 style={{
-                  width: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
-                  maxWidth: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                  width: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
+                  maxWidth: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
                   flexGrow: isDesktop ? 0 : 1,
                   flexShrink: 0,
+                  marginBottom: isDesktop ? 0 : 4,
                 }}
               >
                 <Card
-                  onPress={() => navigation.navigate('InstructorCourses', { editCourseId: course.id })}
-                  style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}
+                  onPress={() => navigation.navigate('CourseDetail', { courseId: course.id })}
+                  style={{ height: isDesktop ? '100%' : undefined, marginBottom: 0, justifyContent: 'space-between' }}
                 >
                   <View>
                     <View style={styles.rowBetween}>
@@ -694,7 +696,7 @@ export default function InstructorDashboardScreen({ navigation }) {
                       {course.modulesCount || 0} módulos
                     </Text>
                     <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 12 }}>
-                      Abrir materia →
+                      Abrir tablón →
                     </Text>
                   </View>
                 </Card>

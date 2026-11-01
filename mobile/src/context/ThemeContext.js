@@ -45,29 +45,15 @@ export function ThemeProvider({ children }) {
   Object.assign(mutableColors, palette);
 
   const setThemeMode = useCallback(async (nextMode) => {
-    const clean = nextMode === 'dark' ? 'dark' : 'light';
+    const clean = nextMode === 'light' ? 'light' : 'dark';
     setMode(clean);
-    if (typeof window !== 'undefined' && window.localStorage) {
-      try {
-        window.localStorage.setItem('skt_theme_mode', clean);
-      } catch {
-        // Ignorar
-      }
-    }
     await saveThemePreference(clean);
   }, []);
 
-  const toggleTheme = useCallback(() => {
+  const toggleTheme = useCallback(async () => {
     setMode((prev) => {
       const next = prev === 'dark' ? 'light' : 'dark';
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          window.localStorage.setItem('skt_theme_mode', next);
-        } catch {
-          // Ignorar
-        }
-      }
-      saveThemePreference(next);
+      saveThemePreference(next).catch(() => {});
       return next;
     });
   }, []);

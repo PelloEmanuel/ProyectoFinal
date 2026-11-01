@@ -8,7 +8,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useR
 import { Platform } from 'react-native';
 import { authApi, usersApi } from '../api/services';
 import { bindSessionHandlers, setSessionTokens } from '../api/client';
-import { clearSession, loadSession, saveSession } from '../utils/storage';
+import { clearSession, loadSession, saveSession, loadThemePreference } from '../utils/storage';
 import { useTheme } from './ThemeContext';
 
 const AuthContext = createContext(null);
@@ -76,11 +76,10 @@ export function AuthProvider({ children }) {
       const data = payload?.data || payload;
       setSessionTokens(data);
       await saveSession(data);
-      const localSavedTheme =
-        typeof window !== 'undefined' && window.localStorage
-          ? window.localStorage.getItem('skt_theme_mode')
-          : null;
-      if (!localSavedTheme && data.user?.preferences?.theme) {
+      const localSavedTheme = await loadThemePreference();
+      if (localSavedTheme === 'dark' || localSavedTheme === 'light') {
+        await setThemeMode(localSavedTheme);
+      } else if (data.user?.preferences?.theme) {
         await setThemeMode(data.user.preferences.theme);
       }
       dispatch({ type: 'SET_USER', user: data.user });
@@ -179,11 +178,10 @@ export function AuthProvider({ children }) {
       try {
         const fresh = await usersApi.me();
         await saveSession({ user: fresh });
-        const localSavedTheme =
-          typeof window !== 'undefined' && window.localStorage
-            ? window.localStorage.getItem('skt_theme_mode')
-            : null;
-        if (!localSavedTheme && fresh?.preferences?.theme) {
+        const localSavedTheme = await loadThemePreference();
+        if (localSavedTheme === 'dark' || localSavedTheme === 'light') {
+          await setThemeMode(localSavedTheme);
+        } else if (fresh?.preferences?.theme) {
           await setThemeMode(fresh.preferences.theme);
         }
         dispatch({ type: 'SET_USER', user: fresh });

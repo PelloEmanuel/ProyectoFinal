@@ -116,16 +116,6 @@ export default function CourseGroupScreen({ route, navigation }) {
 
   const handleOpenCourseItem = (courseId) => {
     if (!courseId) return;
-    if (user?.role === 'instructor') {
-      const target = courses.find((c) => Number(c.id) === Number(courseId));
-      if (target && Number(target.instructorId) === Number(user.id)) {
-        navigation.navigate('MainTabs', {
-          screen: 'InstructorCourses',
-          params: { editCourseId: courseId },
-        });
-        return;
-      }
-    }
     navigation.navigate('CourseDetail', { courseId });
   };
 

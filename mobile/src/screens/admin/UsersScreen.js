@@ -11,6 +11,7 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -299,7 +300,7 @@ export default function UsersScreen() {
             message="Ajustá los filtros de búsqueda o creá un nuevo usuario institucional."
           />
         ) : (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+          <View style={{ flexDirection: isDesktop ? 'row' : 'column', flexWrap: isDesktop ? 'wrap' : 'nowrap', gap: 14 }}>
             {users.map((u) => {
               const rBadge = getRoleBadge(u.role);
               const isSelf = u.id === currentUser?.id;
@@ -309,13 +310,14 @@ export default function UsersScreen() {
                 <View
                   key={u.id}
                   style={{
-                    width: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
-                    maxWidth: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                    width: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
+                    maxWidth: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
                     flexGrow: isDesktop ? 0 : 1,
                     flexShrink: 0,
+                    marginBottom: isDesktop ? 0 : 4,
                   }}
                 >
-                  <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>
+                  <Card style={{ height: isDesktop ? '100%' : undefined, marginBottom: 0, justifyContent: 'space-between' }}>
                     <View>
                       <View style={[styles.rowBetween, { flexWrap: 'wrap', gap: 6 }]}>
                         <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>

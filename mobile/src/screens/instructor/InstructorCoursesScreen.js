@@ -17,6 +17,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { assignmentsApi, coursesApi, instructorApi } from '../../api/services';
 import { resolveAssetUrl } from '../../config';
 import { extractErrorMessage } from '../../utils/errors';
@@ -207,6 +208,7 @@ export const COURSE_THEME_PALETTES = [
 ];
 
 export default function InstructorCoursesScreen({ route, navigation }) {
+  const { user } = useAuth();
   const { colors, isDark } = useTheme();
   const { width: screenWidth } = useWindowDimensions();
   const isDesktop = screenWidth >= 768;
@@ -989,7 +991,7 @@ export default function InstructorCoursesScreen({ route, navigation }) {
               <TablonFeed
                 course={activeCourse}
                 isInstructor={true}
-                user={{ role: 'instructor' }}
+                user={user}
                 onRefreshCourse={() => openCourseWorkspace(activeCourse.id)}
                 hideHeroBanner={true}
               />
@@ -1472,18 +1474,22 @@ export default function InstructorCoursesScreen({ route, navigation }) {
                 }
               />
             ) : (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 14 }}>
+              <View style={{ flexDirection: isDesktop ? 'row' : 'column', flexWrap: isDesktop ? 'wrap' : 'nowrap', gap: 14 }}>
                 {filteredCourses.map((course) => (
                   <View
                     key={course.id}
                     style={{
-                      width: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
-                      maxWidth: isDesktop ? 'calc((100% - 28px) / 3)' : '100%',
+                      width: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
+                      maxWidth: isDesktop ? (Platform.OS === 'web' ? 'calc((100% - 28px) / 3)' : Math.floor((screenWidth - 60) / 3)) : '100%',
                       flexGrow: isDesktop ? 0 : 1,
                       flexShrink: 0,
+                      marginBottom: isDesktop ? 0 : 4,
                     }}
                   >
-                    <Card style={{ height: '100%', marginBottom: 0, justifyContent: 'space-between' }}>
+                    <Card
+                      onPress={() => navigation.navigate('CourseDetail', { courseId: course.id })}
+                      style={{ height: isDesktop ? '100%' : undefined, marginBottom: 0, justifyContent: 'space-between' }}
+                    >
                       <View>
                         <View style={styles.rowBetween}>
                           <Badge
@@ -1515,10 +1521,17 @@ export default function InstructorCoursesScreen({ route, navigation }) {
                           </Text>
                         </View>
                       </View>
-                      <View style={[styles.actionRow, { marginTop: 14 }]}>
+                      <View style={[styles.actionRow, { marginTop: 14, gap: 8 }]}>
                         <Button
-                          title="Abrir materia"
-                          icon="folder-open-outline"
+                          title="Abrir tablón"
+                          icon="chatbubbles-outline"
+                          onPress={() => navigation.navigate('CourseDetail', { courseId: course.id })}
+                          style={{ flex: 1, minHeight: 40, paddingVertical: 8, marginBottom: 0 }}
+                        />
+                        <Button
+                          title="Administrar"
+                          variant="outline"
+                          icon="settings-outline"
                           onPress={() => openCourseWorkspace(course.id)}
                           style={{ flex: 1, minHeight: 40, paddingVertical: 8, marginBottom: 0 }}
                         />
