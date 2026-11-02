@@ -6,6 +6,7 @@
  */
 
 export const BUENOS_AIRES_TZ = 'America/Argentina/Buenos_Aires';
+export const BUENOS_AIRES_OFFSET_MS = -3 * 60 * 60 * 1000; // UTC-3 permanente (Argentina no utiliza horario de verano)
 
 const DAYS_ORDER = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
@@ -27,37 +28,23 @@ export function normalizeDayName(day) {
 
 /**
  * Obtiene la fecha y hora actual exacta de Buenos Aires, Argentina (UTC-3).
+ * Cálculo determinístico independiente del reloj local y motor JS (Hermes/V8).
  */
 export function getBuenosAiresNow() {
   const now = new Date();
-  const dtf = new Intl.DateTimeFormat('en-US', {
-    timeZone: BUENOS_AIRES_TZ,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
+  const baDate = new Date(now.getTime() + BUENOS_AIRES_OFFSET_MS);
 
-  const parts = dtf.formatToParts(now);
-  const get = (type) => parts.find((p) => p.type === type)?.value;
+  const year = baDate.getUTCFullYear();
+  const month = baDate.getUTCMonth() + 1;
+  const day = baDate.getUTCDate();
+  const hour = baDate.getUTCHours();
+  const minute = baDate.getUTCMinutes();
+  const second = baDate.getUTCSeconds();
 
-  const year = Number(get('year'));
-  const month = Number(get('month'));
-  const day = Number(get('day'));
-  const hour = Number(get('hour'));
-  const minute = Number(get('minute'));
-  const second = Number(get('second'));
-
-  // Día de la semana en español en Buenos Aires
-  const dayFmt = new Intl.DateTimeFormat('es-AR', {
-    timeZone: BUENOS_AIRES_TZ,
-    weekday: 'long',
-  });
-  const weekday = normalizeDayName(dayFmt.format(now));
-  const dayIndex = DAYS_ORDER.indexOf(weekday); // 0 (Lunes) a 6 (Domingo)
+  // getUTCDay: 0=Domingo, 1=Lunes, 2=Martes... 6=Sábado
+  const utcDay = baDate.getUTCDay();
+  const dayIndex = utcDay === 0 ? 6 : utcDay - 1; // 0=Lunes ... 6=Domingo
+  const weekday = DAYS_ORDER[dayIndex];
 
   const timeString = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
   const dateString = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
@@ -98,45 +85,67 @@ export function formatDate(value) {
   const str = String(value).trim();
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) return str;
 
+  // Si viene de MySQL o formato local YYYY-MM-DD
   const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (isoMatch) {
+  if (isoMatch && !str.includes('Z') && !str.includes('+')) {
     return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
   }
 
-  const d = new Date(str);
-  if (Number.isNaN(d.getTime())) return str;
+  // Si tiene Z o es objeto Date, convertir a Buenos Aires
+  const ms = typeof value === 'number' ? value : value instanceof Date ? value.getTime() : new Date(str).getTime();
+  if (Number.isNaN(ms)) return str;
 
-  const dtf = new Intl.DateTimeFormat('en-US', {
-    timeZone: BUENOS_AIRES_TZ,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  const parts = dtf.formatToParts(d);
-  const get = (type) => parts.find((p) => p.type === type)?.value;
-  return `${get('day')}/${get('month')}/${get('year')}`;
+  const ba = new Date(ms + BUENOS_AIRES_OFFSET_MS);
+  const d = String(ba.getUTCDate()).padStart(2, '0');
+  const m = String(ba.getUTCMonth() + 1).padStart(2, '0');
+  const y = ba.getUTCFullYear();
+  return `${d}/${m}/${y}`;
 }
 
 /**
- * Formato dd/mm/aaaa HH:mm hs en zona horaria Buenos Aires.
+ * Formato dd/mm/aaaa HH:mm hs estrictamente bajo zona horaria Buenos Aires (UTC-3).
+ * Maneja tanto strings directos de MySQL como ISO UTC y objetos Date.
  */
 export function formatDateTime(value) {
   if (!value) return 'Sin fecha';
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return formatDate(value);
 
-  const dtf = new Intl.DateTimeFormat('en-US', {
-    timeZone: BUENOS_AIRES_TZ,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-  const parts = dtf.formatToParts(d);
-  const get = (type) => parts.find((p) => p.type === type)?.value;
-  return `${get('day')}/${get('month')}/${get('year')} ${get('hour')}:${get('minute')} hs`;
+  // 1. Strings directos de base de datos (MySQL DATETIME en -03:00)
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+
+    // Coincidencia con YYYY-MM-DD HH:mm(:ss)? o YYYY-MM-DDTHH:mm(:ss)? sin Z ni +
+    const matchBA = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:-03:00)?$/);
+    if (matchBA && !trimmed.includes('Z') && !trimmed.includes('+')) {
+      const [, y, m, d, hh, mm] = matchBA;
+      return `${d}/${m}/${y} ${hh}:${mm} hs`;
+    }
+
+    // Formato ISO con Z o timezone
+    if (trimmed.includes('Z') || trimmed.includes('+')) {
+      const ms = new Date(trimmed).getTime();
+      if (!Number.isNaN(ms)) {
+        const ba = new Date(ms + BUENOS_AIRES_OFFSET_MS);
+        const y = ba.getUTCFullYear();
+        const m = String(ba.getUTCMonth() + 1).padStart(2, '0');
+        const d = String(ba.getUTCDate()).padStart(2, '0');
+        const hh = String(ba.getUTCHours()).padStart(2, '0');
+        const mm = String(ba.getUTCMinutes()).padStart(2, '0');
+        return `${d}/${m}/${y} ${hh}:${mm} hs`;
+      }
+    }
+  }
+
+  // 2. Objeto Date o timestamp numérico
+  const ms = typeof value === 'number' ? value : value instanceof Date ? value.getTime() : new Date(value).getTime();
+  if (Number.isNaN(ms)) return formatDate(value);
+
+  const ba = new Date(ms + BUENOS_AIRES_OFFSET_MS);
+  const y = ba.getUTCFullYear();
+  const m = String(ba.getUTCMonth() + 1).padStart(2, '0');
+  const d = String(ba.getUTCDate()).padStart(2, '0');
+  const hh = String(ba.getUTCHours()).padStart(2, '0');
+  const mm = String(ba.getUTCMinutes()).padStart(2, '0');
+  return `${d}/${m}/${y} ${hh}:${mm} hs`;
 }
 
 export function formatDateAR(value, includeTime = false) {

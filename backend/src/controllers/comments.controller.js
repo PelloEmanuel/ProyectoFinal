@@ -128,6 +128,9 @@ exports.createFeedComment = asyncHandler(async (req, res) => {
     console.error('Error enviando notificación de comentario:', err.message);
   }
 
+  const [newRow] = await db.execute('SELECT created_at FROM feed_comments WHERE id = ?', [ins.insertId]);
+  const createdAt = newRow.length ? newRow[0].created_at : new Date().toISOString();
+
   res.status(201).json({
     success: true,
     data: {
@@ -142,7 +145,7 @@ exports.createFeedComment = asyncHandler(async (req, res) => {
       studentId: targetStudentId,
       message: String(message).trim(),
       attachments: Array.isArray(attachments) ? attachments : [],
-      createdAt: new Date().toISOString(),
+      createdAt,
     },
   });
 });

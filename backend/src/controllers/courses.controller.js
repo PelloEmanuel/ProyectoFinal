@@ -853,6 +853,9 @@ exports.createLesson = asyncHandler(async (req, res) => {
     }
   }
 
+  const [newRow] = await db.execute('SELECT created_at FROM lessons WHERE id = ?', [ins.insertId]);
+  const createdAt = newRow.length ? newRow[0].created_at : new Date().toISOString();
+
   res.status(201).json({
     success: true,
     data: {
@@ -862,7 +865,7 @@ exports.createLesson = asyncHandler(async (req, res) => {
       contentType,
       content: content.trim(),
       attachments: Array.isArray(attachments) ? attachments : [],
-      createdAt: new Date().toISOString(),
+      createdAt,
       position: pos,
       estimatedDuration: Number(estimatedDuration) || 15,
       isRequired: !!isRequired,
@@ -1170,6 +1173,9 @@ exports.createAnnouncement = asyncHandler(async (req, res) => {
     );
   }
 
+  const [newRow] = await db.execute('SELECT published_at FROM announcements WHERE id = ?', [ins.insertId]);
+  const publishedAt = newRow.length ? newRow[0].published_at : new Date().toISOString();
+
   res.status(201).json({
     success: true,
     data: {
@@ -1179,7 +1185,7 @@ exports.createAnnouncement = asyncHandler(async (req, res) => {
       content: content.trim(),
       attachments: Array.isArray(attachments) ? attachments : [],
       authorName: req.user.name,
-      publishedAt: new Date().toISOString(),
+      publishedAt,
     },
   });
 });

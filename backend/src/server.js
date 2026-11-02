@@ -4,6 +4,7 @@
  * Incluye manejo automático de puerto ocupado (EADDRINUSE) para evitar colisiones en Windows.
  */
 require('dotenv').config();
+process.env.TZ = 'America/Argentina/Buenos_Aires';
 const http = require('http');
 const { execSync } = require('child_process');
 const app = require('./app');
