@@ -30,10 +30,10 @@ function normalizeTime(raw) {
 function validateYearAndDivision(schoolYear, courseDivision) {
   const y = Number(schoolYear);
   const d = Number(courseDivision);
-  if (!Number.isInteger(y) || y < 1 || y > 7) {
-    throw new AppError('El año escolar debe estar entre 1° y 7°.', 422, 'INVALID_SCHOOL_YEAR');
+  if (!Number.isInteger(y) || y < 1 || y > 10) {
+    throw new AppError('El año escolar debe ser un número válido entre 1° y 10°.', 422, 'INVALID_SCHOOL_YEAR');
   }
-  if (!Number.isInteger(d) || d < 1 || d > 6) {
+  if (!Number.isInteger(d) || d < 1 || d > 30) {
     throw new AppError('El curso/división debe ser un número válido.', 422, 'INVALID_COURSE_DIVISION');
   }
   return { schoolYear: y, courseDivision: d };

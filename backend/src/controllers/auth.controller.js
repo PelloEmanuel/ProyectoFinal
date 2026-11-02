@@ -183,7 +183,7 @@ exports.register = asyncHandler(async (req, res) => {
         if (rawUser.role_name === 'student' && req.body.schoolYear && req.body.courseDivision) {
           const sy = Number(req.body.schoolYear);
           const cd = Number(req.body.courseDivision);
-          if (sy >= 1 && sy <= 6 && cd >= 1 && cd <= 3) {
+          if (sy >= 1 && cd >= 1) {
             await syncStudentCourseEnrollments(rawUser.id, sy, cd);
           }
         }
@@ -213,7 +213,7 @@ exports.register = asyncHandler(async (req, res) => {
     // El primer usuario registrado se convierte automáticamente en Administrador
     targetRoleName = 'admin';
   } else if (String(role || '').trim().toLowerCase() === 'instructor') {
-    const submittedKey = String(instructorKey ?? instructorCode ?? '').trim();
+    const submittedKey = String(instructorKey ?? instructorCode ?? '').trim().toUpperCase();
     if (!submittedKey) {
       throw new AppError(
         'Debés completar el campo de clave de docente para poder registrarte e iniciar sesión como docente.',
@@ -226,7 +226,7 @@ exports.register = asyncHandler(async (req, res) => {
     const [keyRows] = await db.execute(
       "SELECT setting_value FROM platform_settings WHERE setting_key = 'instructor_registration_key' LIMIT 1"
     );
-    const validKey = String(keyRows[0]?.setting_value || '').trim();
+    const validKey = String(keyRows[0]?.setting_value || '').trim().toUpperCase();
     if (!validKey || submittedKey !== validKey) {
       throw new AppError(
         'La clave de docente introducida es incorrecta. No se permite iniciar sesión sin la clave vigente del administrador.',
@@ -237,7 +237,7 @@ exports.register = asyncHandler(async (req, res) => {
     }
     targetRoleName = 'instructor';
   } else if (String(role || '').trim().toLowerCase() === 'preceptor') {
-    const submittedKey = String(preceptorKey ?? preceptorCode ?? req.body?.preceptorKey ?? req.body?.preceptorCode ?? '').trim();
+    const submittedKey = String(preceptorKey ?? preceptorCode ?? req.body?.preceptorKey ?? req.body?.preceptorCode ?? '').trim().toUpperCase();
     if (!submittedKey) {
       throw new AppError(
         'Debés completar el campo de clave de preceptor para poder registrarte como preceptor/a.',
@@ -250,7 +250,7 @@ exports.register = asyncHandler(async (req, res) => {
     const [keyRows] = await db.execute(
       "SELECT setting_value FROM platform_settings WHERE setting_key = 'preceptor_registration_key' LIMIT 1"
     );
-    const validKey = String(keyRows[0]?.setting_value || 'PRECEPTOR2026').trim();
+    const validKey = String(keyRows[0]?.setting_value || 'PRECEPTOR2026').trim().toUpperCase();
     if (!validKey || submittedKey !== validKey) {
       throw new AppError(
         'La clave de preceptor introducida es incorrecta. Solicitá la clave institucional al administrador.',
@@ -294,11 +294,11 @@ exports.register = asyncHandler(async (req, res) => {
     ]
   );
 
-  // Si es alumno e indicó en qué año (1° a 6°) y curso (1° a 3°) se encuentra, aplicarle su curso y materias
+  // Si es alumno e indicó en qué año y curso se encuentra, aplicarle su curso y materias
   if (targetRoleName === 'student') {
     const sy = Number(req.body.schoolYear);
     const cd = Number(req.body.courseDivision);
-    if (sy >= 1 && sy <= 6 && cd >= 1 && cd <= 3) {
+    if (sy >= 1 && cd >= 1) {
       await syncStudentCourseEnrollments(result.insertId, sy, cd);
     }
   }
@@ -968,20 +968,20 @@ exports.oauthCallback = asyncHandler(async (req, res) => {
         let targetRoleName = isFirstUser ? 'admin' : 'student';
 
         if (!isFirstUser && String(stateData.role || '').trim().toLowerCase() === 'instructor') {
-          const submittedKey = String(stateData.instructorKey || '').trim();
+          const submittedKey = String(stateData.instructorKey || '').trim().toUpperCase();
           const [keyRows] = await db.execute(
             "SELECT setting_value FROM platform_settings WHERE setting_key = 'instructor_registration_key' LIMIT 1"
           );
-          const validKey = String(keyRows[0]?.setting_value || '').trim();
+          const validKey = String(keyRows[0]?.setting_value || '').trim().toUpperCase();
           if (validKey && submittedKey === validKey) {
             targetRoleName = 'instructor';
           }
         } else if (!isFirstUser && String(stateData.role || '').trim().toLowerCase() === 'preceptor') {
-          const submittedKey = String(stateData.preceptorKey || '').trim();
+          const submittedKey = String(stateData.preceptorKey || '').trim().toUpperCase();
           const [keyRows] = await db.execute(
             "SELECT setting_value FROM platform_settings WHERE setting_key = 'preceptor_registration_key' LIMIT 1"
           );
-          const validKey = String(keyRows[0]?.setting_value || 'PRECEPTOR2026').trim();
+          const validKey = String(keyRows[0]?.setting_value || 'PRECEPTOR2026').trim().toUpperCase();
           if (validKey && submittedKey === validKey) {
             targetRoleName = 'preceptor';
           }
@@ -1007,7 +1007,7 @@ exports.oauthCallback = asyncHandler(async (req, res) => {
         if (targetRoleName === 'student' && stateData.schoolYear && stateData.courseDivision) {
           const sy = Number(stateData.schoolYear);
           const cd = Number(stateData.courseDivision);
-          if (sy >= 1 && sy <= 6 && cd >= 1 && cd <= 3) {
+          if (sy >= 1 && cd >= 1) {
             await syncStudentCourseEnrollments(user.id, sy, cd).catch(() => {});
           }
         }
@@ -1088,7 +1088,7 @@ exports.socialLogin = asyncHandler(async (req, res) => {
       let targetRoleName = isFirstUser ? 'admin' : 'student';
 
       if (!isFirstUser && String(req.body?.role || '').trim().toLowerCase() === 'instructor') {
-        const submittedKey = String(req.body?.instructorKey ?? req.body?.instructorCode ?? '').trim();
+        const submittedKey = String(req.body?.instructorKey ?? req.body?.instructorCode ?? '').trim().toUpperCase();
         if (!submittedKey) {
           throw new AppError(
             'Debés completar el campo de clave de docente para ingresar como docente.',
@@ -1100,7 +1100,7 @@ exports.socialLogin = asyncHandler(async (req, res) => {
         const [keyRows] = await db.execute(
           "SELECT setting_value FROM platform_settings WHERE setting_key = 'instructor_registration_key' LIMIT 1"
         );
-        const validKey = String(keyRows[0]?.setting_value || '').trim();
+        const validKey = String(keyRows[0]?.setting_value || '').trim().toUpperCase();
         if (!validKey || submittedKey !== validKey) {
           throw new AppError(
             'La clave de docente introducida es incorrecta.',

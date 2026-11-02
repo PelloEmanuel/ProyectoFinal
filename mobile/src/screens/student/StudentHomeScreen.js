@@ -500,13 +500,13 @@ export default function StudentHomeScreen({ navigation }) {
             <View style={{ marginBottom: 14 }}>
               <Input
                 label="Contraseña del curso *"
-                placeholder="contraseña"
+                placeholder="EJ. 1RO8VA"
                 value={groupAccessCode}
                 onChangeText={(text) => {
-                  setGroupAccessCode(text);
+                  setGroupAccessCode(String(text || '').toUpperCase());
                   setModalError('');
                 }}
-                autoCapitalize="none"
+                autoCapitalize="characters"
                 autoCorrect={false}
                 leftIcon="key-outline"
               />

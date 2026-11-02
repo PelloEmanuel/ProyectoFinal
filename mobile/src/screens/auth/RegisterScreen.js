@@ -39,7 +39,8 @@ export default function RegisterScreen({ navigation }) {
   const [loading, setLoading] = useState(false);
 
   const set = (k) => (v) => {
-    setForm((f) => ({ ...f, [k]: v }));
+    const val = (k === 'instructorKey' || k === 'preceptorKey') ? String(v || '').toUpperCase() : v;
+    setForm((f) => ({ ...f, [k]: val }));
     if (errors[k]) {
       setErrors((prev) => ({ ...prev, [k]: undefined }));
     }
@@ -508,9 +509,8 @@ export default function RegisterScreen({ navigation }) {
             value={form.instructorKey}
             onChangeText={set('instructorKey')}
             error={errors.instructorKey}
-            placeholder="Ingresá la clave asignada por el administrador"
-            autoCapitalize="none"
-            secureTextEntry
+            placeholder="EJ. DOCENTE2026"
+            autoCapitalize="characters"
           />
           <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: -4 }}>
             Esta clave es elegida por el Administrador. Si no la completás o es incorrecta, no se permitirá iniciar sesión.

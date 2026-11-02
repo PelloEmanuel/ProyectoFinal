@@ -611,10 +611,14 @@ exports.updateSettings = asyncHandler(async (req, res) => {
 
   for (const key of allowedKeys) {
     if (req.body[key] !== undefined) {
+      let val = String(req.body[key]).trim();
+      if (key === 'instructor_registration_key' || key === 'preceptor_registration_key') {
+        val = val.toUpperCase();
+      }
       await db.execute(
         `INSERT INTO platform_settings (setting_key, setting_value) VALUES (?, ?)
          ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)`,
-        [key, String(req.body[key]).trim()]
+        [key, val]
       );
     }
   }

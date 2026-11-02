@@ -169,7 +169,7 @@ export default function AdminSettingsScreen({ navigation }) {
         <Input
           label="Nueva Clave de registro para Docentes *"
           value={settings.instructor_registration_key}
-          onChangeText={(v) => setSettings((p) => ({ ...p, instructor_registration_key: v }))}
+          onChangeText={(v) => setSettings((p) => ({ ...p, instructor_registration_key: String(v || '').toUpperCase() }))}
           placeholder="Ej. DOCENTE2026"
           autoCapitalize="characters"
         />
@@ -240,7 +240,7 @@ export default function AdminSettingsScreen({ navigation }) {
         <Input
           label="Nueva Clave de registro para Preceptores *"
           value={settings.preceptor_registration_key}
-          onChangeText={(v) => setSettings((p) => ({ ...p, preceptor_registration_key: v }))}
+          onChangeText={(v) => setSettings((p) => ({ ...p, preceptor_registration_key: String(v || '').toUpperCase() }))}
           placeholder="Ej. PRECEPTOR2026"
           autoCapitalize="characters"
         />

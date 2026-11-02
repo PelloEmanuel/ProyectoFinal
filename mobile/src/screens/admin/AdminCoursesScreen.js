@@ -1262,7 +1262,7 @@ export default function AdminCoursesScreen({ route }) {
                 <Input
                   label="Código de Acceso del Curso (para alumnos)"
                   value={newGroupCode}
-                  onChangeText={setNewGroupCode}
+                  onChangeText={(t) => setNewGroupCode(String(t || '').toUpperCase())}
                   autoCapitalize="characters"
                   autoCorrect={false}
                   placeholder="Ej. 6TO1RA (automático si se deja vacío)"
@@ -1718,7 +1718,7 @@ export default function AdminCoursesScreen({ route }) {
             <Input
               label="Código de Acceso *"
               value={editCodeValue}
-              onChangeText={setEditCodeValue}
+              onChangeText={(t) => setEditCodeValue(String(t || '').toUpperCase())}
               autoCapitalize="characters"
               autoCorrect={false}
               placeholder="Ej. 6TO1RA"
