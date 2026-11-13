@@ -2,9 +2,9 @@
   "name": "campus-tecnica-5",
   "version": "1.0.0",
   "description": "Campus Técnica 5 - Plataforma y Campus Escolar Integral",
-  "main": "backend/src/server.js",
+  "main": "backend/src/servidor.ts",
   "scripts": {
-    "start": "node backend/src/server.js",
+    "start": "npx tsx backend/src/servidor.ts",
     "dev": "cd backend && npm run dev"
   },
   "engines": {
@@ -21,6 +21,8 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "mysql2": "^3.11.0",
-    "nodemailer": "^6.9.14"
+    "nodemailer": "^6.9.14",
+    "tsx": "^4.23.15",
+    "typescript": "^5.6.3"
   }
 }
