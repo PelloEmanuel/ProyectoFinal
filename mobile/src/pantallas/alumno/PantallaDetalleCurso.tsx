@@ -1,7 +1,7 @@
 // Importa los hooks de React para estado, memorización y callbacks.
 import React, { useCallback, useMemo, useState } from 'react';
 // Importa los componentes visuales nativos de React Native.
-import { Pressable, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 // Importa el hook de foco de navegación.
 import { useFocusEffect } from '@react-navigation/native';
 // Importa la librería de íconos Ionicons.
@@ -12,6 +12,7 @@ import {
   Button,
   ConfirmModal,
   ErrorBanner,
+  Input,
   Loading,
   Screen,
   SuccessBanner,
@@ -29,7 +30,7 @@ import { formatSchoolGroupShort } from '../../componentes/GrillaHorarios';
 // Importa el componente de muro y tablón de la materia.
 import TablonFeed from '../../componentes/MuroTablon';
 // Importa las paletas cromáticas y constructor de colores de materias.
-import { COURSE_THEME_PALETTES, buildCoursePaletteFromHex } from '../docente/PantallaCursosDocente';
+import { COLOR_FAMILIES, COURSE_THEME_PALETTES, buildCoursePaletteFromHex } from '../docente/PantallaCursosDocente';
 
 // Define las propiedades recibidas por la pantalla de detalle de curso.
 interface PropiedadesPantallaDetalleCurso {
@@ -44,7 +45,7 @@ export default function CourseDetailScreen({ navigation, route }: PropiedadesPan
   // Obtiene el usuario autenticado.
   const { user } = useAuth();
   // Obtiene la paleta de colores del tema actual.
-  const { colors } = useTheme();
+  const { colors, isDark } = useTheme();
 
   // Estados para la información del curso, pestaña activa y banderas de operación.
   const [course, setCourse] = useState<any>(null);
@@ -53,6 +54,13 @@ export default function CourseDetailScreen({ navigation, route }: PropiedadesPan
   const [success, setSuccess] = useState<string>('');
   const [busy, setBusy] = useState<boolean>(false);
   const [confirmUnenroll, setConfirmUnenroll] = useState<boolean>(false);
+
+  // Estados del selector de color personalizado de la materia para el docente.
+  const [colorModalOpen, setColorModalOpen] = useState<boolean>(false);
+  const [selectedColorFamily, setSelectedColorFamily] = useState<string>('red');
+  const [selectedIntensity, setSelectedIntensity] = useState<string>('dark');
+  const [draftHexColor, setDraftHexColor] = useState<string>('#b91c1c');
+  const [savingColor, setSavingColor] = useState<boolean>(false);
 
   // Calcula la paleta visual de la materia a partir de su color personalizado o su identificador.
   const coursePalette = useMemo(() => {
@@ -63,6 +71,46 @@ export default function CourseDetailScreen({ navigation, route }: PropiedadesPan
     const idx = Math.abs(Number(course.id) || 0) % COURSE_THEME_PALETTES.length;
     return COURSE_THEME_PALETTES[idx];
   }, [course]);
+
+  // Abre el modal selector de color preseleccionando la tonalidad actual de la materia.
+  const openColorPickerModal = () => {
+    const currentHex = course?.themeColor || coursePalette.solidBg || '#b91c1c';
+    setDraftHexColor(currentHex);
+    const foundFam = COLOR_FAMILIES.find((fam) =>
+      fam.shades.some((s) => s.hex.toLowerCase() === currentHex.toLowerCase())
+    );
+    if (foundFam) {
+      setSelectedColorFamily(foundFam.id);
+      const foundShade = foundFam.shades.find(
+        (s) => s.hex.toLowerCase() === currentHex.toLowerCase()
+      );
+      if (foundShade) setSelectedIntensity(foundShade.id);
+    }
+    setColorModalOpen(true);
+  };
+
+  // Guarda el color personalizado elegido por el docente para el encabezado de la materia.
+  const handleSaveCourseColor = async (colorToSave = draftHexColor) => {
+    if (!course) return;
+    const cleanHex = String(colorToSave || '').trim();
+    if (!cleanHex.startsWith('#') || cleanHex.length < 4) {
+      setError('Por favor ingresá un código hexadecimal de color válido (ej. #b91c1c).');
+      return;
+    }
+    try {
+      setSavingColor(true);
+      setError('');
+      setSuccess('');
+      await coursesApi.update(course.id, { themeColor: cleanHex });
+      setCourse((prev: any) => (prev ? { ...prev, themeColor: cleanHex } : prev));
+      setSuccess(`Color de "${course.title}" actualizado exitosamente.`);
+      setColorModalOpen(false);
+    } catch (e) {
+      setError(getErrorMessage(e));
+    } finally {
+      setSavingColor(false);
+    }
+  };
 
   // Carga los datos completos de la materia desde el servidor.
   const load = useCallback(async () => {
@@ -153,7 +201,7 @@ export default function CourseDetailScreen({ navigation, route }: PropiedadesPan
               <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#fbbf24' }} />
             </View>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <View
                 style={{
                   backgroundColor: coursePalette.badgeBg,
@@ -169,19 +217,44 @@ export default function CourseDetailScreen({ navigation, route }: PropiedadesPan
                 </Text>
               </View>
 
-              <View
-                style={{
-                  backgroundColor: coursePalette.badgeBg,
-                  borderColor: coursePalette.badgeBorder,
-                  borderWidth: 1,
-                  paddingHorizontal: 10,
-                  paddingVertical: 4,
-                  borderRadius: 10,
-                }}
-              >
-                <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 12 }}>
-                  👥 {course.studentsCount || 0} alumnos
-                </Text>
+              <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                <View
+                  style={{
+                    backgroundColor: coursePalette.badgeBg,
+                    borderColor: coursePalette.badgeBorder,
+                    borderWidth: 1,
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 10,
+                  }}
+                >
+                  <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: 12 }}>
+                    👥 {course.studentsCount ?? course.enrolledCount ?? 0} alumnos
+                  </Text>
+                </View>
+
+                {(user?.role === 'instructor' || user?.role === 'admin') && (
+                  <TouchableOpacity
+                    onPress={openColorPickerModal}
+                    activeOpacity={0.8}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 5,
+                      backgroundColor: 'rgba(0, 0, 0, 0.28)',
+                      borderColor: 'rgba(255, 255, 255, 0.48)',
+                      borderWidth: 1,
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
+                      borderRadius: 10,
+                    }}
+                  >
+                    <Ionicons name="color-palette" size={14} color="#ffffff" />
+                    <Text style={{ color: '#ffffff', fontWeight: '800', fontSize: 11 }}>
+                      Cambiar color
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
 
@@ -459,6 +532,226 @@ export default function CourseDetailScreen({ navigation, route }: PropiedadesPan
           )}
         </>
       )}
+
+      <Modal visible={colorModalOpen} animationType="slide" transparent onRequestClose={() => setColorModalOpen(false)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlay }}>
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              padding: 20,
+              maxHeight: '90%',
+            }}
+          >
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 10,
+                      backgroundColor: draftHexColor,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderWidth: 2,
+                      borderColor: '#ffffff',
+                    }}
+                  >
+                    <Ionicons name="color-palette" size={20} color="#ffffff" />
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>
+                      Color de la Materia
+                    </Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                      {course?.title || 'Materia'}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity onPress={() => setColorModalOpen(false)}>
+                  <Ionicons name="close-circle" size={24} color={colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 14 }}>
+                Seleccioná el tono y ajustá qué tan claro u oscuro querés el recuadro de tu materia:
+              </Text>
+
+              <View
+                style={{
+                  backgroundColor: draftHexColor,
+                  borderRadius: 14,
+                  padding: 14,
+                  marginBottom: 16,
+                  borderWidth: 1.5,
+                  borderColor: 'rgba(255, 255, 255, 0.35)',
+                }}
+              >
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <View style={{ backgroundColor: 'rgba(255, 255, 255, 0.25)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
+                    <Text style={{ color: '#ffffff', fontSize: 11, fontWeight: '800' }}>
+                      {course?.schoolGroupLabel || 'Curso Asignado'}
+                    </Text>
+                  </View>
+                  <Text style={{ color: 'rgba(255, 255, 255, 0.9)', fontSize: 11, fontWeight: '800' }}>
+                    VISTA PREVIA
+                  </Text>
+                </View>
+                <Text style={{ color: '#ffffff', fontSize: 20, fontWeight: '900', letterSpacing: 0.2 }}>
+                  {course?.title || 'Nombre de la Materia'}
+                </Text>
+                <Text style={{ color: '#f8fafc', fontSize: 12, marginTop: 4, fontWeight: '600' }}>
+                  Color seleccionado: {draftHexColor}
+                </Text>
+              </View>
+
+              <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 8 }}>
+                1. Seleccioná el Tono de Color:
+              </Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', gap: 8, paddingVertical: 2 }}>
+                  {COLOR_FAMILIES.map((fam) => {
+                    const isFamSelected = selectedColorFamily === fam.id;
+                    const sampleHex = fam.shades[2].hex;
+                    return (
+                      <TouchableOpacity
+                        key={fam.id}
+                        onPress={() => {
+                          setSelectedColorFamily(fam.id);
+                          const matchingShade = fam.shades.find((s) => s.id === selectedIntensity) || fam.shades[2];
+                          setDraftHexColor(matchingShade.hex);
+                        }}
+                        style={{
+                          alignItems: 'center',
+                          paddingVertical: 9,
+                          paddingHorizontal: 12,
+                          borderRadius: 12,
+                          backgroundColor: isFamSelected
+                            ? isDark
+                              ? 'rgba(99, 102, 241, 0.25)'
+                              : 'rgba(79, 70, 229, 0.12)'
+                            : colors.surfaceAlt || colors.background,
+                          borderWidth: 2,
+                          borderColor: isFamSelected ? colors.primary : colors.border,
+                          minWidth: 74,
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: 24,
+                            height: 24,
+                            borderRadius: 12,
+                            backgroundColor: sampleHex,
+                            marginBottom: 4,
+                            borderWidth: 1.5,
+                            borderColor: 'rgba(255, 255, 255, 0.8)',
+                          }}
+                        />
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            fontWeight: isFamSelected ? '800' : '600',
+                            color: isFamSelected ? colors.primary : colors.text,
+                          }}
+                        >
+                          {fam.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+
+              <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 8 }}>
+                2. Regulá la Intensidad (Qué tan claro u oscuro):
+              </Text>
+              <View style={{ gap: 8, marginBottom: 18 }}>
+                {(COLOR_FAMILIES.find((f) => f.id === selectedColorFamily)?.shades || []).map((shd) => {
+                  const isSelected = draftHexColor.toLowerCase() === shd.hex.toLowerCase();
+                  return (
+                    <TouchableOpacity
+                      key={shd.id}
+                      onPress={() => {
+                        setSelectedIntensity(shd.id);
+                        setDraftHexColor(shd.hex);
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: 11,
+                        borderRadius: 11,
+                        backgroundColor: isSelected
+                          ? isDark
+                            ? 'rgba(99, 102, 241, 0.18)'
+                            : 'rgba(79, 70, 229, 0.08)'
+                          : colors.surfaceAlt || colors.background,
+                        borderWidth: 1.5,
+                        borderColor: isSelected ? colors.primary : colors.border,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        <View
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 8,
+                            backgroundColor: shd.hex,
+                            borderWidth: 1,
+                            borderColor: 'rgba(0, 0, 0, 0.15)',
+                          }}
+                        />
+                        <View>
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: colors.text }}>
+                            {shd.label}
+                          </Text>
+                          <Text style={{ fontSize: 11, color: colors.textSecondary }}>
+                            {shd.hex}
+                          </Text>
+                        </View>
+                      </View>
+                      {isSelected ? (
+                        <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
+                      ) : (
+                        <Ionicons name="ellipse-outline" size={18} color={colors.textMuted} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={{ marginBottom: 16 }}>
+                <Input
+                  label="Código HEX manual (opcional)"
+                  value={draftHexColor}
+                  onChangeText={(val) => setDraftHexColor(val)}
+                  placeholder="#b91c1c"
+                  maxLength={7}
+                />
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <Button
+                  title="Cancelar"
+                  variant="secondary"
+                  onPress={() => setColorModalOpen(false)}
+                  style={{ flex: 1, marginBottom: 0 }}
+                />
+                <Button
+                  title={savingColor ? 'Guardando...' : 'Aplicar Color'}
+                  icon="checkmark-outline"
+                  loading={savingColor}
+                  disabled={savingColor}
+                  onPress={() => handleSaveCourseColor(draftHexColor)}
+                  style={{ flex: 1.4, marginBottom: 0 }}
+                />
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
       <ConfirmModal
         visible={confirmUnenroll}

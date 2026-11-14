@@ -226,7 +226,11 @@ export const listCourses = asyncHandler(async (req: SolicitudAutenticada, res: R
            c.published_at AS publishedAt, c.created_at AS createdAt,
            cat.name AS categoryName,
            COALESCE(CONCAT(u.first_name, ' ', u.last_name), 'Sin profesor asignado') AS instructorName,
-           (SELECT COUNT(*) FROM inscripciones e WHERE e.course_id = c.id) AS studentsCount,
+           (SELECT COUNT(DISTINCT stu.id)
+            FROM usuarios stu
+            LEFT JOIN inscripciones e ON e.student_id = stu.id AND e.course_id = c.id
+            WHERE (e.id IS NOT NULL OR (stu.school_year = c.school_year AND stu.course_division = c.course_division))
+              AND stu.role_id = 3 AND stu.deleted_at IS NULL) AS studentsCount,
            (SELECT COUNT(*) FROM modulos m WHERE m.course_id = c.id) AS modulesCount,
            (SELECT COUNT(*) FROM lecciones l JOIN modulos m ON m.id = l.module_id WHERE m.course_id = c.id) AS lessonsCount
     FROM cursos c
@@ -357,9 +361,14 @@ export const getCourse = asyncHandler(async (req: SolicitudAutenticada, res: Res
     [course.id]
   );
 
-  const [[{ studentsCount }]] = await db.execute('SELECT COUNT(*) AS studentsCount FROM inscripciones WHERE course_id = ?', [
-    course.id,
-  ]);
+  const [[{ studentsCount }]] = await db.execute(
+    `SELECT COUNT(DISTINCT stu.id) AS studentsCount
+     FROM usuarios stu
+     LEFT JOIN inscripciones e ON e.student_id = stu.id AND e.course_id = ?
+     WHERE (e.id IS NOT NULL OR (stu.school_year = ? AND stu.course_division = ?))
+       AND stu.role_id = 3 AND stu.deleted_at IS NULL`,
+    [course.id, Number(course.school_year) || 1, Number(course.course_division) || 1]
+  );
 
   let enrollment: any = null;
   let completedLessonIds: number[] = [];

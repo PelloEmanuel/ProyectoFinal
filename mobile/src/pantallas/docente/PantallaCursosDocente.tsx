@@ -394,8 +394,9 @@ export default function InstructorCoursesScreen({ route, navigation }: { route: 
       navigation.setParams({ openCreate: undefined });
     }
     if (route.params?.editCourseId) {
-      openCourseWorkspace(route.params.editCourseId);
+      const targetId = route.params.editCourseId;
       navigation.setParams({ editCourseId: undefined });
+      navigation.navigate('CourseDetail', { courseId: targetId });
     }
   }, [route.params, categories, navigation, openCourseWorkspace]);
 
@@ -1373,13 +1374,6 @@ export default function InstructorCoursesScreen({ route, navigation }: { route: 
                           title="Abrir tablón"
                           icon="chatbubbles-outline"
                           onPress={() => navigation.navigate('CourseDetail', { courseId: course.id })}
-                          style={{ flex: 1, minHeight: 40, paddingVertical: 8, marginBottom: 0 }}
-                        />
-                        <Button
-                          title="Administrar"
-                          variant="outline"
-                          icon="settings-outline"
-                          onPress={() => openCourseWorkspace(course.id)}
                           style={{ flex: 1, minHeight: 40, paddingVertical: 8, marginBottom: 0 }}
                         />
                       </View>

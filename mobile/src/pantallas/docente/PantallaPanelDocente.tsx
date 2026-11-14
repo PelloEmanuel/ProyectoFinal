@@ -312,8 +312,8 @@ export default function InstructorDashboardScreen({ navigation }: { navigation: 
               <TouchableOpacity
                 style={[styles.smallActionBtn, { backgroundColor: colors.primary }]}
                 onPress={() => {
-                  navigation.navigate('InstructorCourses', {
-                    editCourseId: nextClassInfo.item.courseId,
+                  navigation.navigate('CourseDetail', {
+                    courseId: nextClassInfo.item.courseId,
                   });
                 }}
               >

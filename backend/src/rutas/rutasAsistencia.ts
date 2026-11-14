@@ -1,58 +1,27 @@
+// Importa el enrutador de Express, el controlador de asistencia y el intermediario de autenticación.
 import { Router } from 'express';
-import { body, param } from 'express-validator';
-import * as ac from '../controladores/controladorTareas';
-import validate from '../intermediarios/validacion';
-import { authenticate, authorize } from '../intermediarios/autenticacion';
-import { SolicitudAutenticada } from '../tipos';
+import * as attendanceCtrl from '../controladores/controladorAsistencia';
+import { authenticate } from '../intermediarios/autenticacion';
 
-// Inicializa el enrutador de tareas, entregas y panel de evaluación docente.
+// Inicializa el enrutador para las operaciones de asistencia escolar.
 const router = Router();
 
-// Define el validador para identificadores numéricos en las rutas.
-const idParam = param('id').isInt().withMessage('ID inválido');
+// Exige autenticación mediante token JWT en todas las rutas de asistencia.
+router.use(authenticate);
 
-// Gestiona la consulta, creación, edición y borrado de actividades académicas.
-router.get('/assignments', authenticate, ac.listMyAssignments);
-router.post('/assignments', authenticate, authorize('instructor', 'admin'), ac.createAssignment);
-router.get('/assignments/:id', authenticate, idParam, validate, ac.getAssignment);
-router.patch('/assignments/:id', authenticate, authorize('instructor', 'admin'), idParam, validate, ac.updateAssignment);
-router.delete('/assignments/:id', authenticate, authorize('instructor', 'admin'), idParam, validate, ac.deleteAssignment);
+// Lista todos los cursos escolares abiertos para la toma de asistencia.
+router.get('/open-courses', attendanceCtrl.listOpenCourses);
 
-// Gestiona el inicio de intentos, guardado de respuestas y envío de entregas por parte de los alumnos.
-router.post('/assignments/:id/attempts', authenticate, idParam, validate, ac.startAttempt);
-router.get('/attempts/:id', authenticate, idParam, validate, ac.getAttempt);
-router.put('/attempts/:id/answers', authenticate, idParam, validate, ac.saveAttemptAnswers);
-router.post('/attempts/:id/submit', authenticate, idParam, validate, ac.submitAttempt);
+// Obtiene la nómina de alumnos inscritos en un año y división determinados.
+router.get('/students', attendanceCtrl.getCourseStudents);
 
-// Expone los endpoints del panel docente para consultar cursos, alumnos y entregas pendientes.
-router.get('/instructor/dashboard', authenticate, authorize('instructor', 'admin'), ac.instructorDashboard);
-router.get('/instructor/courses', authenticate, authorize('instructor', 'admin', 'preceptor'), ac.listInstructorCourses);
-router.get('/instructor/students', authenticate, authorize('instructor', 'admin', 'preceptor'), ac.listInstructorStudents);
-router.get('/instructor/assignments/pending', authenticate, authorize('instructor', 'admin'), (req: SolicitudAutenticada, res, next) => {
-  // Filtra automáticamente las entregas que están pendientes de calificación.
-  req.query.status = 'submitted';
-  return ac.listInstructorAttempts(req, res, next);
-});
-router.get('/instructor/attempts', authenticate, authorize('instructor', 'admin'), ac.listInstructorAttempts);
+// Obtiene la planilla diaria de asistencia y el estado de clases de un curso.
+router.get('/sheet', attendanceCtrl.getAttendanceSheet);
 
-// Permite a docentes y administradores calificar una entrega y registrar su devolución.
-router.post(
-  '/attempts/:id/grade',
-  authenticate,
-  authorize('instructor', 'admin'),
-  idParam,
-  body('score').isNumeric().withMessage('La calificación numérica es obligatoria'),
-  validate,
-  ac.gradeAttempt
-);
-router.patch(
-  '/attempts/:id/grade',
-  authenticate,
-  authorize('instructor', 'admin'),
-  idParam,
-  body('score').isNumeric().withMessage('La calificación numérica es obligatoria'),
-  validate,
-  ac.gradeAttempt
-);
+// Registra o actualiza el estado de asistencia de los alumnos para una fecha.
+router.post('/record', attendanceCtrl.recordAttendance);
+
+// Define si un curso tuvo clases normales o sin actividad en una fecha específica.
+router.post('/day-status', attendanceCtrl.setDayAttendanceStatus);
 
 export default router;

@@ -123,6 +123,7 @@ export default function usarAccesoSocial({
     if (options?.preceptorKey) query.append('preceptorKey', String(options.preceptorKey));
     if (options?.schoolYear) query.append('schoolYear', String(options.schoolYear));
     if (options?.courseDivision) query.append('courseDivision', String(options.courseDivision));
+    if (options?.accessCode) query.append('accessCode', String(options.accessCode));
 
     const startUrl = `${backendBase}/api/v1/auth/oauth/${provider}/start?${query.toString()}`;
 

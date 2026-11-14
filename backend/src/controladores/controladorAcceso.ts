@@ -131,6 +131,58 @@ export const registrationStatus = asyncHandler(async (_req: Request, res: Respon
   });
 });
 
+// Valida que el curso escolar seleccionado por el alumno esté abierto y coincida con su contraseña de acceso.
+async function validateStudentCourseAccessCode(
+  schoolYearInput: unknown,
+  courseDivisionInput: unknown,
+  accessCodeInput: unknown
+): Promise<{ schoolYear: number; courseDivision: number }> {
+  const sy = Number(schoolYearInput);
+  const cd = Number(courseDivisionInput);
+  if (!sy || sy < 1 || !cd || cd < 1) {
+    throw new AppError(
+      'Debés elegir a qué Año Escolar y División querés ingresar.',
+      422,
+      'SCHOOL_GROUP_REQUIRED',
+      [{ field: 'schoolYear', message: 'Seleccioná el año y división de tu curso' }]
+    );
+  }
+
+  const submittedCode = String(accessCodeInput || '').trim().toUpperCase();
+  if (!submittedCode) {
+    throw new AppError(
+      'Debés ingresar la contraseña del curso para poder crear tu cuenta de estudiante.',
+      422,
+      'COURSE_ACCESS_CODE_REQUIRED',
+      [{ field: 'accessCode', message: 'Ingresá la contraseña del curso seleccionado' }]
+    );
+  }
+
+  const [groupRows] = await db.execute<any[]>(
+    'SELECT id, status, access_code FROM grupos_escolares WHERE school_year = ? AND course_division = ? LIMIT 1',
+    [sy, cd]
+  );
+  if (!groupRows.length || groupRows[0].status !== 'open') {
+    throw new AppError(
+      `El curso ${sy}° Año - ${cd}° Curso no se encuentra abierto para inscripciones.`,
+      400,
+      'SCHOOL_GROUP_CLOSED'
+    );
+  }
+
+  const expectedCode = String(groupRows[0].access_code || `${sy}TO${cd}RA`).trim().toUpperCase();
+  if (submittedCode !== expectedCode) {
+    throw new AppError(
+      `La contraseña ingresada para el curso ${sy}° ${cd}ª es incorrecta. No podés ingresar sin la contraseña válida del curso.`,
+      403,
+      'INVALID_COURSE_ACCESS_CODE',
+      [{ field: 'accessCode', message: 'La contraseña del curso ingresada es incorrecta' }]
+    );
+  }
+
+  return { schoolYear: sy, courseDivision: cd };
+}
+
 // Registra un nuevo usuario en la plataforma validando su rol, claves institucionales y verificación en dos pasos.
 export const register = asyncHandler(async (req: Request, res: Response) => {
   // Extrae los campos de registro enviados en el cuerpo de la petición.
@@ -146,6 +198,9 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     instructorCode,
     preceptorKey,
     preceptorCode,
+    accessCode,
+    courseAccessCode,
+    coursePassword,
   } = req.body;
 
   // Verifica que el usuario haya aceptado los términos y condiciones.
@@ -153,80 +208,13 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError('Debés aceptar los términos y condiciones para crear una cuenta', 400, 'TERMS_REQUIRED');
   }
 
-  // Normaliza el correo electrónico y comprueba si ya existe un registro previo en la tabla usuarios.
-  const normalizedEmail = String(email).trim().toLowerCase();
-  const [anyUsers] = await db.execute<any[]>('SELECT * FROM usuarios WHERE email = ?', [normalizedEmail]);
-  if (anyUsers.length > 0) {
-    const rawUser = anyUsers[0];
-
-    // Si la cuenta anterior fue dada de baja lógica, la elimina definitivamente para permitir el nuevo registro.
-    if (rawUser.deleted_at !== null) {
-      await db.execute('UPDATE cursos SET instructor_id = NULL WHERE instructor_id = ?', [rawUser.id]);
-      await db.execute('DELETE FROM usuarios WHERE id = ?', [rawUser.id]);
-    } else if (!rawUser.email_verified_at && !rawUser.created_by_admin) {
-      // Si la cuenta estaba pendiente de verificación por correo, actualiza sus datos y reenvía el código de 6 dígitos.
-      let resolvedFirst = (firstName || '').trim();
-      let resolvedLast = (lastName || '').trim();
-      if (!resolvedFirst && name) {
-        const parts = String(name).trim().split(/\s+/);
-        resolvedFirst = parts[0] || 'Usuario';
-        resolvedLast = parts.slice(1).join(' ') || 'Campus';
-      }
-      if (!resolvedLast) resolvedLast = 'Campus';
-
-      const newHash = await bcrypt.hash(password, 10);
-      await db.execute(
-        `UPDATE usuarios 
-         SET first_name = ?, last_name = ?, password_hash = ?, status = 'pending_verification'
-         WHERE id = ?`,
-        [resolvedFirst, resolvedLast, newHash, rawUser.id]
-      );
-
-      await issueEmailVerificationToken(rawUser.id, rawUser.email);
-      return res.status(202).json({
-        success: true,
-        requiresVerification: true,
-        twoFactorRequired: true,
-        userId: rawUser.id,
-        email: rawUser.email,
-        message: 'Habías iniciado un registro previo. Te enviamos un nuevo código de verificación de 6 dígitos a tu casilla de correo.',
-      });
-    } else {
-      // Si la cuenta ya existía mediante proveedor social sin contraseña, vincula la nueva contraseña a la misma cuenta.
-      if (!rawUser.password_hash) {
-        const linkedHash = await bcrypt.hash(password, 10);
-        await db.execute('UPDATE usuarios SET password_hash = ? WHERE id = ?', [linkedHash, rawUser.id]);
-        if (rawUser.role_name === 'student' && req.body.schoolYear && req.body.courseDivision) {
-          const sy = Number(req.body.schoolYear);
-          const cd = Number(req.body.courseDivision);
-          if (sy >= 1 && cd >= 1) {
-            await syncStudentCourseEnrollments(rawUser.id, sy, cd);
-          }
-        }
-        await logAudit(rawUser.id, 'OAUTH_ACCOUNT_LINKED_PASSWORD', 'user', rawUser.id, { email: normalizedEmail });
-        const unifiedUser = await findById(rawUser.id);
-        return res.status(200).json(await buildSessionResponse(unifiedUser, req));
-      }
-
-      // Si la contraseña coincide con la cuenta activa existente, inicia sesión directamente.
-      if (await bcrypt.compare(password, rawUser.password_hash)) {
-        const unifiedUser = await findById(rawUser.id);
-        return res.status(200).json(await buildSessionResponse(unifiedUser, req));
-      }
-      throw new AppError(
-        'Este correo electrónico ya pertenece a una cuenta activa. Iniciá sesión con tu contraseña o con tu cuenta vinculada.',
-        409,
-        'EMAIL_EXISTS'
-      );
-    }
-  }
-
   // Determina si es el primer usuario registrado en el sistema para asignarle rol de administrador.
   const [[{ totalUsers }]] = await db.execute<any[]>('SELECT COUNT(*) AS totalUsers FROM usuarios WHERE deleted_at IS NULL');
   const isFirstUser = Number(totalUsers) === 0;
 
-  // Valida el rol solicitado y verifica las claves institucionales de docente o preceptor en mayúsculas.
+  // Valida el rol solicitado y verifica las claves institucionales de docente, preceptor o curso de alumno.
   let targetRoleName = 'student';
+  let verifiedStudentGroup: { schoolYear: number; courseDivision: number } | null = null;
   if (isFirstUser) {
     targetRoleName = 'admin';
   } else if (String(role || '').trim().toLowerCase() === 'instructor') {
@@ -279,6 +267,79 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     targetRoleName = 'preceptor';
   } else {
     targetRoleName = 'student';
+    verifiedStudentGroup = await validateStudentCourseAccessCode(
+      req.body.schoolYear,
+      req.body.courseDivision,
+      accessCode ?? courseAccessCode ?? coursePassword
+    );
+  }
+
+  // Normaliza el correo electrónico y comprueba si ya existe un registro previo en la tabla usuarios.
+  const normalizedEmail = String(email).trim().toLowerCase();
+  const [anyUsers] = await db.execute<any[]>('SELECT * FROM usuarios WHERE email = ?', [normalizedEmail]);
+  if (anyUsers.length > 0) {
+    const rawUser = anyUsers[0];
+
+    // Si la cuenta anterior fue dada de baja lógica, la elimina definitivamente para permitir el nuevo registro.
+    if (rawUser.deleted_at !== null) {
+      await db.execute('UPDATE cursos SET instructor_id = NULL WHERE instructor_id = ?', [rawUser.id]);
+      await db.execute('DELETE FROM usuarios WHERE id = ?', [rawUser.id]);
+    } else if (!rawUser.email_verified_at && !rawUser.created_by_admin) {
+      // Si la cuenta estaba pendiente de verificación por correo, actualiza sus datos y reenvía el código de 6 dígitos.
+      let resolvedFirst = (firstName || '').trim();
+      let resolvedLast = (lastName || '').trim();
+      if (!resolvedFirst && name) {
+        const parts = String(name).trim().split(/\s+/);
+        resolvedFirst = parts[0] || 'Usuario';
+        resolvedLast = parts.slice(1).join(' ') || 'Campus';
+      }
+      if (!resolvedLast) resolvedLast = 'Campus';
+
+      const newHash = await bcrypt.hash(password, 10);
+      await db.execute(
+        `UPDATE usuarios 
+         SET first_name = ?, last_name = ?, password_hash = ?, status = 'pending_verification'
+         WHERE id = ?`,
+        [resolvedFirst, resolvedLast, newHash, rawUser.id]
+      );
+
+      if (targetRoleName === 'student' && verifiedStudentGroup) {
+        await syncStudentCourseEnrollments(rawUser.id, verifiedStudentGroup.schoolYear, verifiedStudentGroup.courseDivision);
+      }
+
+      await issueEmailVerificationToken(rawUser.id, rawUser.email);
+      return res.status(202).json({
+        success: true,
+        requiresVerification: true,
+        twoFactorRequired: true,
+        userId: rawUser.id,
+        email: rawUser.email,
+        message: 'Habías iniciado un registro previo. Te enviamos un nuevo código de verificación de 6 dígitos a tu casilla de correo.',
+      });
+    } else {
+      // Si la cuenta ya existía mediante proveedor social sin contraseña, vincula la nueva contraseña a la misma cuenta.
+      if (!rawUser.password_hash) {
+        const linkedHash = await bcrypt.hash(password, 10);
+        await db.execute('UPDATE usuarios SET password_hash = ? WHERE id = ?', [linkedHash, rawUser.id]);
+        if (targetRoleName === 'student' && verifiedStudentGroup) {
+          await syncStudentCourseEnrollments(rawUser.id, verifiedStudentGroup.schoolYear, verifiedStudentGroup.courseDivision);
+        }
+        await logAudit(rawUser.id, 'OAUTH_ACCOUNT_LINKED_PASSWORD', 'user', rawUser.id, { email: normalizedEmail });
+        const unifiedUser = await findById(rawUser.id);
+        return res.status(200).json(await buildSessionResponse(unifiedUser, req));
+      }
+
+      // Si la contraseña coincide con la cuenta activa existente, inicia sesión directamente.
+      if (await bcrypt.compare(password, rawUser.password_hash)) {
+        const unifiedUser = await findById(rawUser.id);
+        return res.status(200).json(await buildSessionResponse(unifiedUser, req));
+      }
+      throw new AppError(
+        'Este correo electrónico ya pertenece a una cuenta activa. Iniciá sesión con tu contraseña o con tu cuenta vinculada.',
+        409,
+        'EMAIL_EXISTS'
+      );
+    }
   }
 
   // Normaliza el nombre y apellido del usuario para almacenarlos en la base de datos.
@@ -311,13 +372,9 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     ]
   );
 
-  // Si el usuario es estudiante y seleccionó un año y división, sincroniza sus inscripciones escolares.
-  if (targetRoleName === 'student') {
-    const sy = Number(req.body.schoolYear);
-    const cd = Number(req.body.courseDivision);
-    if (sy >= 1 && cd >= 1) {
-      await syncStudentCourseEnrollments(result.insertId, sy, cd);
-    }
+  // Si el usuario es estudiante y validó la contraseña del curso, sincroniza sus inscripciones escolares.
+  if (targetRoleName === 'student' && verifiedStudentGroup) {
+    await syncStudentCourseEnrollments(result.insertId, verifiedStudentGroup.schoolYear, verifiedStudentGroup.courseDivision);
   }
 
   // Emite el token de verificación por correo y crea una notificación de bienvenida para el usuario.
@@ -788,6 +845,7 @@ export const oauthStart = asyncHandler(async (req: Request, res: Response) => {
     preceptorKey: req.query.preceptorKey || null,
     schoolYear: req.query.schoolYear || null,
     courseDivision: req.query.courseDivision || null,
+    accessCode: req.query.accessCode || null,
     t: Date.now(),
   };
   const state = Buffer.from(JSON.stringify(statePayload)).toString('base64url');
@@ -1035,6 +1093,15 @@ export const oauthCallback = asyncHandler(async (req: Request, res: Response) =>
           }
         }
 
+        let verifiedStudentGroup: { schoolYear: number; courseDivision: number } | null = null;
+        if (!isFirstUser && targetRoleName === 'student') {
+          verifiedStudentGroup = await validateStudentCourseAccessCode(
+            stateData.schoolYear,
+            stateData.courseDivision,
+            stateData.accessCode
+          );
+        }
+
         const [roleRows] = await db.execute<any[]>('SELECT id FROM roles WHERE name = ? LIMIT 1', [targetRoleName]);
         const roleId = roleRows[0]?.id || (targetRoleName === 'admin' ? 1 : targetRoleName === 'instructor' ? 2 : 3);
 
@@ -1052,12 +1119,8 @@ export const oauthCallback = asyncHandler(async (req: Request, res: Response) =>
         );
         user = await findById(ins.insertId);
 
-        if (targetRoleName === 'student' && stateData.schoolYear && stateData.courseDivision) {
-          const sy = Number(stateData.schoolYear);
-          const cd = Number(stateData.courseDivision);
-          if (sy >= 1 && cd >= 1) {
-            await syncStudentCourseEnrollments(user.id, sy, cd).catch(() => {});
-          }
+        if (targetRoleName === 'student' && verifiedStudentGroup) {
+          await syncStudentCourseEnrollments(user.id, verifiedStudentGroup.schoolYear, verifiedStudentGroup.courseDivision).catch(() => {});
         }
       }
 
@@ -1166,6 +1229,15 @@ export const socialLogin = asyncHandler(async (req: Request, res: Response) => {
         targetRoleName = 'instructor';
       }
 
+      let verifiedStudentGroup: { schoolYear: number; courseDivision: number } | null = null;
+      if (!isFirstUser && targetRoleName === 'student') {
+        verifiedStudentGroup = await validateStudentCourseAccessCode(
+          req.body?.schoolYear,
+          req.body?.courseDivision,
+          req.body?.accessCode ?? req.body?.courseAccessCode ?? req.body?.coursePassword
+        );
+      }
+
       const [roleRows] = await db.execute<any[]>('SELECT id FROM roles WHERE name = ? LIMIT 1', [targetRoleName]);
       const roleId = roleRows[0]?.id || (targetRoleName === 'admin' ? 1 : targetRoleName === 'instructor' ? 2 : 3);
       const [ins] = await db.execute<any>(
@@ -1181,6 +1253,9 @@ export const socialLogin = asyncHandler(async (req: Request, res: Response) => {
         ]
       );
       user = await findById(ins.insertId);
+      if (targetRoleName === 'student' && verifiedStudentGroup) {
+        await syncStudentCourseEnrollments(user.id, verifiedStudentGroup.schoolYear, verifiedStudentGroup.courseDivision).catch(() => {});
+      }
     }
 
     await db.execute(

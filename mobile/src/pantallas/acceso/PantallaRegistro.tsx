@@ -20,6 +20,7 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
     role: 'student',
     instructorKey: '',
     preceptorKey: '',
+    accessCode: '',
     schoolYear: 1,
     courseDivision: 1,
     firstName: '',
@@ -35,7 +36,7 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
 
   // Actualiza un campo del formulario convirtiendo claves institucionales a mayúsculas automáticamente.
   const set = (k: string) => (v: any) => {
-    const val = (k === 'instructorKey' || k === 'preceptorKey') ? String(v || '').toUpperCase() : v;
+    const val = (k === 'instructorKey' || k === 'preceptorKey' || k === 'accessCode') ? String(v || '').toUpperCase() : v;
     setForm((f) => ({ ...f, [k]: val }));
     if (errors[k]) {
       setErrors((prev) => ({ ...prev, [k]: undefined }));
@@ -148,6 +149,14 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
         setBanner('Debés completar el campo de clave de preceptor para poder registrarte como preceptor.');
         return;
       }
+      if (!isFirstUser && form.role === 'student' && !String(form.accessCode || '').trim()) {
+        setErrors((prev) => ({
+          ...prev,
+          accessCode: 'Debés ingresar la contraseña del curso para poder ingresar',
+        }));
+        setBanner('Debés ingresar la contraseña del curso elegido para poder crear tu cuenta.');
+        return;
+      }
       setLoading(true);
       try {
         await socialLogin(provider, {
@@ -155,6 +164,9 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
           role: form.role,
           instructorKey: form.role === 'instructor' ? form.instructorKey.trim() : undefined,
           preceptorKey: form.role === 'preceptor' ? form.preceptorKey.trim() : undefined,
+          schoolYear: form.role === 'student' ? form.schoolYear : undefined,
+          courseDivision: form.role === 'student' ? form.courseDivision : undefined,
+          accessCode: form.role === 'student' ? form.accessCode.trim().toUpperCase() : undefined,
         });
       } catch (e) {
         setErrors(getFieldErrors(e));
@@ -173,6 +185,8 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
     if (Object.keys(v).length) {
       if (v.instructorKey) {
         setBanner('Debés completar el campo de clave de docente para poder registrarte e iniciar sesión como docente.');
+      } else if (v.accessCode) {
+        setBanner('Debés ingresar la contraseña del curso seleccionado para poder registrarte como alumno.');
       }
       return;
     }
@@ -192,6 +206,7 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
         preceptorKey: form.role === 'preceptor' ? form.preceptorKey.trim() : undefined,
         schoolYear: form.role === 'student' ? form.schoolYear : undefined,
         courseDivision: form.role === 'student' ? form.courseDivision : undefined,
+        accessCode: form.role === 'student' ? form.accessCode.trim().toUpperCase() : undefined,
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         email: form.email.trim().toLowerCase(),
@@ -463,8 +478,19 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
             </>
           )}
 
-          <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }}>
-            Se te asignarán automáticamente las materias y horarios de {form.schoolYear}° Año - {form.courseDivision}° Curso.
+          <View style={{ marginTop: 4 }}>
+            <Input
+              label={`Contraseña del Curso (${form.schoolYear}° ${form.courseDivision}ª) *`}
+              value={form.accessCode}
+              onChangeText={set('accessCode')}
+              error={errors.accessCode}
+              placeholder="Ej. 6TO1RA"
+              autoCapitalize="characters"
+            />
+          </View>
+
+          <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: -2 }}>
+            Ingresá la contraseña oficial de {form.schoolYear}° Año - {form.courseDivision}° Curso para poder inscribirte. Si la contraseña es incorrecta, no podrás ingresar.
           </Text>
         </View>
       )}
@@ -593,12 +619,21 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
           style={{ flex: 1 }}
           small
           onPress={() => {
+            if (!isFirstUser && form.role === 'student' && !String(form.accessCode || '').trim()) {
+              setErrors((prev) => ({
+                ...prev,
+                accessCode: 'Debés ingresar la contraseña del curso para poder ingresar',
+              }));
+              setBanner('Debés ingresar la contraseña del curso seleccionado antes de registrarte.');
+              return;
+            }
             const meta = {
               role: form.role,
               instructorKey: form.instructorKey,
               preceptorKey: form.preceptorKey,
               schoolYear: form.schoolYear,
               courseDivision: form.courseDivision,
+              accessCode: form.accessCode.trim().toUpperCase(),
             };
             if (typeof window !== 'undefined' && window.sessionStorage) {
               sessionStorage.setItem('oauth_meta', JSON.stringify(meta));
@@ -613,12 +648,21 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
           style={{ flex: 1 }}
           small
           onPress={() => {
+            if (!isFirstUser && form.role === 'student' && !String(form.accessCode || '').trim()) {
+              setErrors((prev) => ({
+                ...prev,
+                accessCode: 'Debés ingresar la contraseña del curso para poder ingresar',
+              }));
+              setBanner('Debés ingresar la contraseña del curso seleccionado antes de registrarte.');
+              return;
+            }
             const meta = {
               role: form.role,
               instructorKey: form.instructorKey,
               preceptorKey: form.preceptorKey,
               schoolYear: form.schoolYear,
               courseDivision: form.courseDivision,
+              accessCode: form.accessCode.trim().toUpperCase(),
             };
             if (typeof window !== 'undefined' && window.sessionStorage) {
               sessionStorage.setItem('oauth_meta', JSON.stringify(meta));
@@ -633,12 +677,21 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
           style={{ flex: 1 }}
           small
           onPress={() => {
+            if (!isFirstUser && form.role === 'student' && !String(form.accessCode || '').trim()) {
+              setErrors((prev) => ({
+                ...prev,
+                accessCode: 'Debés ingresar la contraseña del curso para poder ingresar',
+              }));
+              setBanner('Debés ingresar la contraseña del curso seleccionado antes de registrarte.');
+              return;
+            }
             const meta = {
               role: form.role,
               instructorKey: form.instructorKey,
               preceptorKey: form.preceptorKey,
               schoolYear: form.schoolYear,
               courseDivision: form.courseDivision,
+              accessCode: form.accessCode.trim().toUpperCase(),
             };
             if (typeof window !== 'undefined' && window.sessionStorage) {
               sessionStorage.setItem('oauth_meta', JSON.stringify(meta));

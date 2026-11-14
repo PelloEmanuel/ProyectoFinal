@@ -22,6 +22,7 @@ export function validateRegister({
   acceptTerms,
   role,
   instructorKey,
+  accessCode,
   isFirstUser,
 }: {
   firstName?: string;
@@ -32,6 +33,7 @@ export function validateRegister({
   acceptTerms?: boolean;
   role?: string;
   instructorKey?: string;
+  accessCode?: string;
   isFirstUser?: boolean;
 }): Record<string, string> {
   const e: Record<string, string> = {};
@@ -52,6 +54,9 @@ export function validateRegister({
   }
   if (!isFirstUser && role === 'instructor' && !String(instructorKey || '').trim()) {
     e.instructorKey = 'Debés completar este campo con la clave de docente';
+  }
+  if (!isFirstUser && role === 'student' && !String(accessCode || '').trim()) {
+    e.accessCode = 'Debés ingresar la contraseña del curso para poder ingresar';
   }
   if (!acceptTerms) {
     e.acceptTerms = 'Debés aceptar los términos y condiciones';
