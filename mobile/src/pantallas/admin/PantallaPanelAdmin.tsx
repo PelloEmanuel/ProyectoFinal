@@ -507,10 +507,25 @@ export default function DashboardScreen({ navigation }: PropiedadesPantallaPanel
                   schoolYear={selectedGroup.schoolYear}
                   courseDivision={selectedGroup.courseDivision}
                   schedule={schedule}
-                  editable={false}
+                  editable={true}
                   onPressOccupiedCell={(entry: any) =>
-                    navigation.navigate('CourseDetail', {
-                      courseId: entry.courseId,
+                    navigation.navigate('AdminCourses', {
+                      initialSection: 'schedule',
+                      schoolYear: selectedGroup.schoolYear,
+                      courseDivision: selectedGroup.courseDivision,
+                      editCourseId: entry.courseId,
+                      t: Date.now(),
+                    })
+                  }
+                  onPressEmptyCell={(day: string, mod: any) =>
+                    navigation.navigate('AdminCourses', {
+                      initialSection: 'schedule',
+                      schoolYear: selectedGroup.schoolYear,
+                      courseDivision: selectedGroup.courseDivision,
+                      assignDay: day,
+                      assignStart: mod.start,
+                      assignEnd: mod.end,
+                      t: Date.now(),
                     })
                   }
                 />

@@ -110,9 +110,22 @@ export default function CourseGroupScreen({ route, navigation }: { route: any; n
   const courses = data?.courses || [];
   const schedule = data?.schedule || [];
 
-  // Navega hacia el detalle de una materia específica al seleccionarla.
+  // Navega hacia el detalle de una materia específica o a su edición de horario si es administrador.
   const handleOpenCourseItem = (courseId?: number) => {
     if (!courseId) return;
+    if (user?.role === 'admin') {
+      navigation.navigate('MainTabs', {
+        screen: 'AdminCourses',
+        params: {
+          initialSection: 'schedule',
+          schoolYear,
+          courseDivision,
+          editCourseId: courseId,
+          t: Date.now(),
+        },
+      });
+      return;
+    }
     navigation.navigate('CourseDetail', { courseId });
   };
 

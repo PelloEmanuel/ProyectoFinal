@@ -12,13 +12,17 @@ interface EstadoAutenticacion {
   loading: boolean;
   refreshingSession: boolean;
   user: UsuarioCliente | null;
+  pendingVerification: { mode: string; userId: number; email: string } | null;
+  oauthError: string | null;
 }
 
 // Define las acciones soportadas por el reductor de sesión.
 type AccionAutenticacion =
   | { type: 'SET_USER'; user: UsuarioCliente | null }
   | { type: 'SIGN_OUT' }
-  | { type: 'SET_REFRESHING'; value: boolean };
+  | { type: 'SET_REFRESHING'; value: boolean }
+  | { type: 'SET_PENDING_VERIFICATION'; pendingVerification: { mode: string; userId: number; email: string } | null }
+  | { type: 'SET_OAUTH_ERROR'; oauthError: string | null };
 
 // Crea el contexto de autenticación de React.
 const AuthContext = createContext<any>(null);
@@ -29,6 +33,8 @@ const initialState: EstadoAutenticacion = {
   loading: true,
   refreshingSession: false,
   user: null,
+  pendingVerification: null,
+  oauthError: null,
 };
 
 // Gestiona las transiciones de estado de la sesión del usuario.
@@ -41,6 +47,8 @@ function reducer(state: EstadoAutenticacion, action: AccionAutenticacion): Estad
         loading: false,
         refreshingSession: false,
         user: action.user,
+        pendingVerification: null,
+        oauthError: null,
       };
     case 'SIGN_OUT':
       return {
@@ -52,6 +60,23 @@ function reducer(state: EstadoAutenticacion, action: AccionAutenticacion): Estad
       };
     case 'SET_REFRESHING':
       return { ...state, refreshingSession: action.value };
+    case 'SET_PENDING_VERIFICATION':
+      return {
+        ...state,
+        initialized: true,
+        loading: false,
+        refreshingSession: false,
+        user: null,
+        pendingVerification: action.pendingVerification,
+      };
+    case 'SET_OAUTH_ERROR':
+      return {
+        ...state,
+        initialized: true,
+        loading: false,
+        refreshingSession: false,
+        oauthError: action.oauthError,
+      };
     default:
       return state;
   }
@@ -114,6 +139,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         const search = window.location.search || '';
         const hash = window.location.hash || '';
+        const searchParams = new URLSearchParams(search);
+        const hashStr = hash.startsWith('#') ? hash.slice(1) : hash;
+        const hashParams = new URLSearchParams(hashStr);
+
+        const oauthErr = searchParams.get('error') || hashParams.get('error');
+        if (oauthErr) {
+          try {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } catch {}
+          dispatch({ type: 'SET_OAUTH_ERROR', oauthError: oauthErr });
+          return;
+        }
+
+        const requiresVerif =
+          searchParams.get('requiresVerification') === 'true' ||
+          hashParams.get('requiresVerification') === 'true' ||
+          searchParams.get('twoFactorRequired') === 'true' ||
+          hashParams.get('twoFactorRequired') === 'true';
+        if (requiresVerif) {
+          const userId = Number(searchParams.get('userId') || hashParams.get('userId') || 0);
+          const email = String(searchParams.get('email') || hashParams.get('email') || '');
+          const mode = String(
+            searchParams.get('mode') ||
+              hashParams.get('mode') ||
+              (searchParams.get('requiresVerification') === 'true' ||
+              hashParams.get('requiresVerification') === 'true'
+                ? 'verify_email'
+                : '2fa')
+          );
+          try {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } catch {}
+          dispatch({
+            type: 'SET_PENDING_VERIFICATION',
+            pendingVerification: { mode, userId, email },
+          });
+          return;
+        }
+
         const hasDirectToken = search.includes('token=') || hash.includes('token=');
         const hasCode = search.includes('code=') || hash.includes('code=');
         const hasToken = hash.includes('access_token=') || search.includes('access_token=') || hasDirectToken;
@@ -121,9 +185,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
 
         if (hasCode || hasToken || hasIdToken) {
           try {
-            const searchParams = new URLSearchParams(search);
-            const hashStr = hash.startsWith('#') ? hash.slice(1) : hash;
-            const hashParams = new URLSearchParams(hashStr);
 
             const directToken =
               searchParams.get('token') ||
@@ -180,6 +241,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
             if (idToken) payload.idToken = idToken;
 
             const res = await authApi.social(provider, payload);
+            const data = res?.data || res;
+            if (data?.requiresVerification || data?.twoFactorRequired) {
+              dispatch({
+                type: 'SET_PENDING_VERIFICATION',
+                pendingVerification: {
+                  mode: data.mode || (data.requiresVerification ? 'verify_email' : '2fa'),
+                  userId: Number(data.userId),
+                  email: String(data.email || ''),
+                },
+              });
+              return;
+            }
             await startSession(res);
             return;
           } catch (err) {
@@ -267,6 +340,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         return data;
       },
       async socialLogin(provider: string, body: any) {
+        if (body?.requiresVerification || body?.twoFactorRequired) {
+          const pv = {
+            mode: body.mode || (body.requiresVerification ? 'verify_email' : '2fa'),
+            userId: Number(body.userId),
+            email: String(body.email || ''),
+          };
+          dispatch({ type: 'SET_PENDING_VERIFICATION', pendingVerification: pv });
+          return {
+            requiresVerification: Boolean(body.requiresVerification),
+            twoFactorRequired: Boolean(body.twoFactorRequired),
+            ...pv,
+          };
+        }
         if (body?.token || body?.accessToken) {
           const tokens = {
             accessToken: body.token || body.accessToken,
@@ -279,8 +365,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
           return sessionData;
         }
         const res = await authApi.social(provider, body);
+        const data = res?.data || res;
+        if (data?.requiresVerification || data?.twoFactorRequired) {
+          const pv = {
+            mode: data.mode || (data.requiresVerification ? 'verify_email' : '2fa'),
+            userId: Number(data.userId),
+            email: String(data.email || ''),
+          };
+          dispatch({ type: 'SET_PENDING_VERIFICATION', pendingVerification: pv });
+          return {
+            requiresVerification: Boolean(data.requiresVerification),
+            twoFactorRequired: Boolean(data.twoFactorRequired),
+            ...pv,
+          };
+        }
         await startSession(res);
         return res;
+      },
+      clearPendingVerification() {
+        dispatch({ type: 'SET_PENDING_VERIFICATION', pendingVerification: null });
+      },
+      clearOauthError() {
+        dispatch({ type: 'SET_OAUTH_ERROR', oauthError: null });
       },
       async refreshProfile() {
         const fresh = await usersApi.me();

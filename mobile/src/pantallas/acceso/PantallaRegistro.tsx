@@ -12,7 +12,7 @@ import { validateRegister } from '../../utilidades/validadores';
 
 // Renderiza la pantalla de registro de cuentas para Alumnos, Preceptores, Docentes o primer Administrador.
 export default function RegisterScreen({ navigation }: { navigation: any }) {
-  const { register, socialLogin } = useAuth();
+  const { register, socialLogin, oauthError, clearOauthError } = useAuth();
   const { colors } = useTheme();
   const [isFirstUser, setIsFirstUser] = useState(false);
   const [availableGroups, setAvailableGroups] = useState<any[]>([]);
@@ -124,13 +124,25 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
     }));
   };
 
+  // Muestra cualquier error retornado por el flujo de autenticación OAuth.
+  useEffect(() => {
+    if (oauthError) {
+      setBanner(oauthError);
+      if (clearOauthError) clearOauthError();
+    }
+  }, [oauthError, clearOauthError]);
+
   // Configura el registro e inicio de sesión mediante proveedores sociales OAuth.
   const startSocial = useSocialAuth({
     onCredential: async (provider, body) => {
       setBanner('');
-      if (body?.twoFactorRequired) {
+      if (body?.requiresVerification || body?.twoFactorRequired) {
         setLoading(false);
-        navigation.navigate('VerifyCode', { mode: '2fa', userId: body.userId, email: body.email });
+        navigation.navigate('VerifyCode', {
+          mode: body.mode || (body.requiresVerification ? 'verify_email' : '2fa'),
+          userId: body.userId,
+          email: body.email,
+        });
         return;
       }
       if (!isFirstUser && form.role === 'instructor' && !String(form.instructorKey || '').trim()) {
@@ -159,7 +171,7 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
       }
       setLoading(true);
       try {
-        await socialLogin(provider, {
+        const res = await socialLogin(provider, {
           ...body,
           role: form.role,
           instructorKey: form.role === 'instructor' ? form.instructorKey.trim() : undefined,
@@ -168,6 +180,15 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
           courseDivision: form.role === 'student' ? form.courseDivision : undefined,
           accessCode: form.role === 'student' ? form.accessCode.trim().toUpperCase() : undefined,
         });
+        if (res?.requiresVerification || res?.twoFactorRequired) {
+          setLoading(false);
+          navigation.navigate('VerifyCode', {
+            mode: res.mode || (res.requiresVerification ? 'verify_email' : '2fa'),
+            userId: res.userId,
+            email: res.email,
+          });
+          return;
+        }
       } catch (e) {
         setErrors(getFieldErrors(e));
         setBanner(getErrorMessage(e));

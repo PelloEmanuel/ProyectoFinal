@@ -486,18 +486,6 @@ export default function InstructorDashboardScreen({ navigation }: { navigation: 
                         {selectedGroup.fullLabel} • Tus materias están destacadas
                       </Text>
                     </View>
-                    <TouchableOpacity
-                      onPress={() =>
-                        navigation.navigate('CourseGroup', {
-                          schoolYear: selectedGroup.schoolYear,
-                          courseDivision: selectedGroup.courseDivision,
-                        })
-                      }
-                    >
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: colors.primary }}>
-                        Ver pantalla completa →
-                      </Text>
-                    </TouchableOpacity>
                   </View>
 
                   {loadingGroupSchedule ? (

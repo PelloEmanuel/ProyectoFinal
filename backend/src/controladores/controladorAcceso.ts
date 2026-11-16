@@ -1057,8 +1057,9 @@ export const oauthCallback = asyncHandler(async (req: Request, res: Response) =>
     );
 
     let user = identityRows[0];
+    let isNewOAuthRegistration = false;
 
-    // Si la identidad social aún no estaba registrada, busca por correo o crea un nuevo usuario.
+    // Si la identidad social aún no estaba registrada, busca por correo o crea un nuevo usuario pendiente de verificación 2FA.
     if (!user) {
       if (!profile.email || !profile.emailVerified) {
         return sendRedirectWithBridge(
@@ -1069,28 +1070,37 @@ export const oauthCallback = asyncHandler(async (req: Request, res: Response) =>
 
       user = await findByEmail(profile.email);
       if (!user) {
+        isNewOAuthRegistration = true;
         const [[{ totalUsers }]] = await db.execute<any[]>('SELECT COUNT(*) AS totalUsers FROM usuarios WHERE deleted_at IS NULL');
         const isFirstUser = Number(totalUsers) === 0;
         let targetRoleName = isFirstUser ? 'admin' : 'student';
 
         if (!isFirstUser && String(stateData.role || '').trim().toLowerCase() === 'instructor') {
           const submittedKey = String(stateData.instructorKey || '').trim().toUpperCase();
+          if (!submittedKey) {
+            throw new AppError('Debés completar el campo de clave de docente para registrarte como docente.', 422, 'INSTRUCTOR_KEY_REQUIRED');
+          }
           const [keyRows] = await db.execute<any[]>(
             "SELECT setting_value FROM ajustes_plataforma WHERE setting_key = 'instructor_registration_key' LIMIT 1"
           );
           const validKey = String(keyRows[0]?.setting_value || '').trim().toUpperCase();
-          if (validKey && submittedKey === validKey) {
-            targetRoleName = 'instructor';
+          if (!validKey || submittedKey !== validKey) {
+            throw new AppError('La clave de docente introducida es incorrecta.', 403, 'INVALID_INSTRUCTOR_KEY');
           }
+          targetRoleName = 'instructor';
         } else if (!isFirstUser && String(stateData.role || '').trim().toLowerCase() === 'preceptor') {
           const submittedKey = String(stateData.preceptorKey || '').trim().toUpperCase();
+          if (!submittedKey) {
+            throw new AppError('Debés completar el campo de clave de preceptor para registrarte como preceptor.', 422, 'PRECEPTOR_KEY_REQUIRED');
+          }
           const [keyRows] = await db.execute<any[]>(
             "SELECT setting_value FROM ajustes_plataforma WHERE setting_key = 'preceptor_registration_key' LIMIT 1"
           );
           const validKey = String(keyRows[0]?.setting_value || 'PRECEPTOR2026').trim().toUpperCase();
-          if (validKey && submittedKey === validKey) {
-            targetRoleName = 'preceptor';
+          if (!validKey || submittedKey !== validKey) {
+            throw new AppError('La clave de preceptor introducida es incorrecta.', 403, 'INVALID_PRECEPTOR_KEY');
           }
+          targetRoleName = 'preceptor';
         }
 
         let verifiedStudentGroup: { schoolYear: number; courseDivision: number } | null = null;
@@ -1104,13 +1114,15 @@ export const oauthCallback = asyncHandler(async (req: Request, res: Response) =>
 
         const [roleRows] = await db.execute<any[]>('SELECT id FROM roles WHERE name = ? LIMIT 1', [targetRoleName]);
         const roleId = roleRows[0]?.id || (targetRoleName === 'admin' ? 1 : targetRoleName === 'instructor' ? 2 : 3);
+        const resolvedUsername = `${profile.firstName || 'Usuario'} ${profile.lastName || 'Campus'}`.trim();
 
         const [ins] = await db.execute<any>(
-          `INSERT INTO usuarios (first_name, last_name, email, avatar_url, role_id, status, email_verified_at, preferences)
-           VALUES (?, ?, ?, ?, ?, 'active', NOW(), ?)`,
+          `INSERT INTO usuarios (first_name, last_name, username, email, avatar_url, role_id, status, two_factor_enabled, email_verified_at, preferences)
+           VALUES (?, ?, ?, ?, ?, ?, 'pending_verification', 0, NULL, ?)`,
           [
             profile.firstName,
             profile.lastName,
+            resolvedUsername,
             profile.email.toLowerCase(),
             profile.avatar,
             roleId,
@@ -1135,12 +1147,36 @@ export const oauthCallback = asyncHandler(async (req: Request, res: Response) =>
       return sendRedirectWithBridge(makeTarget({ error: 'Tu cuenta ha sido suspendida' }), 'Cuenta suspendida...');
     }
 
+    // Si es un nuevo registro o la cuenta aún no completó la verificación en 2 pasos por correo, envía el código y redirige a 2FA.
+    if (isNewOAuthRegistration || (!user.two_factor_enabled && !user.created_by_admin)) {
+      if (!isNewOAuthRegistration && stateData.role && String(stateData.role).toLowerCase() === 'student' && stateData.accessCode) {
+        const verifiedStudentGroup = await validateStudentCourseAccessCode(
+          stateData.schoolYear,
+          stateData.courseDivision,
+          stateData.accessCode
+        );
+        await syncStudentCourseEnrollments(user.id, verifiedStudentGroup.schoolYear, verifiedStudentGroup.courseDivision).catch(() => {});
+      }
+      await issueEmailVerificationToken(user.id, user.email);
+      return sendRedirectWithBridge(
+        makeTarget({
+          requiresVerification: 'true',
+          twoFactorRequired: 'true',
+          mode: 'verify_email',
+          userId: String(user.id),
+          email: user.email,
+        }),
+        'Enviamos un código de verificación en 2 pasos a tu correo electrónico...'
+      );
+    }
+
     // Verifica si el usuario tiene activada una aplicación autenticadora TOTP.
     const [tfRows] = await db.execute<any[]>('SELECT id, enabled_at FROM doble_factor_usuario WHERE user_id = ? AND enabled_at IS NOT NULL', [user.id]);
     if (tfRows.length > 0) {
       return sendRedirectWithBridge(
         makeTarget({
           twoFactorRequired: 'true',
+          mode: '2fa',
           userId: String(user.id),
           email: user.email,
         }),
@@ -1187,6 +1223,7 @@ export const socialLogin = asyncHandler(async (req: Request, res: Response) => {
   );
 
   let user = identityRows[0];
+  let isNewOAuthRegistration = false;
 
   // Si no existe la identidad, busca por correo electrónico o crea la cuenta validando claves de rol.
   if (!user) {
@@ -1200,6 +1237,7 @@ export const socialLogin = asyncHandler(async (req: Request, res: Response) => {
 
     user = await findByEmail(profile.email);
     if (!user) {
+      isNewOAuthRegistration = true;
       const [[{ totalUsers }]] = await db.execute<any[]>('SELECT COUNT(*) AS totalUsers FROM usuarios WHERE deleted_at IS NULL');
       const isFirstUser = Number(totalUsers) === 0;
       let targetRoleName = isFirstUser ? 'admin' : 'student';
@@ -1227,6 +1265,29 @@ export const socialLogin = asyncHandler(async (req: Request, res: Response) => {
           );
         }
         targetRoleName = 'instructor';
+      } else if (!isFirstUser && String(req.body?.role || '').trim().toLowerCase() === 'preceptor') {
+        const submittedKey = String(req.body?.preceptorKey ?? req.body?.preceptorCode ?? '').trim().toUpperCase();
+        if (!submittedKey) {
+          throw new AppError(
+            'Debés completar el campo de clave de preceptor para ingresar como preceptor.',
+            422,
+            'PRECEPTOR_KEY_REQUIRED',
+            [{ field: 'preceptorKey', message: 'Debés completar este campo con la clave de preceptor' }]
+          );
+        }
+        const [keyRows] = await db.execute<any[]>(
+          "SELECT setting_value FROM ajustes_plataforma WHERE setting_key = 'preceptor_registration_key' LIMIT 1"
+        );
+        const validKey = String(keyRows[0]?.setting_value || 'PRECEPTOR2026').trim().toUpperCase();
+        if (!validKey || submittedKey !== validKey) {
+          throw new AppError(
+            'La clave de preceptor introducida es incorrecta.',
+            403,
+            'INVALID_PRECEPTOR_KEY',
+            [{ field: 'preceptorKey', message: 'La clave de preceptor ingresada es incorrecta' }]
+          );
+        }
+        targetRoleName = 'preceptor';
       }
 
       let verifiedStudentGroup: { schoolYear: number; courseDivision: number } | null = null;
@@ -1240,12 +1301,15 @@ export const socialLogin = asyncHandler(async (req: Request, res: Response) => {
 
       const [roleRows] = await db.execute<any[]>('SELECT id FROM roles WHERE name = ? LIMIT 1', [targetRoleName]);
       const roleId = roleRows[0]?.id || (targetRoleName === 'admin' ? 1 : targetRoleName === 'instructor' ? 2 : 3);
+      const resolvedUsername = `${profile.firstName || 'Usuario'} ${profile.lastName || 'Campus'}`.trim();
+
       const [ins] = await db.execute<any>(
-        `INSERT INTO usuarios (first_name, last_name, email, avatar_url, role_id, status, email_verified_at, preferences)
-         VALUES (?, ?, ?, ?, ?, 'active', NOW(), ?)`,
+        `INSERT INTO usuarios (first_name, last_name, username, email, avatar_url, role_id, status, two_factor_enabled, email_verified_at, preferences)
+         VALUES (?, ?, ?, ?, ?, ?, 'pending_verification', 0, NULL, ?)`,
         [
           profile.firstName,
           profile.lastName,
+          resolvedUsername,
           profile.email.toLowerCase(),
           profile.avatar,
           roleId,
@@ -1266,6 +1330,33 @@ export const socialLogin = asyncHandler(async (req: Request, res: Response) => {
 
   if (user.status === 'suspended') {
     throw new AppError('Tu cuenta está suspendida', 403, 'ACCOUNT_SUSPENDED');
+  }
+
+  // Exige verificación en 2 pasos por correo antes de permitir el ingreso si es un nuevo registro o la cuenta aún no fue verificada.
+  if (isNewOAuthRegistration || (!user.two_factor_enabled && !user.created_by_admin)) {
+    await issueEmailVerificationToken(user.id, user.email);
+    return res.status(202).json({
+      success: true,
+      requiresVerification: true,
+      twoFactorRequired: true,
+      mode: 'verify_email',
+      userId: user.id,
+      email: user.email,
+      message: 'Enviamos un código de verificación en 2 pasos a tu correo electrónico para activar tu cuenta.',
+    });
+  }
+
+  // Comprueba si el usuario tiene activada una aplicación autenticadora TOTP.
+  const [tfRows] = await db.execute<any[]>('SELECT id, enabled_at FROM doble_factor_usuario WHERE user_id = ? AND enabled_at IS NOT NULL', [user.id]);
+  if (tfRows.length > 0) {
+    return res.status(202).json({
+      success: true,
+      twoFactorRequired: true,
+      mode: '2fa',
+      userId: user.id,
+      email: user.email,
+      message: 'Ingresá el código de 6 dígitos de tu aplicación autenticadora o un código de recuperación',
+    });
   }
 
   await logAudit(user.id, 'USER_LOGIN_OAUTH', 'user', user.id, { provider });

@@ -102,10 +102,11 @@ function expandGroupsToSlots(timeGroups: GrupoHorario[] = []): Array<{ dayOfWeek
 // Define las propiedades recibidas por la pantalla de gestión de cursos y materias.
 interface PropiedadesPantallaCursosAdmin {
   route?: any;
+  navigation?: any;
 }
 
 // Renderiza la pantalla administrativa de catálogo de materias, armador de horarios y apertura de cursos.
-export default function AdminCoursesScreen({ route }: PropiedadesPantallaCursosAdmin) {
+export default function AdminCoursesScreen({ route, navigation }: PropiedadesPantallaCursosAdmin) {
   // Obtiene la paleta de colores activa.
   const { colors } = useTheme();
   // Obtiene el ancho de la ventana para diseño adaptable.
@@ -182,7 +183,45 @@ export default function AdminCoursesScreen({ route }: PropiedadesPantallaCursosA
       setCourseDivision(Number(route.params.courseDivision));
       setDivisionInput(String(route.params.courseDivision));
     }
-  }, [route?.params?.initialSection, route?.params?.schoolYear, route?.params?.courseDivision]);
+  }, [route?.params?.initialSection, route?.params?.schoolYear, route?.params?.courseDivision, route?.params?.t]);
+
+  // Si se recibió un bloque horario o materia desde el Panel Admin para modificar, abre automáticamente el modal de edición.
+  useEffect(() => {
+    if (loading) return;
+    if (route?.params?.editCourseId) {
+      const targetId = Number(route.params.editCourseId);
+      const foundCourse =
+        courses.find((c) => Number(c.id) === targetId) ||
+        (schedule.some((s) => Number(s.courseId) === targetId)
+          ? {
+              id: targetId,
+              title: schedule.find((s) => Number(s.courseId) === targetId)?.courseTitle || '',
+              instructorId: schedule.find((s) => Number(s.courseId) === targetId)?.instructorId || null,
+              schedules: schedule.filter((s) => Number(s.courseId) === targetId),
+            }
+          : null);
+      if (foundCourse) {
+        setSection('schedule');
+        setCourseViewTab('grid');
+        openEditCourseScheduleModal(foundCourse);
+        if (navigation?.setParams) {
+          navigation.setParams({ editCourseId: undefined });
+        }
+      }
+    } else if (route?.params?.assignDay) {
+      setSection('schedule');
+      setCourseViewTab('grid');
+      openAssignNewSubjectToCourse(
+        null,
+        route.params.assignDay,
+        route.params.assignStart || '07:30',
+        route.params.assignEnd || '09:30'
+      );
+      if (navigation?.setParams) {
+        navigation.setParams({ assignDay: undefined, assignStart: undefined, assignEnd: undefined });
+      }
+    }
+  }, [loading, courses, schedule, route?.params?.editCourseId, route?.params?.assignDay, route?.params?.t]);
 
   // Consulta al servidor el catálogo de materias, docentes, cursos y horarios del grupo seleccionado.
   const loadScheduleData = useCallback(
@@ -993,10 +1032,14 @@ export default function AdminCoursesScreen({ route }: PropiedadesPantallaCursosA
                   schedule={schedule}
                   editable
                   onPressOccupiedCell={(entry: any) => {
-                    const parentCourse = courses.find((c) => Number(c.id) === Number(entry.courseId));
-                    if (parentCourse) {
-                      openEditCourseScheduleModal(parentCourse);
-                    }
+                    const parentCourse =
+                      courses.find((c) => Number(c.id) === Number(entry.courseId)) || {
+                        id: entry.courseId,
+                        title: entry.courseTitle,
+                        instructorId: entry.instructorId,
+                        schedules: schedule.filter((s) => Number(s.courseId) === Number(entry.courseId)),
+                      };
+                    openEditCourseScheduleModal(parentCourse);
                   }}
                   onPressEmptyCell={(day: string, mod: any) =>
                     openAssignNewSubjectToCourse(null, day, mod.start, mod.end)

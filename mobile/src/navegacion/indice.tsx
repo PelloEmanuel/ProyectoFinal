@@ -613,9 +613,17 @@ function AdminTabs(): React.JSX.Element {
 // Configura la pila de pantallas públicas de bienvenida, inicio de sesión, registro y verificación.
 function AuthStack(): React.JSX.Element {
   const { colors } = useTheme();
+  const { pendingVerification, oauthError } = useAuth();
+  const initialRoute = pendingVerification
+    ? 'VerifyCode'
+    : oauthError
+    ? 'Register'
+    : 'Welcome';
   return (
     <Stack.Navigator
       id="AuthStack"
+      key={`auth_stack_${initialRoute}_${pendingVerification?.userId || 0}`}
+      initialRouteName={initialRoute}
       screenOptions={{
         headerStyle: { backgroundColor: colors.navy },
         headerTintColor: '#ffffff',
@@ -625,7 +633,12 @@ function AuthStack(): React.JSX.Element {
       <Stack.Screen name="Welcome" component={PantallaBienvenida} options={{ headerShown: false, title: 'Bienvenidos' }} />
       <Stack.Screen name="Login" component={PantallaInicioSesion} options={{ title: 'Iniciar sesión en Campus Técnica 5' }} />
       <Stack.Screen name="Register" component={PantallaRegistro} options={{ title: 'Crear cuenta académica' }} />
-      <Stack.Screen name="VerifyCode" component={PantallaVerificarCodigo} options={{ title: 'Verificación de seguridad' }} />
+      <Stack.Screen
+        name="VerifyCode"
+        component={PantallaVerificarCodigo}
+        initialParams={pendingVerification || undefined}
+        options={{ title: 'Verificación de seguridad' }}
+      />
     </Stack.Navigator>
   );
 }

@@ -77,6 +77,39 @@ export default function usarAccesoSocial({
         const error = sp.get('error') || hp.get('error');
         if (error) {
           onError(`Error de autenticación: ${error}`);
+          try {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } catch {}
+          return true;
+        }
+
+        const twoFactor =
+          sp.get('twoFactorRequired') ||
+          hp.get('twoFactorRequired') ||
+          sp.get('requiresVerification') ||
+          hp.get('requiresVerification');
+        if (twoFactor === 'true') {
+          const userId = sp.get('userId') || hp.get('userId');
+          const email = sp.get('email') || hp.get('email');
+          const mode =
+            sp.get('mode') ||
+            hp.get('mode') ||
+            ((sp.get('requiresVerification') || hp.get('requiresVerification')) === 'true'
+              ? 'verify_email'
+              : '2fa');
+          const key2fa = `2fa_${userId}_${email}`;
+          if (handledRef.current.has(key2fa)) return false;
+          handledRef.current.add(key2fa);
+          try {
+            window.history.replaceState({}, document.title, window.location.pathname);
+          } catch {}
+          onCredential('oauth_proxy', {
+            twoFactorRequired: true,
+            requiresVerification: mode === 'verify_email',
+            mode,
+            userId: Number(userId),
+            email,
+          });
           return true;
         }
 
@@ -102,6 +135,8 @@ export default function usarAccesoSocial({
 
     if (
       window.location.search?.includes('token=') ||
+      window.location.search?.includes('twoFactorRequired=') ||
+      window.location.search?.includes('requiresVerification=') ||
       window.location.search?.includes('error=') ||
       window.location.hash?.includes('token=')
     ) {
@@ -162,11 +197,27 @@ export default function usarAccesoSocial({
           return onError(`Error de autenticación: ${error}`);
         }
 
-        const twoFactor = sp.get('twoFactorRequired') || hp.get('twoFactorRequired');
+        const twoFactor =
+          sp.get('twoFactorRequired') ||
+          hp.get('twoFactorRequired') ||
+          sp.get('requiresVerification') ||
+          hp.get('requiresVerification');
         if (twoFactor === 'true') {
           const userId = sp.get('userId') || hp.get('userId');
           const email = sp.get('email') || hp.get('email');
-          return onCredential(provider, { twoFactorRequired: true, userId, email });
+          const mode =
+            sp.get('mode') ||
+            hp.get('mode') ||
+            ((sp.get('requiresVerification') || hp.get('requiresVerification')) === 'true'
+              ? 'verify_email'
+              : '2fa');
+          return onCredential(provider, {
+            twoFactorRequired: true,
+            requiresVerification: mode === 'verify_email',
+            mode,
+            userId: Number(userId),
+            email,
+          });
         }
 
         const token = sp.get('token') || hp.get('token') || sp.get('accessToken') || hp.get('accessToken');

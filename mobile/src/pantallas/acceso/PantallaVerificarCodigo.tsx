@@ -13,7 +13,7 @@ export default function VerifyCodeScreen({ navigation, route }: { navigation: an
   const initialEmail = route.params?.email || '';
   const userId = route.params?.userId;
 
-  const { verifyTwoFactor, refreshProfile, startSession, verifyEmail } = useAuth();
+  const { verifyTwoFactor, refreshProfile, startSession, verifyEmail, clearPendingVerification } = useAuth();
   const { colors } = useTheme();
 
   const [email, setEmail] = useState(initialEmail);
@@ -150,7 +150,13 @@ export default function VerifyCodeScreen({ navigation, route }: { navigation: an
             style={{ marginBottom: 16 }}
           />
 
-          <Pressable onPress={() => navigation.navigate('Login')} style={{ alignItems: 'center', paddingVertical: 8 }}>
+          <Pressable
+            onPress={() => {
+              if (clearPendingVerification) clearPendingVerification();
+              navigation.navigate('Login');
+            }}
+            style={{ alignItems: 'center', paddingVertical: 8 }}
+          >
             <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>
               ¿Querés ingresar con otra cuenta? Iniciar sesión
             </Text>
@@ -194,7 +200,13 @@ export default function VerifyCodeScreen({ navigation, route }: { navigation: an
             style={{ marginBottom: 16 }}
           />
 
-          <Pressable onPress={() => navigation.navigate('Login')} style={{ alignItems: 'center', paddingVertical: 8 }}>
+          <Pressable
+            onPress={() => {
+              if (clearPendingVerification) clearPendingVerification();
+              navigation.navigate('Login');
+            }}
+            style={{ alignItems: 'center', paddingVertical: 8 }}
+          >
             <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>
               Volver a Iniciar sesión
             </Text>
