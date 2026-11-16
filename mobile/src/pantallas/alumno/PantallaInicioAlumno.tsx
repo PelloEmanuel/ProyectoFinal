@@ -18,6 +18,8 @@ import { useTheme } from '../../contexto/ContextoTema';
 import { getErrorMessage } from '../../utilidades/errores';
 // Importa el componente de grilla horaria y el formateador de cursos.
 import SchoolScheduleGrid, { formatSchoolGroupShort } from '../../componentes/GrillaHorarios';
+// Importa el gancho de sincronización automática en tiempo real.
+import usarTiempoReal from '../../ganchos/usarTiempoReal';
 
 // Define el orden secuencial de los días hábiles de la semana.
 const DAYS_ORDER = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
@@ -110,6 +112,11 @@ export default function StudentHomeScreen({ navigation }: PropiedadesPantallaIni
       load();
     }, [load])
   );
+
+  // Sincroniza automáticamente el panel, materias y horarios del alumno cuando ocurren cambios en otro dispositivo.
+  usarTiempoReal(() => {
+    load();
+  });
 
   // Valida la contraseña del curso e inscribe al alumno en el año y división seleccionados.
   const handleConfirmSchoolGroup = async (): Promise<void> => {

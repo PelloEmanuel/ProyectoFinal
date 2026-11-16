@@ -20,6 +20,8 @@ import { useTheme } from '../../contexto/ContextoTema';
 import { adminApi } from '../../api/servicios';
 // Importa la utilidad para extraer mensajes de error.
 import { extractErrorMessage } from '../../utilidades/errores';
+// Importa el gancho de sincronización automática en tiempo real.
+import usarTiempoReal from '../../ganchos/usarTiempoReal';
 // Importa los componentes reutilizables de la interfaz.
 import {
   AlertBanner,
@@ -57,11 +59,13 @@ export default function AdminSettingsScreen({ navigation }: PropiedadesPantallaA
   const [success, setSuccess] = useState<string>('');
 
   // Consulta al servidor los parámetros actuales de configuración institucional.
-  const loadSettings = useCallback(async (isRefresh: boolean = false) => {
+  const loadSettings = useCallback(async (isRefresh: boolean = false, silent: boolean = false) => {
     try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      setError('');
+      if (!silent) {
+        if (isRefresh) setRefreshing(true);
+        else setLoading(true);
+        setError('');
+      }
       const res = await adminApi.getSettings();
       const map = (res && typeof res === 'object' && res.data ? res.data : res) || {};
       setSettings((prev) => ({
@@ -71,12 +75,19 @@ export default function AdminSettingsScreen({ navigation }: PropiedadesPantallaA
         ),
       }));
     } catch (err) {
-      setError(extractErrorMessage(err));
+      if (!silent) setError(extractErrorMessage(err));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (!silent) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
+
+  // Sincroniza automáticamente los ajustes si otro administrador los modifica desde otro dispositivo.
+  usarTiempoReal(() => {
+    if (!saving) loadSettings(false, true);
+  });
 
   // Recarga la configuración cada vez que la pantalla gana foco.
   useFocusEffect(

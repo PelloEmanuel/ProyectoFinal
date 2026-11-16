@@ -18,6 +18,7 @@ import { instructorApi } from '../../api/servicios';
 import { extractErrorMessage } from '../../utilidades/errores';
 import { formatDateAR } from '../../utilidades/fechas';
 import { formatSchoolGroupShort } from '../../componentes/GrillaHorarios';
+import usarTiempoReal from '../../ganchos/usarTiempoReal';
 import {
   AlertBanner,
   Badge,
@@ -44,11 +45,13 @@ export default function InstructorStudentsScreen() {
   const [error, setError] = useState('');
 
   // Consulta en el servidor la nómina de estudiantes y materias asignadas al docente.
-  const loadData = useCallback(async (isRefresh = false) => {
+  const loadData = useCallback(async (isRefresh = false, silent = false) => {
     try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      setError('');
+      if (!silent) {
+        if (isRefresh) setRefreshing(true);
+        else setLoading(true);
+        setError('');
+      }
 
       let syParam: number | undefined = undefined;
       let cdParam: number | undefined = undefined;
@@ -71,12 +74,19 @@ export default function InstructorStudentsScreen() {
       setStudents(studentsRes.data.data || []);
       setCourses(coursesRes.data.data || []);
     } catch (err) {
-      setError(extractErrorMessage(err));
+      if (!silent) setError(extractErrorMessage(err));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (!silent) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [selectedGroupKey, selectedCourseId, search]);
+
+  // Actualiza automáticamente la lista de estudiantes cuando se inscriben o modifican desde otro dispositivo.
+  usarTiempoReal(() => {
+    loadData(false, true);
+  });
 
   // Recarga la nómina al enfocar la pantalla.
   useFocusEffect(

@@ -18,6 +18,8 @@ import { useTheme } from '../../contexto/ContextoTema';
 import { getErrorMessage } from '../../utilidades/errores';
 // Importa el formateador de grupos escolares.
 import { formatSchoolGroupShort } from '../../componentes/GrillaHorarios';
+// Importa el gancho de sincronización automática en tiempo real.
+import usarTiempoReal from '../../ganchos/usarTiempoReal';
 // Importa las paletas de colores de materias y el constructor hexadecimal.
 import {
   COURSE_THEME_PALETTES,
@@ -65,6 +67,11 @@ export default function MyLearningScreen({ navigation }: PropiedadesPantallaMiAp
       load();
     }, [load])
   );
+
+  // Actualiza automáticamente la lista y colores de materias cuando un docente o administrador realiza cambios en otro dispositivo.
+  usarTiempoReal(() => {
+    load();
+  });
 
   // Muestra el indicador de carga mientras se obtienen las inscripciones.
   if (loading) return <Loading />;

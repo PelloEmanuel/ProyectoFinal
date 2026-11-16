@@ -12,6 +12,11 @@ import rutasArchivos from './rutas/rutasArchivos';
 import rutasTareas from './rutas/rutasTareas';
 import rutasAsistencia from './rutas/rutasAsistencia';
 import rutasAdmin from './rutas/rutasAdmin';
+import {
+  intermediarioMutacionTiempoReal,
+  obtenerVersionSincronizacion,
+  suscribirEventosTiempoReal,
+} from './utilidades/tiempoReal';
 
 // Configura la zona horaria predeterminada de Argentina para toda la aplicación.
 process.env.TZ = 'America/Argentina/Buenos_Aires';
@@ -98,6 +103,11 @@ app.get('/api/v1/health', (_req: Request, res: Response) =>
     version: '1.0.0',
   })
 );
+
+// Expone los endpoints de sincronización en tiempo real (Server-Sent Events y versión de estado) e intercepta mutaciones.
+app.get('/api/v1/sync-version', obtenerVersionSincronizacion);
+app.get('/api/v1/events', suscribirEventosTiempoReal);
+app.use(intermediarioMutacionTiempoReal);
 
 // Monta todos los módulos de rutas de la API REST v1.
 app.use('/api/v1/auth', rutasAcceso);

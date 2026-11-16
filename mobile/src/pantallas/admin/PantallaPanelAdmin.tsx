@@ -36,6 +36,8 @@ import {
 } from '../../componentes/interfaz';
 // Importa el componente de grilla horaria escolar.
 import SchoolScheduleGrid from '../../componentes/GrillaHorarios';
+// Importa el gancho de sincronización automática en tiempo real.
+import usarTiempoReal from '../../ganchos/usarTiempoReal';
 
 // Define las propiedades recibidas por el panel principal de administración.
 interface PropiedadesPantallaPanelAdmin {
@@ -61,13 +63,13 @@ export default function DashboardScreen({ navigation }: PropiedadesPantallaPanel
   const [loadingSchedule, setLoadingSchedule] = useState<boolean>(false);
 
   // Carga el cronograma horario del curso escolar seleccionado.
-  const loadScheduleForGroup = useCallback(async (grp: any) => {
+  const loadScheduleForGroup = useCallback(async (grp: any, silent: boolean = false) => {
     if (!grp) {
       setSchedule([]);
       return;
     }
     try {
-      setLoadingSchedule(true);
+      if (!silent) setLoadingSchedule(true);
       const res = await adminApi.getSchedule({
         schoolYear: grp.schoolYear,
         courseDivision: grp.courseDivision,
@@ -77,17 +79,19 @@ export default function DashboardScreen({ navigation }: PropiedadesPantallaPanel
     } catch (err) {
       console.error('Error cargando cronograma de curso:', err);
     } finally {
-      setLoadingSchedule(false);
+      if (!silent) setLoadingSchedule(false);
     }
   }, []);
 
   // Consulta en paralelo las métricas globales y los cursos abiertos de la institución.
   const loadDashboard = useCallback(
-    async (isRefresh: boolean = false) => {
+    async (isRefresh: boolean = false, silent: boolean = false) => {
       try {
-        if (isRefresh) setRefreshing(true);
-        else setLoading(true);
-        setError('');
+        if (!silent) {
+          if (isRefresh) setRefreshing(true);
+          else setLoading(true);
+          setError('');
+        }
 
         const [dashRes, openCoursesRes] = await Promise.all([
           adminApi.getDashboard(),
@@ -112,7 +116,7 @@ export default function DashboardScreen({ navigation }: PropiedadesPantallaPanel
                 )
               : null;
             const target = found || openList[0];
-            loadScheduleForGroup(target);
+            loadScheduleForGroup(target, silent);
             return target;
           });
         } else {
@@ -120,14 +124,21 @@ export default function DashboardScreen({ navigation }: PropiedadesPantallaPanel
           setSchedule([]);
         }
       } catch (err) {
-        setError(extractErrorMessage(err));
+        if (!silent) setError(extractErrorMessage(err));
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (!silent) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
     [loadScheduleForGroup]
   );
+
+  // Actualiza automáticamente los datos del panel cuando otro dispositivo realiza cambios.
+  usarTiempoReal(() => {
+    loadDashboard(false, true);
+  });
 
   // Cambia el curso seleccionado y carga su cronograma correspondiente.
   const handleSelectGroup = (grp: any): void => {

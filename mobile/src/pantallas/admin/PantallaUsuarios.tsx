@@ -26,6 +26,8 @@ import { usersApi } from '../../api/servicios';
 import { extractErrorMessage } from '../../utilidades/errores';
 // Importa el formateador de fechas al estándar argentino.
 import { formatDateAR } from '../../utilidades/fechas';
+// Importa el gancho de sincronización automática en tiempo real.
+import usarTiempoReal from '../../ganchos/usarTiempoReal';
 // Importa los componentes reutilizables de la interfaz.
 import {
   AlertBanner,
@@ -85,11 +87,13 @@ export default function UsersScreen() {
   const [userToDelete, setUserToDelete] = useState<any>(null);
 
   // Consulta al servidor la lista paginada y filtrada de usuarios.
-  const loadUsers = useCallback(async (isRefresh: boolean = false) => {
+  const loadUsers = useCallback(async (isRefresh: boolean = false, silent: boolean = false) => {
     try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      setError('');
+      if (!silent) {
+        if (isRefresh) setRefreshing(true);
+        else setLoading(true);
+        setError('');
+      }
       const res = await usersApi.list({
         search: search.trim() || undefined,
         role: roleFilter || undefined,
@@ -97,12 +101,19 @@ export default function UsersScreen() {
       });
       setUsers(res.data.data || []);
     } catch (err) {
-      setError(extractErrorMessage(err));
+      if (!silent) setError(extractErrorMessage(err));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (!silent) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [search, roleFilter, statusFilter]);
+
+  // Actualiza automáticamente la nómina de usuarios cuando otro dispositivo registra o modifica cuentas.
+  usarTiempoReal(() => {
+    loadUsers(false, true);
+  });
 
   // Recarga la lista de usuarios cuando la pantalla obtiene foco.
   useFocusEffect(

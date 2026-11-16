@@ -33,6 +33,7 @@ import {
 import SchoolScheduleGrid, {
   formatSchoolGroupShort,
 } from '../../componentes/GrillaHorarios';
+import usarTiempoReal from '../../ganchos/usarTiempoReal';
 
 // Renderiza el panel de control del docente con próximo módulo a dictar, métricas, grilla horaria y materias asignadas.
 export default function InstructorDashboardScreen({ navigation }: { navigation: any }) {
@@ -62,23 +63,38 @@ export default function InstructorDashboardScreen({ navigation }: { navigation: 
   }, []);
 
   // Carga las métricas, cursos recientes y cronograma del docente desde la API.
-  const loadDashboard = useCallback(async (isRefresh = false) => {
+  const loadDashboard = useCallback(async (isRefresh = false, silent = false) => {
     try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      setError('');
+      if (!silent) {
+        if (isRefresh) setRefreshing(true);
+        else setLoading(true);
+        setError('');
+      }
       setBaTime(getBuenosAiresNow());
 
       const res = await instructorApi.getDashboard();
       const dashData = res.data.data;
       setData(dashData);
     } catch (err) {
-      setError(extractErrorMessage(err));
+      if (!silent) setError(extractErrorMessage(err));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (!silent) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
+
+  // Actualiza automáticamente el panel y horarios del docente cuando se producen cambios desde otro dispositivo.
+  usarTiempoReal(() => {
+    loadDashboard(false, true);
+    if (selectedGroup) {
+      coursesApi
+        .getSchoolGroupSchedule(selectedGroup.schoolYear, selectedGroup.courseDivision)
+        .then((res) => setGroupScheduleData(res))
+        .catch(() => {});
+    }
+  });
 
   // Recarga la información del panel al enfocar la pantalla.
   useFocusEffect(

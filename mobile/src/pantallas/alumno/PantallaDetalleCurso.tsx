@@ -29,6 +29,8 @@ import { getErrorMessage } from '../../utilidades/errores';
 import { formatSchoolGroupShort } from '../../componentes/GrillaHorarios';
 // Importa el componente de muro y tablón de la materia.
 import TablonFeed from '../../componentes/MuroTablon';
+// Importa el gancho de sincronización automática en tiempo real.
+import usarTiempoReal from '../../ganchos/usarTiempoReal';
 // Importa las paletas cromáticas y constructor de colores de materias.
 import { COLOR_FAMILIES, COURSE_THEME_PALETTES, buildCoursePaletteFromHex } from '../docente/PantallaCursosDocente';
 
@@ -129,6 +131,11 @@ export default function CourseDetailScreen({ navigation, route }: PropiedadesPan
       load();
     }, [load])
   );
+
+  // Actualiza automáticamente el tablón, color y conteo de alumnos cuando otro dispositivo realiza cambios.
+  usarTiempoReal(() => {
+    load();
+  });
 
   // Muestra el indicador de carga mientras se obtiene la materia.
   if (!course && !error) return <Loading />;

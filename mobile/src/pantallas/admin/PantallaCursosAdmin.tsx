@@ -40,6 +40,8 @@ import {
 import SchoolScheduleGrid, {
   formatSchoolGroupShort,
 } from '../../componentes/GrillaHorarios';
+// Importa el gancho de sincronización automática en tiempo real.
+import usarTiempoReal from '../../ganchos/usarTiempoReal';
 
 // Define la lista de días hábiles de la semana.
 const DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
@@ -225,11 +227,13 @@ export default function AdminCoursesScreen({ route, navigation }: PropiedadesPan
 
   // Consulta al servidor el catálogo de materias, docentes, cursos y horarios del grupo seleccionado.
   const loadScheduleData = useCallback(
-    async (isRefresh: boolean = false, yr: number = schoolYear, div: number = courseDivision) => {
+    async (isRefresh: boolean = false, yr: number = schoolYear, div: number = courseDivision, silent: boolean = false) => {
       try {
-        if (isRefresh) setRefreshing(true);
-        else setLoading(true);
-        setError('');
+        if (!silent) {
+          if (isRefresh) setRefreshing(true);
+          else setLoading(true);
+          setError('');
+        }
         const schedData = await adminApi.getSchedule({ schoolYear: yr, courseDivision: div });
         const catalog = schedData?.subjectsCatalog || [];
         setSubjectsCatalog(catalog);
@@ -238,14 +242,21 @@ export default function AdminCoursesScreen({ route, navigation }: PropiedadesPan
         setSchedule(schedData?.schedule || []);
         setSchoolGroups(schedData?.schoolGroups || []);
       } catch (err) {
-        setError(extractErrorMessage(err));
+        if (!silent) setError(extractErrorMessage(err));
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (!silent) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
     [schoolYear, courseDivision]
   );
+
+  // Sincroniza automáticamente materias, cursos y horarios cuando otro dispositivo realiza modificaciones.
+  usarTiempoReal(() => {
+    loadScheduleData(false, schoolYear, courseDivision, true);
+  });
 
   // Recarga los datos cuando la pantalla obtiene foco.
   useFocusEffect(

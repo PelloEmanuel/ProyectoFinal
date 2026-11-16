@@ -16,6 +16,7 @@ import { useTheme } from '../../contexto/ContextoTema';
 import { useAuth } from '../../contexto/ContextoAcceso';
 import { attendanceApi } from '../../api/servicios';
 import { extractErrorMessage } from '../../utilidades/errores';
+import usarTiempoReal from '../../ganchos/usarTiempoReal';
 import {
   AlertBanner,
   Badge,
@@ -41,22 +42,31 @@ export default function PreceptorDashboardScreen({ navigation }: { navigation: a
   const [loadingStudents, setLoadingStudents] = useState(false);
 
   // Carga desde el servidor el listado de cursos abiertos habilitados para preceptoría.
-  const loadData = useCallback(async (isRefresh = false) => {
+  const loadData = useCallback(async (isRefresh = false, silent = false) => {
     try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      setError('');
+      if (!silent) {
+        if (isRefresh) setRefreshing(true);
+        else setLoading(true);
+        setError('');
+      }
 
       const res = await attendanceApi.getOpenCourses();
       const groups = Array.isArray(res) ? res : res?.data || [];
       setOpenCourses(groups);
     } catch (err) {
-      setError(extractErrorMessage(err));
+      if (!silent) setError(extractErrorMessage(err));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (!silent) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
+
+  // Sincroniza automáticamente los cursos y conteos de alumnos cuando ocurren cambios en otro dispositivo.
+  usarTiempoReal(() => {
+    loadData(false, true);
+  });
 
   // Recarga la información al enfocar la pantalla.
   useFocusEffect(

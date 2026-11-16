@@ -9,6 +9,7 @@ import { useTheme } from '../../contexto/ContextoTema';
 import useSocialAuth from '../../ganchos/usarAccesoSocial';
 import { getErrorMessage, getFieldErrors } from '../../utilidades/errores';
 import { validateRegister } from '../../utilidades/validadores';
+import usarTiempoReal from '../../ganchos/usarTiempoReal';
 
 // Renderiza la pantalla de registro de cuentas para Alumnos, Preceptores, Docentes o primer Administrador.
 export default function RegisterScreen({ navigation }: { navigation: any }) {
@@ -93,6 +94,18 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
       mounted = false;
     };
   }, [applyAvailableGroups]);
+
+  // Actualiza automáticamente los años y divisiones abiertos si un administrador abre o cierra un curso desde otro dispositivo.
+  usarTiempoReal(() => {
+    coursesApi
+      .getAvailableSchoolGroups()
+      .then((groups) => {
+        if (Array.isArray(groups)) {
+          applyAvailableGroups(groups);
+        }
+      })
+      .catch(() => {});
+  });
 
   // Calcula la lista ordenada de años escolares únicos disponibles.
   const availableYears = React.useMemo(() => {

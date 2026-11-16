@@ -17,6 +17,7 @@ import { useTheme } from '../../contexto/ContextoTema';
 import { useAuth } from '../../contexto/ContextoAcceso';
 import { attendanceApi } from '../../api/servicios';
 import { extractErrorMessage } from '../../utilidades/errores';
+import usarTiempoReal from '../../ganchos/usarTiempoReal';
 import {
   AlertBanner,
   Badge,
@@ -165,13 +166,21 @@ export default function AttendanceScreen({ route }: { route?: any; navigation?: 
 
   // Carga la cuadrícula mensual de asistencia para el curso, mes y año seleccionados.
   const loadAttendanceSheet = useCallback(
-    async (isRefresh = false, groupToLoad = selectedGroup, monthToLoad = selectedMonth, yearToLoad = selectedYear) => {
+    async (
+      isRefresh = false,
+      groupToLoad = selectedGroup,
+      monthToLoad = selectedMonth,
+      yearToLoad = selectedYear,
+      silent = false
+    ) => {
       const grp = groupToLoad || selectedGroup;
       if (!grp) return;
       try {
-        if (isRefresh) setRefreshing(true);
-        else setLoading(true);
-        setError('');
+        if (!silent) {
+          if (isRefresh) setRefreshing(true);
+          else setLoading(true);
+          setError('');
+        }
 
         const res = await attendanceApi.getSheet({
           schoolYear: grp.schoolYear,
@@ -187,14 +196,24 @@ export default function AttendanceScreen({ route }: { route?: any; navigation?: 
         };
         setSheetData(data);
       } catch (err) {
-        setError(extractErrorMessage(err));
+        if (!silent) setError(extractErrorMessage(err));
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (!silent) {
+          setLoading(false);
+          setRefreshing(false);
+        }
       }
     },
     [selectedGroup, selectedMonth, selectedYear]
   );
+
+  // Actualiza automáticamente la planilla de asistencia cuando otro dispositivo registra asistencias o abre cursos.
+  usarTiempoReal(() => {
+    loadOpenCourses();
+    if (selectedGroup) {
+      loadAttendanceSheet(false, selectedGroup, selectedMonth, selectedYear, true);
+    }
+  });
 
   // Ejecuta la carga inicial de cursos abiertos al montar la pantalla.
   useEffect(() => {

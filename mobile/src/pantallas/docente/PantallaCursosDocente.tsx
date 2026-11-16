@@ -25,6 +25,7 @@ import { formatDateAR } from '../../utilidades/fechas';
 import { formatSchoolGroupShort } from '../../componentes/GrillaHorarios';
 import FileUploader from '../../componentes/SubidorArchivos';
 import TablonFeed from '../../componentes/MuroTablon';
+import usarTiempoReal from '../../ganchos/usarTiempoReal';
 import {
   AlertBanner,
   Badge,
@@ -327,11 +328,13 @@ export default function InstructorCoursesScreen({ route, navigation }: { route: 
   const [confirmDeleteCourse, setConfirmDeleteCourse] = useState<any>(null);
 
   // Carga las materias asignadas, categorías y habilidades desde la API.
-  const loadData = useCallback(async (isRefresh = false) => {
+  const loadData = useCallback(async (isRefresh = false, silent = false) => {
     try {
-      if (isRefresh) setRefreshing(true);
-      else setLoading(true);
-      setError('');
+      if (!silent) {
+        if (isRefresh) setRefreshing(true);
+        else setLoading(true);
+        setError('');
+      }
       const [coursesRes, catRes, skillsRes] = await Promise.all([
         instructorApi.getCourses(),
         coursesApi.getCategories(),
@@ -342,12 +345,19 @@ export default function InstructorCoursesScreen({ route, navigation }: { route: 
       setCategories(catRes.data.data || []);
       setSkills(skillsRes.data.data || []);
     } catch (err) {
-      setError(extractErrorMessage(err));
+      if (!silent) setError(extractErrorMessage(err));
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (!silent) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, []);
+
+  // Sincroniza automáticamente las materias asignadas cuando ocurren cambios desde otro dispositivo.
+  usarTiempoReal(() => {
+    loadData(false, true);
+  });
 
   // Recarga la lista de materias al enfocar la pantalla.
   useFocusEffect(

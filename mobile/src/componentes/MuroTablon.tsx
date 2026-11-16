@@ -35,6 +35,8 @@ import { extractErrorMessage } from '../utilidades/errores';
 import { resolveAssetUrl } from '../configuracion/indice';
 // Importa el formateador de grupos escolares.
 import { formatSchoolGroupShort } from './GrillaHorarios';
+// Importa el gancho de sincronización automática en tiempo real.
+import usarTiempoReal from '../ganchos/usarTiempoReal';
 
 // Define las propiedades recibidas por el componente de muro del tablón.
 interface PropiedadesMuroTablon {
@@ -193,10 +195,10 @@ export default function TablonFeed({
 
   // Carga los comentarios públicos y privados asociados a una publicación del tablón.
   const loadComments = useCallback(
-    async (item: any, targetStudentId: number | null = null) => {
+    async (item: any, targetStudentId: number | null = null, silent: boolean = false) => {
       if (!item || !course) return;
       try {
-        setLoadingComments(true);
+        if (!silent) setLoadingComments(true);
         const pub = await commentsApi.list(course.id, {
           itemType: item.itemType,
           itemId: item.id,
@@ -237,11 +239,36 @@ export default function TablonFeed({
       } catch (err) {
         console.error('Error cargando comentarios:', err);
       } finally {
-        setLoadingComments(false);
+        if (!silent) setLoadingComments(false);
       }
     },
     [course, isInstructor, selectedStudentForPrivateChat]
   );
+
+  // Sincroniza automáticamente los comentarios y detalles de entregas cuando otro dispositivo publica o califica.
+  usarTiempoReal(() => {
+    if (selectedItem) {
+      loadComments(selectedItem, selectedStudentForPrivateChat?.id || null, true);
+      if (selectedItem.itemType === 'assignment') {
+        assignmentsApi
+          .get(selectedItem.id)
+          .then((detailed) => {
+            setSelectedItem((prev: any) =>
+              prev && prev.id === selectedItem.id
+                ? {
+                    ...prev,
+                    ...detailed,
+                    raw: { ...prev.raw, ...detailed },
+                    attachments: Array.isArray(detailed.attachments) ? detailed.attachments : prev.attachments,
+                    myAttempts: detailed.myAttempts || prev.myAttempts || [],
+                  }
+                : prev
+            );
+          })
+          .catch(() => {});
+      }
+    }
+  });
 
   // Abre el modal de detalle completo de una publicación y carga sus comentarios.
   const handleOpenDetail = async (item: any): Promise<void> => {
