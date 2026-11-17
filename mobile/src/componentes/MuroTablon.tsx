@@ -152,6 +152,8 @@ export default function TablonFeed({
             : [],
           authorName: a.authorName || 'Profesor de la materia',
           date: a.publishedAt || a.createdAt,
+          unreadCommentsCount: Number(a.unreadCommentsCount) || 0,
+          studentCommentsCount: Number(a.studentCommentsCount) || 0,
           raw: a,
         });
       });
@@ -177,6 +179,8 @@ export default function TablonFeed({
               authorName: 'Profesor de la materia',
               date: l.createdAt,
               duration: l.estimatedDuration,
+              unreadCommentsCount: Number(l.unreadCommentsCount) || 0,
+              studentCommentsCount: Number(l.studentCommentsCount) || 0,
               raw: l,
             });
           });
@@ -302,7 +306,11 @@ export default function TablonFeed({
         setLoadingDetail(false);
       }
     } else {
-      loadComments(item);
+      await loadComments(item);
+    }
+
+    if (isInstructor && item.unreadCommentsCount > 0 && onRefreshCourse) {
+      onRefreshCourse();
     }
   };
 
@@ -889,6 +897,44 @@ export default function TablonFeed({
                       </Text>
                     </View>
 
+                    {isInstructor && (item.unreadCommentsCount || 0) > 0 && (
+                      <View
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 19,
+                          backgroundColor: colors.mode === 'light' ? colors.surfaceAlt : '#1e293b',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: 4,
+                        }}
+                      >
+                        <Ionicons
+                          name="notifications-outline"
+                          size={20}
+                          color={colors.mode === 'light' ? colors.text : '#ffffff'}
+                        />
+                        <View
+                          style={{
+                            position: 'absolute',
+                            top: 2,
+                            right: 2,
+                            backgroundColor: colors.danger,
+                            borderRadius: 10,
+                            minWidth: 18,
+                            height: 18,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            paddingHorizontal: 4,
+                          }}
+                        >
+                          <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '800' }}>
+                            {item.unreadCommentsCount}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
                     {isInstructor && (
                       <TouchableOpacity
                         onPress={(e) => {
@@ -932,6 +978,44 @@ export default function TablonFeed({
                         📢 Publicado el {formatDateTime(item.date)}
                       </Text>
                     </View>
+
+                    {isInstructor && (item.unreadCommentsCount || 0) > 0 && (
+                      <View
+                        style={{
+                          width: 38,
+                          height: 38,
+                          borderRadius: 19,
+                          backgroundColor: colors.mode === 'light' ? colors.surfaceAlt : '#1e293b',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: 4,
+                        }}
+                      >
+                        <Ionicons
+                          name="notifications-outline"
+                          size={20}
+                          color={colors.mode === 'light' ? colors.text : '#ffffff'}
+                        />
+                        <View
+                          style={{
+                            position: 'absolute',
+                            top: 2,
+                            right: 2,
+                            backgroundColor: colors.danger,
+                            borderRadius: 10,
+                            minWidth: 18,
+                            height: 18,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            paddingHorizontal: 4,
+                          }}
+                        >
+                          <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '800' }}>
+                            {item.unreadCommentsCount}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
 
                     {isInstructor && (
                       <TouchableOpacity

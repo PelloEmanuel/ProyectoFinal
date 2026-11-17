@@ -92,6 +92,9 @@ export default function StudentHomeScreen({ navigation }: PropiedadesPantallaIni
       if (res?.schoolGroup?.schoolYear && res?.schoolGroup?.courseDivision) {
         setSelectedYear(res.schoolGroup.schoolYear);
         setSelectedDivision(res.schoolGroup.courseDivision);
+      } else if (res?.pendingCourseRequest) {
+        setSelectedYear(res.pendingCourseRequest.requestedSchoolYear);
+        setSelectedDivision(res.pendingCourseRequest.requestedCourseDivision);
       } else {
         if (openGroups.length > 0) {
           setSelectedYear(openGroups[0].schoolYear);
@@ -129,10 +132,13 @@ export default function StudentHomeScreen({ navigation }: PropiedadesPantallaIni
       setModalError('');
       setError('');
       setSuccess('');
-      await setSchoolGroup(selectedYear, selectedDivision, groupAccessCode.trim().toUpperCase());
+      const res = await setSchoolGroup(selectedYear, selectedDivision, groupAccessCode.trim().toUpperCase());
       setGroupModalVisible(false);
       setGroupAccessCode('');
-      setSuccess(`¡Acceso concedido! Te asignaste a ${selectedYear}° Año - ${selectedDivision}° Curso. Se actualizaron tus materias y horarios.`);
+      setSuccess(
+        res?.message ||
+          `Tu petición para ingresar al curso ${selectedYear}° Año - ${selectedDivision}° Curso fue enviada al Preceptor. Cuando la autorice, se actualizarán tus materias y horarios.`
+      );
       await load();
     } catch (e) {
       setModalError(getErrorMessage(e));
@@ -282,6 +288,33 @@ export default function StudentHomeScreen({ navigation }: PropiedadesPantallaIni
 
         <ErrorBanner message={error} onRetry={load} />
         <SuccessBanner message={success} />
+
+        {data?.pendingCourseRequest && (
+          <View
+            style={{
+              marginBottom: 14,
+              backgroundColor: colors.warningSoft || '#fef3c7',
+              borderColor: colors.warning || '#f59e0b',
+              borderWidth: 1,
+              borderRadius: 12,
+              padding: 14,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 12,
+            }}
+          >
+            <Ionicons name="time-outline" size={24} color={colors.warning || '#b45309'} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontWeight: '800', color: colors.mode === 'light' ? '#78350f' : '#fef3c7', fontSize: 13 }}>
+                Petición pendiente de autorización del Preceptor
+              </Text>
+              <Text style={{ fontSize: 12, color: colors.mode === 'light' ? '#92400e' : '#fde68a', marginTop: 2 }}>
+                Solicitaste {data.pendingCourseRequest.requestType === 'change' ? 'cambiar al' : 'ingresar al'} curso{' '}
+                {data.pendingCourseRequest.requestedFullLabel}. Apenas el Preceptor autorice tu petición, tus materias y horarios se actualizarán automáticamente.
+              </Text>
+            </View>
+          </View>
+        )}
 
         {!user?.twoFactorEnabled && !user?.createdByAdmin && (
           <View

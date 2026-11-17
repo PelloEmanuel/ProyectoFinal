@@ -140,14 +140,17 @@ export default function CourseDetailScreen({ navigation, route }: PropiedadesPan
   // Muestra el indicador de carga mientras se obtiene la materia.
   if (!course && !error) return <Loading />;
 
-  // Inscribe al alumno actual en la materia.
+  // Solicita la inscripción del alumno actual en la materia enviando la petición al Preceptor.
   const handleEnroll = async (): Promise<void> => {
     setBusy(true);
     setError('');
     setSuccess('');
     try {
-      await coursesApi.enroll(courseId);
-      setSuccess('¡Te inscribiste en el curso! Ya podés comenzar la primera lección.');
+      const res: any = await coursesApi.enroll(courseId);
+      setSuccess(
+        res?.message ||
+          'Tu petición de inscripción fue enviada al Preceptor para autorizar tu ingreso al curso.'
+      );
       await load();
     } catch (e) {
       setError(getErrorMessage(e));

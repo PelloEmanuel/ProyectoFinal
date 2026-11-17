@@ -1,6 +1,7 @@
-// Importa la conexión a la base de datos y la clase de error de aplicación.
+// Importa la conexión a la base de datos, la clase de error de aplicación y el emisor en tiempo real.
 import db from '../configuracion/baseDatos';
 import { AppError } from './errores';
+import { notificarCambioTiempoReal } from './tiempoReal';
 
 // Define los días hábiles escolares válidos para el armado de horarios.
 export const VALID_DAYS: string[] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -385,4 +386,99 @@ export async function deleteCourseAndDependencies(courseId: number, conn: any = 
   } finally {
     await runner.execute('SET FOREIGN_KEY_CHECKS = 1');
   }
+}
+
+// Registra una petición de inscripción o cambio de curso escolar pendiente de autorización por el Preceptor.
+export async function createStudentCourseRequest(
+  studentId: number,
+  requestedSchoolYear: unknown,
+  requestedCourseDivision: unknown,
+  currentSchoolYear: unknown = null,
+  currentCourseDivision: unknown = null
+): Promise<{
+  id: number;
+  studentId: number;
+  requestedSchoolYear: number;
+  requestedCourseDivision: number;
+  requestType: 'inscription' | 'change';
+  status: 'pending';
+}> {
+  const { schoolYear: reqYear, courseDivision: reqDiv } = validateYearAndDivision(
+    requestedSchoolYear,
+    requestedCourseDivision
+  );
+  const curYear = currentSchoolYear ? Number(currentSchoolYear) : null;
+  const curDiv = currentCourseDivision ? Number(currentCourseDivision) : null;
+  const requestType: 'inscription' | 'change' = curYear && curDiv ? 'change' : 'inscription';
+
+  // Asegura la existencia de la tabla solicitudes_curso antes de insertar.
+  await db.execute(
+    `CREATE TABLE IF NOT EXISTS solicitudes_curso (
+      id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+      student_id INT UNSIGNED NOT NULL,
+      current_school_year TINYINT UNSIGNED NULL DEFAULT NULL,
+      current_course_division TINYINT UNSIGNED NULL DEFAULT NULL,
+      requested_school_year TINYINT UNSIGNED NOT NULL,
+      requested_course_division TINYINT UNSIGNED NOT NULL,
+      request_type ENUM('inscription', 'change') NOT NULL DEFAULT 'inscription',
+      status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+      reviewed_by INT UNSIGNED NULL DEFAULT NULL,
+      reviewed_at DATETIME NULL DEFAULT NULL,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      INDEX idx_solicitudes_curso_status (status, requested_school_year, requested_course_division),
+      INDEX idx_solicitudes_curso_student (student_id, status)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+  );
+
+  // Si el alumno ya tenía una petición pendiente, la reemplaza por la nueva solicitud.
+  await db.execute("DELETE FROM solicitudes_curso WHERE student_id = ? AND status = 'pending'", [studentId]);
+
+  const [ins]: any = await db.execute(
+    `INSERT INTO solicitudes_curso
+       (student_id, current_school_year, current_course_division, requested_school_year, requested_course_division, request_type, status)
+     VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
+    [studentId, curYear, curDiv, reqYear, reqDiv, requestType]
+  );
+
+  // Envía una notificación a todos los preceptores activos sobre la nueva petición de curso.
+  try {
+    const [stuRows] = await db.execute<any[]>('SELECT first_name, last_name FROM usuarios WHERE id = ? LIMIT 1', [
+      studentId,
+    ]);
+    const studentName = stuRows[0] ? `${stuRows[0].first_name} ${stuRows[0].last_name}`.trim() : 'Un alumno';
+    const [preceptors] = await db.execute<any[]>(
+      `SELECT u.id
+       FROM usuarios u
+       JOIN roles r ON r.id = u.role_id
+       WHERE r.name = 'preceptor' AND u.deleted_at IS NULL`
+    );
+    const title =
+      requestType === 'change'
+        ? `Petición de cambio de curso a ${reqYear}° ${reqDiv}ª`
+        : `Petición de ingreso a ${reqYear}° ${reqDiv}ª`;
+    const body =
+      requestType === 'change'
+        ? `${studentName} solicitó cambiar de ${curYear}° ${curDiv}ª al curso ${reqYear}° Año - ${reqDiv}° Curso.`
+        : `${studentName} solicitó inscribirse al curso ${reqYear}° Año - ${reqDiv}° Curso.`;
+
+    for (const p of preceptors) {
+      await db.execute(
+        `INSERT INTO notificaciones (user_id, type, title, body, resource_type, resource_id)
+         VALUES (?, 'course_request', ?, ?, 'course_request', ?)`,
+        [p.id, title, body, ins.insertId]
+      );
+    }
+  } catch {}
+
+  notificarCambioTiempoReal('POST', '/api/v1/attendance/course-requests');
+
+  return {
+    id: Number(ins.insertId),
+    studentId,
+    requestedSchoolYear: reqYear,
+    requestedCourseDivision: reqDiv,
+    requestType,
+    status: 'pending',
+  };
 }

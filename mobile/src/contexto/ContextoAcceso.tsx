@@ -395,10 +395,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }): React
         return fresh;
       },
       async setSchoolGroup(schoolYear: number, courseDivision: number, accessCode?: string) {
-        const updated = await usersApi.setSchoolGroup({ schoolYear, courseDivision, accessCode });
-        await saveSession({ user: updated });
-        dispatch({ type: 'SET_USER', user: updated });
-        return updated;
+        const res = await usersApi.setSchoolGroup({ schoolYear, courseDivision, accessCode });
+        const updatedUser = res?.user || res?.data || res;
+        if (updatedUser && updatedUser.id) {
+          await saveSession({ user: updatedUser });
+          dispatch({ type: 'SET_USER', user: updatedUser });
+        }
+        return res;
       },
       async updateProfile(body: any) {
         const updated = await usersApi.updateMe(body);

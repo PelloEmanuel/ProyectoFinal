@@ -1,7 +1,8 @@
-// Importa la conexión a la base de datos, el manejador de errores y los tipos de solicitud autenticada.
+// Importa la conexión a la base de datos, el manejador de errores, el notificador en tiempo real y los tipos de solicitud autenticada.
 import { Response } from 'express';
 import db from '../configuracion/baseDatos';
 import { AppError, asyncHandler } from '../utilidades/errores';
+import { notificarCambioTiempoReal } from '../utilidades/tiempoReal';
 import { SolicitudAutenticada } from '../tipos';
 
 // Lista los comentarios públicos o privados asociados a un aviso, lección o tarea del tablón.
@@ -44,6 +45,19 @@ export const listFeedComments = asyncHandler(async (req: SolicitudAutenticada, r
   query += ' ORDER BY fc.created_at ASC';
 
   const [rows] = await db.execute(query, params);
+
+  // Si quien abre los comentarios del aviso o material teórico es el docente o administrador, los marca como leídos.
+  if (req.user?.role === 'instructor' || req.user?.role === 'admin') {
+    try {
+      const [upd]: any = await db.execute(
+        'UPDATE comentarios_tablon SET read_by_instructor = 1 WHERE course_id = ? AND item_type = ? AND item_id = ? AND read_by_instructor = 0',
+        [courseId, itemType, Number(itemId)]
+      );
+      if (upd?.affectedRows > 0) {
+        notificarCambioTiempoReal('PATCH', `/api/v1/courses/${courseId}/comments/read`);
+      }
+    } catch {}
+  }
 
   const formatted = rows.map((r: any) => ({
     id: r.id,
@@ -91,11 +105,22 @@ export const createFeedComment = asyncHandler(async (req: SolicitudAutenticada, 
   }
 
   const attJson = Array.isArray(attachments) && attachments.length > 0 ? JSON.stringify(attachments) : null;
+  const readByInstructor = req.user?.role === 'student' ? 0 : 1;
 
   const [ins] = await db.execute(
-    `INSERT INTO comentarios_tablon (course_id, item_type, item_id, user_id, is_private, student_id, message, attachments)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [courseId, itemType, Number(itemId), req.user!.id, isPriv ? 1 : 0, targetStudentId, String(message).trim(), attJson]
+    `INSERT INTO comentarios_tablon (course_id, item_type, item_id, user_id, is_private, read_by_instructor, student_id, message, attachments)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      courseId,
+      itemType,
+      Number(itemId),
+      req.user!.id,
+      isPriv ? 1 : 0,
+      readByInstructor,
+      targetStudentId,
+      String(message).trim(),
+      attJson,
+    ]
   );
 
   // Envía una notificación automática al docente o alumno según el tipo de comentario publicado.

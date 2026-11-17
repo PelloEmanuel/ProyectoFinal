@@ -6,7 +6,7 @@ import { AppError, asyncHandler } from '../utilidades/errores';
 import { publicUser } from '../utilidades/serializadores';
 import * as tokens from '../utilidades/tokens';
 import { logAudit } from '../utilidades/auditoria';
-import { syncStudentCourseEnrollments } from '../utilidades/escuela';
+import { syncStudentCourseEnrollments, createStudentCourseRequest } from '../utilidades/escuela';
 import { FilaUsuarioBD, SolicitudAutenticada } from '../tipos';
 
 // Define la consulta SQL para obtener un usuario activo junto con el nombre de su rol.
@@ -93,17 +93,29 @@ export const setSchoolGroup = asyncHandler(async (req: SolicitudAutenticada, res
     }
   }
 
-  // Asigna el curso al alumno y sincroniza automáticamente sus inscripciones.
-  await syncStudentCourseEnrollments(req.user!.id, sy, cd);
-  await logAudit(req.user!.id, 'SCHOOL_GROUP_SELECTED', 'user', req.user!.id, {
+  // Envía una petición de ingreso o cambio de curso al Preceptor en lugar de aplicar el cambio directamente.
+  const currentUser = await findById(req.user!.id);
+  const courseReq = await createStudentCourseRequest(
+    req.user!.id,
+    sy,
+    cd,
+    currentUser?.school_year || null,
+    currentUser?.course_division || null
+  );
+  await logAudit(req.user!.id, 'SCHOOL_GROUP_REQUESTED', 'user', req.user!.id, {
     schoolYear: sy,
     courseDivision: cd,
+    requestId: courseReq.id,
   });
   const fresh = await findById(req.user!.id);
   const serialized = publicUser(fresh);
   res.json({
     success: true,
-    message: `¡Acceso concedido! Te asignaste a ${serialized?.schoolGroupLabel}. Se aplicaron las materias y horarios de tu curso.`,
+    pendingApproval: true,
+    courseRequest: courseReq,
+    message: `Tu petición para ${
+      courseReq.requestType === 'change' ? 'cambiar al' : 'ingresar al'
+    } curso ${sy}° Año - ${cd}° Curso fue enviada al Preceptor. Cuando la autorice, se habilitarán tus materias y horarios.`,
     user: serialized,
     data: serialized,
   });
@@ -386,6 +398,32 @@ export const studentDashboard = asyncHandler(async (req: SolicitudAutenticada, r
      ORDER BY sg.school_year ASC, sg.course_division ASC`
   );
 
+  // Consulta si el estudiante tiene una petición de ingreso o cambio de curso pendiente o reciente.
+  let pendingCourseRequest: any = null;
+  let latestCourseRequest: any = null;
+  try {
+    const [reqRows] = await db.execute(
+      `SELECT id, current_school_year AS currentSchoolYear, current_course_division AS currentCourseDivision,
+              requested_school_year AS requestedSchoolYear, requested_course_division AS requestedCourseDivision,
+              request_type AS requestType, status, reviewed_at AS reviewedAt, created_at AS createdAt
+       FROM solicitudes_curso
+       WHERE student_id = ?
+       ORDER BY id DESC
+       LIMIT 1`,
+      [studentId]
+    );
+    if (reqRows.length > 0) {
+      latestCourseRequest = {
+        ...reqRows[0],
+        requestedLabel: `${reqRows[0].requestedSchoolYear}° ${reqRows[0].requestedCourseDivision}ª`,
+        requestedFullLabel: `${reqRows[0].requestedSchoolYear}° Año - ${reqRows[0].requestedCourseDivision}° Curso`,
+      };
+      if (reqRows[0].status === 'pending') {
+        pendingCourseRequest = latestCourseRequest;
+      }
+    }
+  } catch {}
+
   res.json({
     success: true,
     data: {
@@ -397,6 +435,8 @@ export const studentDashboard = asyncHandler(async (req: SolicitudAutenticada, r
             ? `${user.school_year}° Año - ${user.course_division}° Curso`
             : null,
       },
+      pendingCourseRequest,
+      latestCourseRequest,
       availableSchoolGroups: openSchoolGroups.map((g: any) => ({
         id: g.id,
         schoolYear: Number(g.schoolYear),

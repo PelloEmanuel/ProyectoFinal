@@ -100,6 +100,31 @@ export async function initDatabase(): Promise<void> {
       conn,
       'UPDATE materias_escolares SET description = NULL WHERE description IS NOT NULL'
     );
+    await safeExec(
+      conn,
+      'ALTER TABLE comentarios_tablon ADD COLUMN read_by_instructor TINYINT(1) NOT NULL DEFAULT 0'
+    );
+    await safeExec(
+      conn,
+      `CREATE TABLE IF NOT EXISTS solicitudes_curso (
+        id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        student_id INT UNSIGNED NOT NULL,
+        current_school_year TINYINT UNSIGNED NULL DEFAULT NULL,
+        current_course_division TINYINT UNSIGNED NULL DEFAULT NULL,
+        requested_school_year TINYINT UNSIGNED NOT NULL,
+        requested_course_division TINYINT UNSIGNED NOT NULL,
+        request_type ENUM('inscription', 'change') NOT NULL DEFAULT 'inscription',
+        status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+        reviewed_by INT UNSIGNED NULL DEFAULT NULL,
+        reviewed_at DATETIME NULL DEFAULT NULL,
+        created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_solicitudes_curso_status (status, requested_school_year, requested_course_division),
+        INDEX idx_solicitudes_curso_student (student_id, status),
+        FOREIGN KEY (student_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+        FOREIGN KEY (reviewed_by) REFERENCES usuarios(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
+    );
 
     // Carga los datos iniciales de semilla en la base de datos.
     await conn.query(seedSql);

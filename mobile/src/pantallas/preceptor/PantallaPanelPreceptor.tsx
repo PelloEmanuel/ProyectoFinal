@@ -246,10 +246,18 @@ export default function PreceptorDashboardScreen({ navigation }: { navigation: a
                 </View>
               </View>
 
-              <Badge label="Curso Abierto" tone="success" />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {(grp.pendingRequestsCount || 0) > 0 && (
+                  <Badge
+                    label={`${grp.pendingRequestsCount} ${Number(grp.pendingRequestsCount) === 1 ? 'petición' : 'peticiones'}`}
+                    tone="warning"
+                  />
+                )}
+                <Badge label="Curso Abierto" tone="success" />
+              </View>
             </View>
 
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
               <Button
                 title="Confirmar Asistencia"
                 icon="checkmark-circle-outline"
@@ -260,6 +268,22 @@ export default function PreceptorDashboardScreen({ navigation }: { navigation: a
                   navigation.navigate('PreceptorAttendance', {
                     schoolYear: grp.schoolYear,
                     courseDivision: grp.courseDivision,
+                  });
+                }}
+              />
+              <Button
+                title={
+                  (grp.pendingRequestsCount || 0) > 0
+                    ? `Peticiones (${grp.pendingRequestsCount})`
+                    : 'Peticiones'
+                }
+                icon="git-pull-request-outline"
+                variant={(grp.pendingRequestsCount || 0) > 0 ? 'warning' : 'outline'}
+                small
+                style={{ marginBottom: 0 }}
+                onPress={() => {
+                  navigation.navigate('PreceptorRequests', {
+                    filterGroupKey: `${grp.schoolYear}-${grp.courseDivision}`,
                   });
                 }}
               />

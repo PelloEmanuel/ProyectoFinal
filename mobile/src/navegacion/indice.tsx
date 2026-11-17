@@ -48,6 +48,7 @@ import PantallaAjustesAdmin from '../pantallas/admin/PantallaAjustesAdmin';
 
 // Importa las pantallas de preceptoría, asistencia, perfil y cuadrícula de horarios.
 import PantallaPanelPreceptor from '../pantallas/preceptor/PantallaPanelPreceptor';
+import PantallaPeticionesPreceptor from '../pantallas/preceptor/PantallaPeticionesPreceptor';
 import PantallaAsistencia from '../pantallas/compartido/PantallaAsistencia';
 import PantallaPerfil from '../pantallas/PantallaPerfil';
 import PantallaGrupoCurso from '../pantallas/compartido/PantallaGrupoCurso';
@@ -71,7 +72,7 @@ const VALID_STACK_ROUTES = [
 const ROLE_TAB_NAMES: Record<string, string[]> = {
   student: ['StudentHome', 'MyLearning', 'Profile'],
   instructor: ['InstructorDashboard', 'InstructorCourses', 'InstructorStudents', 'InstructorAttendance', 'Profile'],
-  preceptor: ['PreceptorHome', 'PreceptorAttendance', 'PreceptorStudents', 'Profile'],
+  preceptor: ['PreceptorHome', 'PreceptorAttendance', 'PreceptorRequests', 'PreceptorStudents', 'Profile'],
   admin: ['AdminDashboard', 'AdminCourses', 'Users', 'AdminReports', 'AdminSettings', 'AdminAttendance', 'Profile'],
 };
 
@@ -158,6 +159,8 @@ function UnifiedTopNavBar({ state, descriptors, navigation }: any): React.JSX.El
       case 'InstructorSubmissions':
       case 'AdminReports':
         return 'clipboard-outline';
+      case 'PreceptorRequests':
+        return 'git-pull-request-outline';
       case 'AdminSettings':
         return 'settings-outline';
       default:
@@ -569,6 +572,7 @@ function PreceptorTabs(): React.JSX.Element {
     >
       <Tab.Screen name="PreceptorHome" component={PantallaPanelPreceptor} options={{ title: 'Panel' }} />
       <Tab.Screen name="PreceptorAttendance" component={PantallaAsistencia} options={{ title: 'Asistencia' }} />
+      <Tab.Screen name="PreceptorRequests" component={PantallaPeticionesPreceptor} options={{ title: 'Peticiones' }} />
       <Tab.Screen name="PreceptorStudents" component={PantallaAlumnosDocente} options={{ title: 'Estudiantes' }} />
       <Tab.Screen name="Profile" component={PantallaPerfil} options={{ title: 'Perfil' }} />
     </Tab.Navigator>

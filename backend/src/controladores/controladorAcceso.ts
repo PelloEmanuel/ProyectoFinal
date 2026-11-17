@@ -9,7 +9,7 @@ import * as mailer from '../utilidades/correo';
 import * as social from '../utilidades/redesSociales';
 import { publicUser } from '../utilidades/serializadores';
 import { logAudit } from '../utilidades/auditoria';
-import { syncStudentCourseEnrollments } from '../utilidades/escuela';
+import { createStudentCourseRequest } from '../utilidades/escuela';
 import { SolicitudAutenticada } from '../tipos';
 
 // Define la consulta SQL base para recuperar los datos de un usuario junto con el nombre de su rol.
@@ -304,7 +304,13 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
       );
 
       if (targetRoleName === 'student' && verifiedStudentGroup) {
-        await syncStudentCourseEnrollments(rawUser.id, verifiedStudentGroup.schoolYear, verifiedStudentGroup.courseDivision);
+        await createStudentCourseRequest(
+          rawUser.id,
+          verifiedStudentGroup.schoolYear,
+          verifiedStudentGroup.courseDivision,
+          rawUser.school_year || null,
+          rawUser.course_division || null
+        );
       }
 
       await issueEmailVerificationToken(rawUser.id, rawUser.email);
@@ -322,7 +328,13 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
         const linkedHash = await bcrypt.hash(password, 10);
         await db.execute('UPDATE usuarios SET password_hash = ? WHERE id = ?', [linkedHash, rawUser.id]);
         if (targetRoleName === 'student' && verifiedStudentGroup) {
-          await syncStudentCourseEnrollments(rawUser.id, verifiedStudentGroup.schoolYear, verifiedStudentGroup.courseDivision);
+          await createStudentCourseRequest(
+            rawUser.id,
+            verifiedStudentGroup.schoolYear,
+            verifiedStudentGroup.courseDivision,
+            rawUser.school_year || null,
+            rawUser.course_division || null
+          );
         }
         await logAudit(rawUser.id, 'OAUTH_ACCOUNT_LINKED_PASSWORD', 'user', rawUser.id, { email: normalizedEmail });
         const unifiedUser = await findById(rawUser.id);
@@ -372,9 +384,15 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
     ]
   );
 
-  // Si el usuario es estudiante y validó la contraseña del curso, sincroniza sus inscripciones escolares.
+  // Si el usuario es estudiante y validó la contraseña del curso, envía su petición de ingreso al Preceptor.
   if (targetRoleName === 'student' && verifiedStudentGroup) {
-    await syncStudentCourseEnrollments(result.insertId, verifiedStudentGroup.schoolYear, verifiedStudentGroup.courseDivision);
+    await createStudentCourseRequest(
+      result.insertId,
+      verifiedStudentGroup.schoolYear,
+      verifiedStudentGroup.courseDivision,
+      null,
+      null
+    );
   }
 
   // Emite el token de verificación por correo y crea una notificación de bienvenida para el usuario.
@@ -1132,7 +1150,13 @@ export const oauthCallback = asyncHandler(async (req: Request, res: Response) =>
         user = await findById(ins.insertId);
 
         if (targetRoleName === 'student' && verifiedStudentGroup) {
-          await syncStudentCourseEnrollments(user.id, verifiedStudentGroup.schoolYear, verifiedStudentGroup.courseDivision).catch(() => {});
+          await createStudentCourseRequest(
+            user.id,
+            verifiedStudentGroup.schoolYear,
+            verifiedStudentGroup.courseDivision,
+            null,
+            null
+          ).catch(() => {});
         }
       }
 
@@ -1155,7 +1179,13 @@ export const oauthCallback = asyncHandler(async (req: Request, res: Response) =>
           stateData.courseDivision,
           stateData.accessCode
         );
-        await syncStudentCourseEnrollments(user.id, verifiedStudentGroup.schoolYear, verifiedStudentGroup.courseDivision).catch(() => {});
+        await createStudentCourseRequest(
+          user.id,
+          verifiedStudentGroup.schoolYear,
+          verifiedStudentGroup.courseDivision,
+          user.school_year || null,
+          user.course_division || null
+        ).catch(() => {});
       }
       await issueEmailVerificationToken(user.id, user.email);
       return sendRedirectWithBridge(
@@ -1318,7 +1348,13 @@ export const socialLogin = asyncHandler(async (req: Request, res: Response) => {
       );
       user = await findById(ins.insertId);
       if (targetRoleName === 'student' && verifiedStudentGroup) {
-        await syncStudentCourseEnrollments(user.id, verifiedStudentGroup.schoolYear, verifiedStudentGroup.courseDivision).catch(() => {});
+        await createStudentCourseRequest(
+          user.id,
+          verifiedStudentGroup.schoolYear,
+          verifiedStudentGroup.courseDivision,
+          null,
+          null
+        ).catch(() => {});
       }
     }
 

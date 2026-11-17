@@ -1357,7 +1357,45 @@ export default function InstructorCoursesScreen({ route, navigation }: { route: 
                             }
                             tone="primary"
                           />
-                          <Badge label={`${course.enrolledCount || 0} alumnos`} tone="success" />
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Badge label={`${course.enrolledCount || 0} alumnos`} tone="success" />
+                            {(course.unreadCommentsCount || 0) > 0 && (
+                              <View
+                                style={{
+                                  width: 38,
+                                  height: 38,
+                                  borderRadius: 19,
+                                  backgroundColor: colors.mode === 'light' ? colors.surfaceAlt : '#1e293b',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <Ionicons
+                                  name="notifications-outline"
+                                  size={20}
+                                  color={colors.mode === 'light' ? colors.text : '#ffffff'}
+                                />
+                                <View
+                                  style={{
+                                    position: 'absolute',
+                                    top: 2,
+                                    right: 2,
+                                    backgroundColor: colors.danger,
+                                    borderRadius: 10,
+                                    minWidth: 18,
+                                    height: 18,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    paddingHorizontal: 4,
+                                  }}
+                                >
+                                  <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '800' }}>
+                                    {course.unreadCommentsCount}
+                                  </Text>
+                                </View>
+                              </View>
+                            )}
+                          </View>
                         </View>
                         <Text style={[styles.courseTitle, { color: colors.text, marginTop: 8 }]}>
                           {course.title}

@@ -10,6 +10,7 @@ import {
   validateInstructorForExistingCourseSchedules,
   getOrCreateCategoryForSubject,
   deleteCourseAndDependencies,
+  createStudentCourseRequest,
 } from '../utilidades/escuela';
 import { SolicitudAutenticada, UsuarioAutenticado } from '../tipos';
 
@@ -323,7 +324,11 @@ export const getCourse = asyncHandler(async (req: SolicitudAutenticada, res: Res
     `SELECT l.id, l.module_id AS moduleId, l.title, l.content_type AS contentType, l.content,
             l.attachments AS attachments,
             l.created_at AS createdAt,
-            l.position, l.estimated_duration AS estimatedDuration, l.is_required AS isRequired
+            l.position, l.estimated_duration AS estimatedDuration, l.is_required AS isRequired,
+            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u ON u.id = fc.user_id
+             WHERE fc.course_id = m.course_id AND fc.item_type = 'lesson' AND fc.item_id = l.id AND u.role_id = 3 AND fc.read_by_instructor = 0) AS unreadCommentsCount,
+            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u ON u.id = fc.user_id
+             WHERE fc.course_id = m.course_id AND fc.item_type = 'lesson' AND fc.item_id = l.id AND u.role_id = 3) AS studentCommentsCount
      FROM lecciones l
      JOIN modulos m ON m.id = l.module_id
      WHERE m.course_id = ?
@@ -353,7 +358,11 @@ export const getCourse = asyncHandler(async (req: SolicitudAutenticada, res: Res
 
   const [announcements] = await db.execute(
     `SELECT a.id, a.title, a.content, a.attachments, a.published_at AS publishedAt,
-            CONCAT(u.first_name, ' ', u.last_name) AS authorName
+            CONCAT(u.first_name, ' ', u.last_name) AS authorName,
+            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u2 ON u2.id = fc.user_id
+             WHERE fc.course_id = a.course_id AND fc.item_type = 'announcement' AND fc.item_id = a.id AND u2.role_id = 3 AND fc.read_by_instructor = 0) AS unreadCommentsCount,
+            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u2 ON u2.id = fc.user_id
+             WHERE fc.course_id = a.course_id AND fc.item_type = 'announcement' AND fc.item_id = a.id AND u2.role_id = 3) AS studentCommentsCount
      FROM anuncios a
      JOIN usuarios u ON u.id = a.instructor_id
      WHERE a.course_id = ? AND a.status = 'published'
@@ -422,6 +431,8 @@ export const getCourse = asyncHandler(async (req: SolicitudAutenticada, res: Res
         ...l,
         isRequired: !!l.isRequired,
         completed: completedLessonIds.includes(l.id),
+        unreadCommentsCount: Number(l.unreadCommentsCount) || 0,
+        studentCommentsCount: Number(l.studentCommentsCount) || 0,
         resources: resources.filter((r: any) => r.lessonId === l.id),
         attachments: l.attachments
           ? typeof l.attachments === 'string'
@@ -490,6 +501,8 @@ export const getCourse = asyncHandler(async (req: SolicitudAutenticada, res: Res
     })),
     announcements: announcements.map((ann: any) => ({
       ...ann,
+      unreadCommentsCount: Number(ann.unreadCommentsCount) || 0,
+      studentCommentsCount: Number(ann.studentCommentsCount) || 0,
       attachments: ann.attachments
         ? typeof ann.attachments === 'string'
           ? JSON.parse(ann.attachments)
@@ -1102,22 +1115,30 @@ export const enrollCourse = asyncHandler(async (req: SolicitudAutenticada, res: 
     throw new AppError('Ya estás inscrito en este curso', 409, 'ALREADY_ENROLLED');
   }
 
-  const [ins] = await db.execute(
-    "INSERT INTO inscripciones (student_id, course_id, status, enrolled_at, last_accessed_at) VALUES (?, ?, 'active', NOW(), NOW())",
-    [req.user!.id, course.id]
-  );
+  const [stuRows] = await db.execute('SELECT school_year, course_division FROM usuarios WHERE id = ? LIMIT 1', [
+    req.user!.id,
+  ]);
+  const stu = stuRows[0] || {};
+  const sy = Number(course.school_year) || 1;
+  const cd = Number(course.course_division) || 1;
 
-  await db.execute(
-    `INSERT INTO notificaciones (user_id, type, title, body, resource_type, resource_id)
-     VALUES (?, 'enrollment', 'Inscripción confirmada', ?, 'course', ?)`,
-    [req.user!.id, `Te inscribiste en el curso "${course.title}". ¡Comenzá tu primera lección!`, course.id]
+  const courseReq = await createStudentCourseRequest(
+    req.user!.id,
+    sy,
+    cd,
+    stu.school_year || null,
+    stu.course_division || null
   );
-  await logAudit(req.user!.id, 'COURSE_ENROLLED', 'course', course.id);
+  await logAudit(req.user!.id, 'COURSE_ENROLLMENT_REQUESTED', 'course', course.id, {
+    schoolYear: sy,
+    courseDivision: cd,
+  });
 
   res.status(201).json({
     success: true,
-    message: 'Inscripción realizada con éxito',
-    data: { enrollmentId: ins.insertId, courseId: course.id, status: 'active' },
+    pendingApproval: true,
+    message: `Se envió tu petición al Preceptor para autorizar tu ingreso al curso ${sy}° Año - ${cd}° Curso.`,
+    data: { requestId: courseReq.id, courseId: course.id, status: 'pending' },
   });
 });
 

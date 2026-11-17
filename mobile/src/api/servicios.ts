@@ -27,7 +27,7 @@ export const authApi = {
 export const usersApi = {
   me: () => api.get('/users/me').then(unwrap),
   updateMe: (body: any) => api.patch('/users/me', body).then(unwrap),
-  setSchoolGroup: (body: any) => api.patch('/users/me/school-group', body).then(unwrap),
+  setSchoolGroup: (body: any) => api.patch('/users/me/school-group', body).then((r) => r.data),
   mySchedule: () => api.get('/users/me/schedule').then(unwrap),
   updatePreferences: (body: any) => api.patch('/users/me/preferences', body).then(unwrap),
   updatePassword: (body: any) => api.patch('/users/me/password', body).then((r) => r.data),
@@ -205,4 +205,7 @@ export const attendanceApi = {
   getSheet: (params?: any) => api.get('/attendance/sheet', { params }).then((r) => (r.data?.days ? r.data : r.data?.data ?? r.data)),
   recordAttendance: (body: any) => api.post('/attendance/record', body).then(unwrap),
   setDayStatus: (body: any) => api.post('/attendance/day-status', body).then(unwrap),
+  getCourseRequests: (params?: any) => api.get('/attendance/course-requests', { params }).then((r) => r.data),
+  approveCourseRequest: (id: number | string) => api.post(`/attendance/course-requests/${id}/approve`).then((r) => r.data),
+  rejectCourseRequest: (id: number | string) => api.post(`/attendance/course-requests/${id}/reject`).then((r) => r.data),
 };

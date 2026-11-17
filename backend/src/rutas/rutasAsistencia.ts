@@ -24,4 +24,9 @@ router.post('/record', attendanceCtrl.recordAttendance);
 // Define si un curso tuvo clases normales o sin actividad en una fecha específica.
 router.post('/day-status', attendanceCtrl.setDayAttendanceStatus);
 
+// Lista y procesa las peticiones de ingreso o cambio de curso de alumnos por parte del Preceptor.
+router.get('/course-requests', attendanceCtrl.listCourseRequests);
+router.post('/course-requests/:id/approve', attendanceCtrl.approveCourseRequest);
+router.post('/course-requests/:id/reject', attendanceCtrl.rejectCourseRequest);
+
 export default router;
