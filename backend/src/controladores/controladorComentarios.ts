@@ -46,14 +46,25 @@ export const listFeedComments = asyncHandler(async (req: SolicitudAutenticada, r
 
   const [rows] = await db.execute(query, params);
 
-  // Si quien abre los comentarios del aviso o material teórico es el docente o administrador, los marca como leídos.
-  if (req.user?.role === 'instructor' || req.user?.role === 'admin') {
+  // Marca como leídos únicamente los comentarios de la interfaz específica (pública o privada) a la que ingresó el docente.
+  const shouldMarkRead = req.query.markRead === '1' || req.query.markRead === 'true';
+  if (shouldMarkRead && (req.user?.role === 'instructor' || req.user?.role === 'admin')) {
     try {
-      const [upd]: any = await db.execute(
-        'UPDATE comentarios_tablon SET read_by_instructor = 1 WHERE course_id = ? AND item_type = ? AND item_id = ? AND read_by_instructor = 0',
-        [courseId, itemType, Number(itemId)]
-      );
-      if (upd?.affectedRows > 0) {
+      let updResult: any = null;
+      if (!isPriv) {
+        const [upd] = await db.execute(
+          'UPDATE comentarios_tablon SET read_by_instructor = 1 WHERE course_id = ? AND item_type = ? AND item_id = ? AND is_private = 0 AND read_by_instructor = 0',
+          [courseId, itemType, Number(itemId)]
+        );
+        updResult = upd;
+      } else if (targetStudentId) {
+        const [upd] = await db.execute(
+          'UPDATE comentarios_tablon SET read_by_instructor = 1 WHERE course_id = ? AND item_type = ? AND item_id = ? AND is_private = 1 AND student_id = ? AND read_by_instructor = 0',
+          [courseId, itemType, Number(itemId), targetStudentId]
+        );
+        updResult = upd;
+      }
+      if (updResult?.affectedRows > 0) {
         notificarCambioTiempoReal('PATCH', `/api/v1/courses/${courseId}/comments/read`);
       }
     } catch {}
@@ -183,12 +194,26 @@ export const listPrivateCommentStudents = asyncHandler(async (req: SolicitudAute
   const [rows] = await db.execute(
     `SELECT DISTINCT u.id, u.first_name, u.last_name, u.email,
             (SELECT COUNT(*) FROM comentarios_tablon WHERE course_id = ? AND item_type = ? AND item_id = ? AND is_private = 1 AND student_id = u.id) AS messageCount,
+            (SELECT COUNT(*) FROM comentarios_tablon WHERE course_id = ? AND item_type = ? AND item_id = ? AND is_private = 1 AND student_id = u.id AND user_id = u.id AND read_by_instructor = 0) AS unreadCount,
             (SELECT MAX(created_at) FROM comentarios_tablon WHERE course_id = ? AND item_type = ? AND item_id = ? AND is_private = 1 AND student_id = u.id) AS lastMessageAt
      FROM usuarios u
      JOIN comentarios_tablon fc ON fc.student_id = u.id
      WHERE fc.course_id = ? AND fc.item_type = ? AND fc.item_id = ? AND fc.is_private = 1
      ORDER BY lastMessageAt DESC`,
-    [courseId, itemType, Number(itemId), courseId, itemType, Number(itemId), courseId, itemType, Number(itemId)]
+    [
+      courseId,
+      itemType,
+      Number(itemId),
+      courseId,
+      itemType,
+      Number(itemId),
+      courseId,
+      itemType,
+      Number(itemId),
+      courseId,
+      itemType,
+      Number(itemId),
+    ]
   );
 
   res.json({
@@ -198,6 +223,7 @@ export const listPrivateCommentStudents = asyncHandler(async (req: SolicitudAute
       name: `${r.first_name} ${r.last_name}`.trim(),
       email: r.email,
       messageCount: Number(r.messageCount) || 0,
+      unreadCount: Number(r.unreadCount) || 0,
       lastMessageAt: r.lastMessageAt,
     })),
   });

@@ -328,6 +328,10 @@ export const getCourse = asyncHandler(async (req: SolicitudAutenticada, res: Res
             (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u ON u.id = fc.user_id
              WHERE fc.course_id = m.course_id AND fc.item_type = 'lesson' AND fc.item_id = l.id AND u.role_id = 3 AND fc.read_by_instructor = 0) AS unreadCommentsCount,
             (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u ON u.id = fc.user_id
+             WHERE fc.course_id = m.course_id AND fc.item_type = 'lesson' AND fc.item_id = l.id AND u.role_id = 3 AND fc.is_private = 0 AND fc.read_by_instructor = 0) AS unreadPublicCommentsCount,
+            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u ON u.id = fc.user_id
+             WHERE fc.course_id = m.course_id AND fc.item_type = 'lesson' AND fc.item_id = l.id AND u.role_id = 3 AND fc.is_private = 1 AND fc.read_by_instructor = 0) AS unreadPrivateCommentsCount,
+            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u ON u.id = fc.user_id
              WHERE fc.course_id = m.course_id AND fc.item_type = 'lesson' AND fc.item_id = l.id AND u.role_id = 3) AS studentCommentsCount
      FROM lecciones l
      JOIN modulos m ON m.id = l.module_id
@@ -361,6 +365,10 @@ export const getCourse = asyncHandler(async (req: SolicitudAutenticada, res: Res
             CONCAT(u.first_name, ' ', u.last_name) AS authorName,
             (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u2 ON u2.id = fc.user_id
              WHERE fc.course_id = a.course_id AND fc.item_type = 'announcement' AND fc.item_id = a.id AND u2.role_id = 3 AND fc.read_by_instructor = 0) AS unreadCommentsCount,
+            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u2 ON u2.id = fc.user_id
+             WHERE fc.course_id = a.course_id AND fc.item_type = 'announcement' AND fc.item_id = a.id AND u2.role_id = 3 AND fc.is_private = 0 AND fc.read_by_instructor = 0) AS unreadPublicCommentsCount,
+            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u2 ON u2.id = fc.user_id
+             WHERE fc.course_id = a.course_id AND fc.item_type = 'announcement' AND fc.item_id = a.id AND u2.role_id = 3 AND fc.is_private = 1 AND fc.read_by_instructor = 0) AS unreadPrivateCommentsCount,
             (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u2 ON u2.id = fc.user_id
              WHERE fc.course_id = a.course_id AND fc.item_type = 'announcement' AND fc.item_id = a.id AND u2.role_id = 3) AS studentCommentsCount
      FROM anuncios a
@@ -432,6 +440,8 @@ export const getCourse = asyncHandler(async (req: SolicitudAutenticada, res: Res
         isRequired: !!l.isRequired,
         completed: completedLessonIds.includes(l.id),
         unreadCommentsCount: Number(l.unreadCommentsCount) || 0,
+        unreadPublicCommentsCount: Number(l.unreadPublicCommentsCount) || 0,
+        unreadPrivateCommentsCount: Number(l.unreadPrivateCommentsCount) || 0,
         studentCommentsCount: Number(l.studentCommentsCount) || 0,
         resources: resources.filter((r: any) => r.lessonId === l.id),
         attachments: l.attachments
@@ -502,6 +512,8 @@ export const getCourse = asyncHandler(async (req: SolicitudAutenticada, res: Res
     announcements: announcements.map((ann: any) => ({
       ...ann,
       unreadCommentsCount: Number(ann.unreadCommentsCount) || 0,
+      unreadPublicCommentsCount: Number(ann.unreadPublicCommentsCount) || 0,
+      unreadPrivateCommentsCount: Number(ann.unreadPrivateCommentsCount) || 0,
       studentCommentsCount: Number(ann.studentCommentsCount) || 0,
       attachments: ann.attachments
         ? typeof ann.attachments === 'string'

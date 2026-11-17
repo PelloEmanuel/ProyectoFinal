@@ -135,6 +135,26 @@
         overflow-x: hidden;
         flex: 1;
       }
+      /* Estilo visible para barras de desplazamiento en navegador web */
+      * {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(99, 102, 241, 0.6) rgba(0, 0, 0, 0.12);
+      }
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.12);
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: rgba(99, 102, 241, 0.55);
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(99, 102, 241, 0.85);
+      }
     </style>
   </head>
 

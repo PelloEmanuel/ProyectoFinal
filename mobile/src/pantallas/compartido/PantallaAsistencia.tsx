@@ -1,8 +1,9 @@
 // Importa React, componentes visuales, contextos de autenticación y servicios de asistencia.
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -113,6 +114,58 @@ export default function AttendanceScreen({ route }: { route?: any; navigation?: 
 
   const [openCourses, setOpenCourses] = useState<any[]>([]);
   const [selectedGroup, setSelectedGroup] = useState<any>(null);
+  const [filterCourseYear, setFilterCourseYear] = useState<number | 'all'>('all');
+  const coursesScrollRef = useRef<any>(null);
+
+  // Obtiene los años escolares únicos de los cursos abiertos para el selector de filtro.
+  const availableCourseYears = useMemo(() => {
+    const years = Array.from(
+      new Set(openCourses.map((c: any) => Number(c.schoolYear)).filter(Boolean))
+    ).sort((a: number, b: number) => a - b);
+    return years;
+  }, [openCourses]);
+
+  // Cursos escolares abiertos filtrados por el año escolar seleccionado.
+  const filteredOpenCourses = useMemo(() => {
+    if (filterCourseYear === 'all') return openCourses;
+    return openCourses.filter((c: any) => Number(c.schoolYear) === Number(filterCourseYear));
+  }, [openCourses, filterCourseYear]);
+
+  // Cambia el filtro de año escolar y actualiza la selección activa si el curso actual queda fuera.
+  const handleFilterYearChange = (yr: number | 'all') => {
+    setFilterCourseYear(yr);
+    const subset = yr === 'all'
+      ? openCourses
+      : openCourses.filter((c: any) => Number(c.schoolYear) === Number(yr));
+    if (subset.length > 0) {
+      const stillSelected = subset.some(
+        (g: any) => g.schoolYear === selectedGroup?.schoolYear && g.courseDivision === selectedGroup?.courseDivision
+      );
+      if (!stillSelected) {
+        setSelectedGroup(subset[0]);
+      }
+    }
+  };
+
+  // Habilita el desplazamiento horizontal de la lista de cursos al usar la rueda del mouse en navegador web.
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const el = coursesScrollRef.current?.getScrollableNode?.() || coursesScrollRef.current;
+    if (!el || typeof el.addEventListener !== 'function') return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (el.scrollWidth > el.clientWidth) {
+        e.preventDefault();
+        const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+        el.scrollLeft += delta;
+      }
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+    };
+  }, [filteredOpenCourses]);
 
   const [sheetData, setSheetData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -411,9 +464,17 @@ export default function AttendanceScreen({ route }: { route?: any; navigation?: 
       <AlertBanner type="success" message={success} />
 
       <Card style={{ marginBottom: 12 }}>
-        <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text, marginBottom: 6 }}>
-          1. Curso Escolar Abierto:
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: colors.text }}>
+            1. Curso Escolar Abierto:
+          </Text>
+          {openCourses.length > 0 && (
+            <Text style={{ fontSize: 12, color: colors.textSecondary }}>
+              {filteredOpenCourses.length} de {openCourses.length} cursos
+            </Text>
+          )}
+        </View>
+
         {openCourses.length === 0 ? (
           <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
             {user?.role === 'instructor'
@@ -421,23 +482,73 @@ export default function AttendanceScreen({ route }: { route?: any; navigation?: 
               : 'No hay cursos abiertos actualmente en el sistema.'}
           </Text>
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {openCourses.map((grp) => {
-                const isSelected =
-                  selectedGroup?.schoolYear === grp.schoolYear &&
-                  selectedGroup?.courseDivision === grp.courseDivision;
-                return (
-                  <Chip
-                    key={grp.id}
-                    label={`${grp.fullLabel} (${grp.studentsCount} alumnos)`}
-                    selected={isSelected}
-                    onPress={() => setSelectedGroup(grp)}
-                  />
-                );
-              })}
+          <View>
+            {/* Filtro por año escolar */}
+            {availableCourseYears.length > 1 && (
+              <View style={{ marginBottom: 10 }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textSecondary, marginBottom: 5 }}>
+                  Filtrar por año:
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <Chip
+                      label="Todos los años"
+                      selected={filterCourseYear === 'all'}
+                      onPress={() => handleFilterYearChange('all')}
+                    />
+                    {availableCourseYears.map((yr) => (
+                      <Chip
+                        key={yr}
+                        label={`${yr}° Año`}
+                        selected={filterCourseYear === yr}
+                        onPress={() => handleFilterYearChange(yr)}
+                      />
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Lista horizontal de divisiones con barra de navegación visible y rueda de mouse */}
+            <View>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: colors.textSecondary, marginBottom: 5 }}>
+                Seleccionar curso / división:
+              </Text>
+              <ScrollView
+                ref={coursesScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={true}
+                persistentScrollbar={true}
+                style={[
+                  styles.coursesScrollView,
+                  Platform.OS === 'web' && ({
+                    overflowX: 'auto',
+                    scrollbarWidth: 'auto',
+                  } as any),
+                ]}
+                contentContainerStyle={{
+                  flexDirection: 'row',
+                  gap: 8,
+                  paddingBottom: 10,
+                  alignItems: 'center',
+                }}
+              >
+                {filteredOpenCourses.map((grp) => {
+                  const isSelected =
+                    selectedGroup?.schoolYear === grp.schoolYear &&
+                    selectedGroup?.courseDivision === grp.courseDivision;
+                  return (
+                    <Chip
+                      key={grp.id}
+                      label={`${grp.fullLabel} (${grp.studentsCount} alumnos)`}
+                      selected={isSelected}
+                      onPress={() => setSelectedGroup(grp)}
+                    />
+                  );
+                })}
+              </ScrollView>
             </View>
-          </ScrollView>
+          </View>
         )}
       </Card>
 
@@ -1151,5 +1262,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 10,
     fontSize: 13,
+  },
+  coursesScrollView: {
+    maxHeight: 56,
   },
 });

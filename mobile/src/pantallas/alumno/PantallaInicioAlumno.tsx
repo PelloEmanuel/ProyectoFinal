@@ -1,7 +1,7 @@
 // Importa los hooks de React para estado, memorización y callbacks.
 import React, { useCallback, useMemo, useState } from 'react';
 // Importa los componentes visuales nativos de React Native.
-import { Modal, Pressable, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 // Importa el hook de foco de navegación.
 import { useFocusEffect } from '@react-navigation/native';
 // Importa la librería de íconos Ionicons.
@@ -51,6 +51,55 @@ export default function StudentHomeScreen({ navigation }: PropiedadesPantallaIni
   const [groupAccessCode, setGroupAccessCode] = useState<string>('');
   const [modalError, setModalError] = useState<string>('');
   const [savingGroup, setSavingGroup] = useState<boolean>(false);
+
+  // Claves de avisos de peticiones de curso cerrados/descartados por el alumno en esta sesión o guardados.
+  const [dismissedRequestKeys, setDismissedRequestKeys] = useState<string[]>(() => {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      try {
+        const raw = window.localStorage.getItem('skt_dismissed_request_keys');
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  // Descarta un aviso de petición para ocultarlo inmediatamente y persistirlo.
+  const handleDismissRequestNotice = (reqId: number | string, reqStatus: string): void => {
+    const key = `${reqId}_${reqStatus}`;
+    setDismissedRequestKeys((prev) => {
+      if (prev.includes(key)) return prev;
+      const next = [...prev, key];
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          window.localStorage.setItem('skt_dismissed_request_keys', JSON.stringify(next));
+        } catch {}
+      }
+      return next;
+    });
+  };
+
+  // Determina la petición de curso a notificar al alumno (pendiente, aceptada o rechazada).
+  const courseRequestToDisplay = useMemo(() => {
+    if (data?.pendingCourseRequest) {
+      return data.pendingCourseRequest;
+    }
+    if (
+      data?.latestCourseRequest &&
+      (data.latestCourseRequest.status === 'approved' || data.latestCourseRequest.status === 'rejected')
+    ) {
+      return data.latestCourseRequest;
+    }
+    return null;
+  }, [data]);
+
+  const requestNoticeKey = courseRequestToDisplay
+    ? `${courseRequestToDisplay.id}_${courseRequestToDisplay.status}`
+    : null;
+  const isRequestNoticeDismissed = requestNoticeKey
+    ? dismissedRequestKeys.includes(requestNoticeKey)
+    : false;
 
   // Calcula la lista ordenada de años escolares únicos abiertos en la institución.
   const availableYears = useMemo<number[]>(() => {
@@ -289,12 +338,22 @@ export default function StudentHomeScreen({ navigation }: PropiedadesPantallaIni
         <ErrorBanner message={error} onRetry={load} />
         <SuccessBanner message={success} />
 
-        {data?.pendingCourseRequest && (
+        {courseRequestToDisplay && !isRequestNoticeDismissed && (
           <View
             style={{
               marginBottom: 14,
-              backgroundColor: colors.warningSoft || '#fef3c7',
-              borderColor: colors.warning || '#f59e0b',
+              backgroundColor:
+                courseRequestToDisplay.status === 'approved'
+                  ? (colors.mode === 'light' ? '#ecfdf5' : 'rgba(16, 185, 129, 0.15)')
+                  : courseRequestToDisplay.status === 'rejected'
+                  ? (colors.mode === 'light' ? '#fef2f2' : 'rgba(239, 68, 68, 0.15)')
+                  : (colors.warningSoft || '#fef3c7'),
+              borderColor:
+                courseRequestToDisplay.status === 'approved'
+                  ? '#10b981'
+                  : courseRequestToDisplay.status === 'rejected'
+                  ? '#ef4444'
+                  : (colors.warning || '#f59e0b'),
               borderWidth: 1,
               borderRadius: 12,
               padding: 14,
@@ -303,16 +362,83 @@ export default function StudentHomeScreen({ navigation }: PropiedadesPantallaIni
               gap: 12,
             }}
           >
-            <Ionicons name="time-outline" size={24} color={colors.warning || '#b45309'} />
+            <Ionicons
+              name={
+                courseRequestToDisplay.status === 'approved'
+                  ? 'checkmark-circle'
+                  : courseRequestToDisplay.status === 'rejected'
+                  ? 'close-circle'
+                  : 'time-outline'
+              }
+              size={24}
+              color={
+                courseRequestToDisplay.status === 'approved'
+                  ? '#10b981'
+                  : courseRequestToDisplay.status === 'rejected'
+                  ? '#ef4444'
+                  : (colors.warning || '#b45309')
+              }
+            />
             <View style={{ flex: 1 }}>
-              <Text style={{ fontWeight: '800', color: colors.mode === 'light' ? '#78350f' : '#fef3c7', fontSize: 13 }}>
-                Petición pendiente de autorización del Preceptor
+              <Text
+                style={{
+                  fontWeight: '800',
+                  color:
+                    courseRequestToDisplay.status === 'approved'
+                      ? (colors.mode === 'light' ? '#065f46' : '#a7f3d0')
+                      : courseRequestToDisplay.status === 'rejected'
+                      ? (colors.mode === 'light' ? '#991b1b' : '#fca5a5')
+                      : (colors.mode === 'light' ? '#78350f' : '#fef3c7'),
+                  fontSize: 13,
+                }}
+              >
+                {courseRequestToDisplay.status === 'approved'
+                  ? '¡Petición de curso aceptada!'
+                  : courseRequestToDisplay.status === 'rejected'
+                  ? 'Petición de curso rechazada'
+                  : 'Petición pendiente de autorización del Preceptor'}
               </Text>
-              <Text style={{ fontSize: 12, color: colors.mode === 'light' ? '#92400e' : '#fde68a', marginTop: 2 }}>
-                Solicitaste {data.pendingCourseRequest.requestType === 'change' ? 'cambiar al' : 'ingresar al'} curso{' '}
-                {data.pendingCourseRequest.requestedFullLabel}. Apenas el Preceptor autorice tu petición, tus materias y horarios se actualizarán automáticamente.
+              <Text
+                style={{
+                  fontSize: 12,
+                  color:
+                    courseRequestToDisplay.status === 'approved'
+                      ? (colors.mode === 'light' ? '#047857' : '#6ee7b7')
+                      : courseRequestToDisplay.status === 'rejected'
+                      ? (colors.mode === 'light' ? '#b91c1c' : '#f87171')
+                      : (colors.mode === 'light' ? '#92400e' : '#fde68a'),
+                  marginTop: 2,
+                }}
+              >
+                {courseRequestToDisplay.status === 'approved'
+                  ? `El Preceptor autorizó tu petición para ${courseRequestToDisplay.requestType === 'change' ? 'cambiarte al' : 'ingresar al'} curso ${courseRequestToDisplay.requestedFullLabel}. Tus materias y horarios ya se encuentran actualizados.`
+                  : courseRequestToDisplay.status === 'rejected'
+                  ? `El Preceptor rechazó tu petición para el curso ${courseRequestToDisplay.requestedFullLabel}. Podés comunicarte con Preceptoría o volver a solicitar el curso correspondiente con el botón "Cambiar Curso".`
+                  : `Solicitaste ${courseRequestToDisplay.requestType === 'change' ? 'cambiar al' : 'ingresar al'} curso ${courseRequestToDisplay.requestedFullLabel}. Apenas el Preceptor autorice tu petición, tus materias y horarios se actualizarán automáticamente.`}
               </Text>
             </View>
+            <TouchableOpacity
+              onPress={() => handleDismissRequestNotice(courseRequestToDisplay.id, courseRequestToDisplay.status)}
+              style={{
+                padding: 6,
+                borderRadius: 20,
+                alignSelf: 'flex-start',
+                backgroundColor: 'rgba(0, 0, 0, 0.05)',
+              }}
+              accessibilityLabel="Cerrar aviso"
+            >
+              <Ionicons
+                name="close"
+                size={18}
+                color={
+                  courseRequestToDisplay.status === 'approved'
+                    ? (colors.mode === 'light' ? '#065f46' : '#a7f3d0')
+                    : courseRequestToDisplay.status === 'rejected'
+                    ? (colors.mode === 'light' ? '#991b1b' : '#fca5a5')
+                    : (colors.mode === 'light' ? '#78350f' : '#fef3c7')
+                }
+              />
+            </TouchableOpacity>
           </View>
         )}
 

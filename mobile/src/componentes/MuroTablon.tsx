@@ -153,6 +153,8 @@ export default function TablonFeed({
           authorName: a.authorName || 'Profesor de la materia',
           date: a.publishedAt || a.createdAt,
           unreadCommentsCount: Number(a.unreadCommentsCount) || 0,
+          unreadPublicCommentsCount: Number(a.unreadPublicCommentsCount) || 0,
+          unreadPrivateCommentsCount: Number(a.unreadPrivateCommentsCount) || 0,
           studentCommentsCount: Number(a.studentCommentsCount) || 0,
           raw: a,
         });
@@ -180,6 +182,8 @@ export default function TablonFeed({
               date: l.createdAt,
               duration: l.estimatedDuration,
               unreadCommentsCount: Number(l.unreadCommentsCount) || 0,
+              unreadPublicCommentsCount: Number(l.unreadPublicCommentsCount) || 0,
+              unreadPrivateCommentsCount: Number(l.unreadPrivateCommentsCount) || 0,
               studentCommentsCount: Number(l.studentCommentsCount) || 0,
               raw: l,
             });
@@ -197,9 +201,14 @@ export default function TablonFeed({
     return feedItems.filter((item) => item.itemType === filter);
   }, [feedItems, filter]);
 
-  // Carga los comentarios públicos y privados asociados a una publicación del tablón.
+  // Carga los comentarios públicos y privados asociados a una publicación del tablón y marca como leído solo el ámbito abierto.
   const loadComments = useCallback(
-    async (item: any, targetStudentId: number | null = null, silent: boolean = false) => {
+    async (
+      item: any,
+      targetStudentId: number | null = null,
+      silent: boolean = false,
+      markReadScope: 'none' | 'public' | 'private' = 'none'
+    ) => {
       if (!item || !course) return;
       try {
         if (!silent) setLoadingComments(true);
@@ -207,6 +216,7 @@ export default function TablonFeed({
           itemType: item.itemType,
           itemId: item.id,
           isPrivate: 0,
+          markRead: markReadScope === 'public' ? 1 : 0,
         });
         setPublicComments(Array.isArray(pub) ? pub : pub?.data || []);
 
@@ -216,20 +226,34 @@ export default function TablonFeed({
             itemId: item.id,
           });
           const list = Array.isArray(stuList) ? stuList : stuList?.data || [];
-          setPrivateStudents(list);
 
-          const activeStudentId = targetStudentId || selectedStudentForPrivateChat?.id || (list[0]?.id ?? null);
+          const firstUnreadStudent = list.find((s: any) => Number(s.unreadCount) > 0);
+          const activeStudentId =
+            targetStudentId ||
+            selectedStudentForPrivateChat?.id ||
+            firstUnreadStudent?.id ||
+            (list[0]?.id ?? null);
+
           if (activeStudentId) {
             const priv = await commentsApi.list(course.id, {
               itemType: item.itemType,
               itemId: item.id,
               isPrivate: 1,
               studentId: activeStudentId,
+              markRead: markReadScope === 'private' ? 1 : 0,
             });
             setPrivateComments(Array.isArray(priv) ? priv : priv?.data || []);
-            const matchStu = list.find((s: any) => s.id === activeStudentId);
+
+            const updatedList =
+              markReadScope === 'private'
+                ? list.map((s: any) => (Number(s.id) === Number(activeStudentId) ? { ...s, unreadCount: 0 } : s))
+                : list;
+            setPrivateStudents(updatedList);
+
+            const matchStu = updatedList.find((s: any) => Number(s.id) === Number(activeStudentId));
             if (matchStu) setSelectedStudentForPrivateChat(matchStu);
           } else {
+            setPrivateStudents(list);
             setPrivateComments([]);
           }
         } else {
@@ -252,7 +276,22 @@ export default function TablonFeed({
   // Sincroniza automáticamente los comentarios y detalles de entregas cuando otro dispositivo publica o califica.
   usarTiempoReal(() => {
     if (selectedItem) {
-      loadComments(selectedItem, selectedStudentForPrivateChat?.id || null, true);
+      const updatedFeedItem = feedItems.find(
+        (fi) => fi.itemType === selectedItem.itemType && Number(fi.id) === Number(selectedItem.id)
+      );
+      if (updatedFeedItem) {
+        setSelectedItem((prev: any) =>
+          prev
+            ? {
+                ...prev,
+                unreadCommentsCount: updatedFeedItem.unreadCommentsCount,
+                unreadPublicCommentsCount: updatedFeedItem.unreadPublicCommentsCount,
+                unreadPrivateCommentsCount: updatedFeedItem.unreadPrivateCommentsCount,
+              }
+            : prev
+        );
+      }
+      loadComments(selectedItem, selectedStudentForPrivateChat?.id || null, true, 'none');
       if (selectedItem.itemType === 'assignment') {
         assignmentsApi
           .get(selectedItem.id)
@@ -274,10 +313,13 @@ export default function TablonFeed({
     }
   });
 
-  // Abre el modal de detalle completo de una publicación y carga sus comentarios.
+  // Abre el modal de detalle de una publicación manteniendo visible si la notificación es pública o privada hasta que el docente ingrese a esa pestaña.
   const handleOpenDetail = async (item: any): Promise<void> => {
     setSelectedItem(item);
-    setCommentsTab('public');
+    const hasUnreadForInstructor =
+      isInstructor &&
+      (Number(item.unreadPublicCommentsCount || 0) > 0 || Number(item.unreadPrivateCommentsCount || 0) > 0);
+    setCommentsTab(hasUnreadForInstructor ? '' : 'public');
     setStudentSubmissionText('');
     setStudentAttachments([]);
     setSelectedStudentForPrivateChat(null);
@@ -298,19 +340,73 @@ export default function TablonFeed({
           myAttempts: detailed.myAttempts || [],
         };
         setSelectedItem(merged);
-        loadComments(merged);
+        await loadComments(merged, null, false, 'none');
       } catch (err) {
         console.error('Error obteniendo detalle de actividad:', err);
-        loadComments(item);
+        await loadComments(item, null, false, 'none');
       } finally {
         setLoadingDetail(false);
       }
     } else {
-      await loadComments(item);
+      await loadComments(item, null, false, 'none');
     }
+  };
 
-    if (isInstructor && item.unreadCommentsCount > 0 && onRefreshCourse) {
-      onRefreshCourse();
+  // Ingresa a la interfaz de comentarios públicos y limpia la notificación pública de esta publicación.
+  const handleEnterPublicCommentsTab = async (): Promise<void> => {
+    setCommentsTab('public');
+    if (isInstructor && selectedItem && Number(selectedItem.unreadPublicCommentsCount || 0) > 0) {
+      await loadComments(selectedItem, null, true, 'public');
+      setSelectedItem((prev: any) => {
+        if (!prev) return prev;
+        const privUnread = Number(prev.unreadPrivateCommentsCount || 0);
+        return {
+          ...prev,
+          unreadPublicCommentsCount: 0,
+          unreadCommentsCount: privUnread,
+        };
+      });
+      if (onRefreshCourse) onRefreshCourse();
+    }
+  };
+
+  // Ingresa a la interfaz de comentarios privados y limpia la notificación privada del alumno seleccionado.
+  const handleEnterPrivateCommentsTab = async (explicitStudentId: number | null = null): Promise<void> => {
+    setCommentsTab('private');
+    if (isInstructor && selectedItem) {
+      const unreadStudent = privateStudents.find((s: any) => Number(s.unreadCount) > 0);
+      const targetStuId =
+        explicitStudentId ||
+        unreadStudent?.id ||
+        selectedStudentForPrivateChat?.id ||
+        privateStudents[0]?.id ||
+        null;
+
+      const hadUnread =
+        Number(selectedItem.unreadPrivateCommentsCount || 0) > 0 ||
+        (targetStuId &&
+          Number(privateStudents.find((s: any) => Number(s.id) === Number(targetStuId))?.unreadCount || 0) > 0);
+
+      if (targetStuId && hadUnread) {
+        await loadComments(selectedItem, Number(targetStuId), true, 'private');
+        const remainingPrivateUnread = privateStudents.reduce(
+          (acc: number, s: any) =>
+            acc + (Number(s.id) === Number(targetStuId) ? 0 : Number(s.unreadCount) || 0),
+          0
+        );
+        setSelectedItem((prev: any) => {
+          if (!prev) return prev;
+          const pubUnread = Number(prev.unreadPublicCommentsCount || 0);
+          return {
+            ...prev,
+            unreadPrivateCommentsCount: remainingPrivateUnread,
+            unreadCommentsCount: pubUnread + remainingPrivateUnread,
+          };
+        });
+        if (onRefreshCourse) onRefreshCourse();
+      } else if (targetStuId) {
+        await loadComments(selectedItem, Number(targetStuId), true, 'none');
+      }
     }
   };
 
@@ -1310,7 +1406,7 @@ export default function TablonFeed({
                           styles.commentsTabBtn,
                           commentsTab === 'public' && [styles.commentsTabBtnActive, { borderBottomColor: colors.primary }],
                         ]}
-                        onPress={() => setCommentsTab('public')}
+                        onPress={handleEnterPublicCommentsTab}
                       >
                         <Ionicons
                           name="chatbubbles"
@@ -1325,6 +1421,25 @@ export default function TablonFeed({
                         >
                           Comentarios de clase ({publicComments.length})
                         </Text>
+                        {isInstructor && Number(selectedItem?.unreadPublicCommentsCount || 0) > 0 && (
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              backgroundColor: colors.danger,
+                              borderRadius: 12,
+                              paddingHorizontal: 7,
+                              paddingVertical: 2,
+                              marginLeft: 6,
+                              gap: 3,
+                            }}
+                          >
+                            <Ionicons name="notifications" size={12} color="#ffffff" />
+                            <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '800' }}>
+                              {selectedItem.unreadPublicCommentsCount}
+                            </Text>
+                          </View>
+                        )}
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -1332,7 +1447,7 @@ export default function TablonFeed({
                           styles.commentsTabBtn,
                           commentsTab === 'private' && [styles.commentsTabBtnActive, { borderBottomColor: colors.primary }],
                         ]}
-                        onPress={() => setCommentsTab('private')}
+                        onPress={() => handleEnterPrivateCommentsTab(null)}
                       >
                         <Ionicons
                           name="lock-closed"
@@ -1347,8 +1462,48 @@ export default function TablonFeed({
                         >
                           Comentarios privados
                         </Text>
+                        {isInstructor && Number(selectedItem?.unreadPrivateCommentsCount || 0) > 0 && (
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              backgroundColor: colors.danger,
+                              borderRadius: 12,
+                              paddingHorizontal: 7,
+                              paddingVertical: 2,
+                              marginLeft: 6,
+                              gap: 3,
+                            }}
+                          >
+                            <Ionicons name="notifications" size={12} color="#ffffff" />
+                            <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '800' }}>
+                              {selectedItem.unreadPrivateCommentsCount}
+                            </Text>
+                          </View>
+                        )}
                       </TouchableOpacity>
                     </View>
+
+                    {commentsTab === '' && (
+                      <View
+                        style={{
+                          marginTop: 12,
+                          padding: 14,
+                          borderRadius: 12,
+                          backgroundColor: colors.surfaceAlt,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 10,
+                        }}
+                      >
+                        <Ionicons name="notifications-outline" size={22} color={colors.primary} />
+                        <Text style={{ flex: 1, fontSize: 13, color: colors.text, fontWeight: '600' }}>
+                          Seleccioná la pestaña marcada con la notificación arriba ({Number(selectedItem?.unreadPublicCommentsCount || 0) > 0 ? 'Comentarios de clase' : 'Comentarios privados'}) para leer el nuevo comentario.
+                        </Text>
+                      </View>
+                    )}
 
                     {commentsTab === 'public' && (
                       <View style={{ marginTop: 10 }}>
@@ -1409,7 +1564,7 @@ export default function TablonFeed({
                                     key={stu.id}
                                     onPress={() => {
                                       setSelectedStudentForPrivateChat(stu);
-                                      loadComments(selectedItem, stu.id);
+                                      handleEnterPrivateCommentsTab(stu.id);
                                     }}
                                     style={[
                                       styles.studentFilterChip,
@@ -1432,6 +1587,24 @@ export default function TablonFeed({
                                     >
                                       {stu.name} ({stu.messageCount})
                                     </Text>
+                                    {Number(stu.unreadCount || 0) > 0 && (
+                                      <View
+                                        style={{
+                                          backgroundColor: colors.danger,
+                                          borderRadius: 10,
+                                          minWidth: 18,
+                                          height: 18,
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          paddingHorizontal: 4,
+                                          marginLeft: 4,
+                                        }}
+                                      >
+                                        <Text style={{ color: '#ffffff', fontSize: 10, fontWeight: '800' }}>
+                                          {stu.unreadCount}
+                                        </Text>
+                                      </View>
+                                    )}
                                   </TouchableOpacity>
                                 ))
                               )}
