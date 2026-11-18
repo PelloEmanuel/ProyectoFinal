@@ -218,7 +218,8 @@ export default function TablonFeed({
           isPrivate: 0,
           markRead: markReadScope === 'public' ? 1 : 0,
         });
-        setPublicComments(Array.isArray(pub) ? pub : pub?.data || []);
+        const pubCommentsList = Array.isArray(pub) ? pub : pub?.data || [];
+        setPublicComments(pubCommentsList);
 
         if (isInstructor) {
           const stuList = await commentsApi.students(course.id, {
@@ -234,6 +235,8 @@ export default function TablonFeed({
             firstUnreadStudent?.id ||
             (list[0]?.id ?? null);
 
+          let updatedStudentList = list;
+
           if (activeStudentId) {
             const priv = await commentsApi.list(course.id, {
               itemType: item.itemType,
@@ -242,20 +245,44 @@ export default function TablonFeed({
               studentId: activeStudentId,
               markRead: markReadScope === 'private' ? 1 : 0,
             });
-            setPrivateComments(Array.isArray(priv) ? priv : priv?.data || []);
+            const privCommentsList = Array.isArray(priv) ? priv : priv?.data || [];
+            setPrivateComments(privCommentsList);
 
-            const updatedList =
+            updatedStudentList =
               markReadScope === 'private'
-                ? list.map((s: any) => (Number(s.id) === Number(activeStudentId) ? { ...s, unreadCount: 0 } : s))
+                ? list.map((s: any) =>
+                    Number(s.id) === Number(activeStudentId) ? { ...s, unreadCount: 0 } : s
+                  )
                 : list;
-            setPrivateStudents(updatedList);
+            setPrivateStudents(updatedStudentList);
 
-            const matchStu = updatedList.find((s: any) => Number(s.id) === Number(activeStudentId));
+            const matchStu = updatedStudentList.find((s: any) => Number(s.id) === Number(activeStudentId));
             if (matchStu) setSelectedStudentForPrivateChat(matchStu);
           } else {
             setPrivateStudents(list);
             setPrivateComments([]);
           }
+
+          // Notificaciones granulares calculadas al instante para el docente
+          const unreadPub =
+            markReadScope === 'public'
+              ? 0
+              : pubCommentsList.filter((c: any) => c.role === 'student' && !c.readByInstructor).length;
+
+          const unreadPriv = updatedStudentList.reduce(
+            (acc: number, s: any) => acc + (Number(s.unreadCount) || 0),
+            0
+          );
+
+          setSelectedItem((prev: any) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              unreadPublicCommentsCount: unreadPub,
+              unreadPrivateCommentsCount: unreadPriv,
+              unreadCommentsCount: unreadPub + unreadPriv,
+            };
+          });
         } else {
           const priv = await commentsApi.list(course.id, {
             itemType: item.itemType,
@@ -275,23 +302,18 @@ export default function TablonFeed({
 
   // Sincroniza automáticamente los comentarios y detalles de entregas cuando otro dispositivo publica o califica.
   usarTiempoReal(() => {
+    if (onRefreshCourse) {
+      onRefreshCourse();
+    }
     if (selectedItem) {
-      const updatedFeedItem = feedItems.find(
-        (fi) => fi.itemType === selectedItem.itemType && Number(fi.id) === Number(selectedItem.id)
-      );
-      if (updatedFeedItem) {
-        setSelectedItem((prev: any) =>
-          prev
-            ? {
-                ...prev,
-                unreadCommentsCount: updatedFeedItem.unreadCommentsCount,
-                unreadPublicCommentsCount: updatedFeedItem.unreadPublicCommentsCount,
-                unreadPrivateCommentsCount: updatedFeedItem.unreadPrivateCommentsCount,
-              }
-            : prev
-        );
-      }
-      loadComments(selectedItem, selectedStudentForPrivateChat?.id || null, true, 'none');
+      const currentScope =
+        commentsTab === 'public'
+          ? 'public'
+          : commentsTab === 'private' && selectedStudentForPrivateChat
+          ? 'private'
+          : 'none';
+
+      loadComments(selectedItem, selectedStudentForPrivateChat?.id || null, true, currentScope);
       if (selectedItem.itemType === 'assignment') {
         assignmentsApi
           .get(selectedItem.id)
@@ -434,7 +456,8 @@ export default function TablonFeed({
       });
 
       setCommentInput('');
-      await loadComments(selectedItem, studentId);
+      await loadComments(selectedItem, studentId || null, false, isPriv ? 'private' : 'public');
+      if (onRefreshCourse) onRefreshCourse();
     } catch (err) {
       setErrorBanner(extractErrorMessage(err));
     } finally {

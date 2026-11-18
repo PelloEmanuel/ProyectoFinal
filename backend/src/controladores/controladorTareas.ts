@@ -773,8 +773,8 @@ export const listInstructorCourses = asyncHandler(async (req: SolicitudAutentica
             (SELECT COUNT(*) FROM lecciones l JOIN modulos m ON m.id = l.module_id WHERE m.course_id = c.id) AS lessonsCount,
             (SELECT COUNT(*) FROM tareas a WHERE a.course_id = c.id) AS assignmentsCount,
             (SELECT COUNT(*) FROM entregas_tareas att JOIN tareas a ON a.id = att.assignment_id WHERE a.course_id = c.id AND att.status = 'submitted') AS pendingSubmissionsCount,
-            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u ON u.id = fc.user_id WHERE fc.course_id = c.id AND fc.item_type IN ('announcement', 'lesson') AND u.role_id = 3 AND fc.read_by_instructor = 0) AS unreadCommentsCount,
-            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u ON u.id = fc.user_id WHERE fc.course_id = c.id AND fc.item_type IN ('announcement', 'lesson') AND u.role_id = 3) AS studentCommentsCount
+            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u ON u.id = fc.user_id WHERE fc.course_id = c.id AND u.role_id = 3 AND fc.read_by_instructor = 0) AS unreadCommentsCount,
+            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u ON u.id = fc.user_id WHERE fc.course_id = c.id AND u.role_id = 3) AS studentCommentsCount
      FROM cursos c
      LEFT JOIN categorias cat ON cat.id = c.category_id
      WHERE ${filterSql}
@@ -833,8 +833,8 @@ export const instructorDashboard = asyncHandler(async (req: SolicitudAutenticada
             (SELECT COUNT(*) FROM modulos m WHERE m.course_id = c.id) AS modulesCount,
             (SELECT COUNT(*) FROM lecciones l JOIN modulos m ON m.id = l.module_id WHERE m.course_id = c.id) AS lessonsCount,
             (SELECT COUNT(*) FROM tareas a WHERE a.course_id = c.id) AS assignmentsCount,
-            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u ON u.id = fc.user_id WHERE fc.course_id = c.id AND fc.item_type IN ('announcement', 'lesson') AND u.role_id = 3 AND fc.read_by_instructor = 0) AS unreadCommentsCount,
-            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u ON u.id = fc.user_id WHERE fc.course_id = c.id AND fc.item_type IN ('announcement', 'lesson') AND u.role_id = 3) AS studentCommentsCount
+            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u ON u.id = fc.user_id WHERE fc.course_id = c.id AND u.role_id = 3 AND fc.read_by_instructor = 0) AS unreadCommentsCount,
+            (SELECT COUNT(*) FROM comentarios_tablon fc JOIN usuarios u ON u.id = fc.user_id WHERE fc.course_id = c.id AND u.role_id = 3) AS studentCommentsCount
      FROM cursos c
      LEFT JOIN categorias cat ON cat.id = c.category_id
      WHERE ${filterSql}

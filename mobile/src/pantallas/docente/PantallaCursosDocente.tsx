@@ -354,9 +354,19 @@ export default function InstructorCoursesScreen({ route, navigation }: { route: 
     }
   }, []);
 
-  // Sincroniza automáticamente las materias asignadas cuando ocurren cambios desde otro dispositivo.
+  // Sincroniza automáticamente las materias asignadas y el espacio de trabajo activo cuando ocurren cambios desde otro dispositivo.
   usarTiempoReal(() => {
     loadData(false, true);
+    if (activeCourse?.id) {
+      coursesApi
+        .getById(activeCourse.id)
+        .then((res) => {
+          if (res?.data?.data) {
+            setActiveCourse(res.data.data);
+          }
+        })
+        .catch(() => {});
+    }
   });
 
   // Recarga la lista de materias al enfocar la pantalla.

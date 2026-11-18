@@ -104,7 +104,7 @@ function asegurarMotorTiempoReal(): void {
         iniciarConexionSseWeb();
       }
       verificarVersionServidor(false);
-    }, 3500);
+    }, 2000);
   }
 
   if (!escuchandoCicloVida) {

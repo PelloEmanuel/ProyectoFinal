@@ -27,8 +27,8 @@ export const listFeedComments = asyncHandler(async (req: SolicitudAutenticada, r
 
   let query = `
     SELECT fc.id, fc.course_id AS courseId, fc.item_type AS itemType, fc.item_id AS itemId,
-           fc.user_id AS userId, fc.is_private AS isPrivate, fc.student_id AS studentId,
-           fc.message, fc.attachments, fc.created_at AS createdAt,
+           fc.user_id AS userId, fc.is_private AS isPrivate, fc.read_by_instructor AS readByInstructor,
+           fc.student_id AS studentId, fc.message, fc.attachments, fc.created_at AS createdAt,
            u.first_name, u.last_name, r.name AS role
     FROM comentarios_tablon fc
     JOIN usuarios u ON u.id = fc.user_id
@@ -79,6 +79,7 @@ export const listFeedComments = asyncHandler(async (req: SolicitudAutenticada, r
     userName: `${r.first_name} ${r.last_name}`.trim(),
     role: r.role,
     isPrivate: !!r.isPrivate,
+    readByInstructor: Number(r.readByInstructor) === 1,
     studentId: r.studentId,
     message: r.message,
     attachments: r.attachments
@@ -162,6 +163,9 @@ export const createFeedComment = asyncHandler(async (req: SolicitudAutenticada, 
 
   const [newRow] = await db.execute('SELECT created_at FROM comentarios_tablon WHERE id = ?', [ins.insertId]);
   const createdAt = newRow.length ? newRow[0].created_at : new Date().toISOString();
+
+  // Emite la notificación de tiempo real para que todos los dispositivos actualicen su estado instantáneamente.
+  notificarCambioTiempoReal('POST', `/api/v1/courses/${courseId}/feed-comments`);
 
   res.status(201).json({
     success: true,
